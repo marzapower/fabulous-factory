@@ -27,6 +27,25 @@ export type SendResult =
   | { delivered: true }
   | { delivered: false; reason: "disabled" | "console" | "provider-error" | "not-configured" };
 
+/**
+ * Lazy module-singleton for the Resend client (review fix, M5 cycle — mirrors the
+ * analytics/observability vendor-SDK pattern instead of constructing a client per send).
+ * Keyed on the API key so a changed key in tests (or a long-lived process with rotated
+ * env) never sends with a stale client. Type-only `import("resend")` reference — erased
+ * at compile time, so the SDK still loads ONLY via the guarded dynamic import below.
+ */
+let resendClient: import("resend").Resend | undefined;
+let resendClientKey: string | undefined;
+
+async function getResendClient(apiKey: string): Promise<import("resend").Resend> {
+  if (!resendClient || resendClientKey !== apiKey) {
+    const { Resend } = await import("resend");
+    resendClient = new Resend(apiKey);
+    resendClientKey = apiKey;
+  }
+  return resendClient;
+}
+
 /** One subject line per template — kept here rather than per-template so callers never
  * have to pass a subject themselves. */
 const SUBJECTS: Record<TemplateName, string> = {
@@ -47,10 +66,12 @@ export async function send<T extends TemplateName>(
 
   const element = TEMPLATES[template](props);
   const subject = SUBJECTS[template];
-  const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
+  const text = await render(element, { plainText: true });
 
   if (capabilities.email === "console") {
-    // Dev-only convenience transport (spec §5.6) — never claims delivery.
+    // Dev-only convenience transport (spec §5.6) — never claims delivery. The html
+    // variant is deliberately NOT rendered on this path (review fix, M5 cycle) — console
+    // only ever logs the text rendering.
     console.log(`[@factory/email] console transport — "${subject}" to ${to}\n---\n${text}\n---`);
     return { delivered: false, reason: "console" };
   }
@@ -63,8 +84,8 @@ export async function send<T extends TemplateName>(
     return { delivered: false, reason: "not-configured" };
   }
 
-  const { Resend } = await import("resend");
-  const resend = new Resend(env.RESEND_API_KEY);
+  const html = await render(element);
+  const resend = await getResendClient(env.RESEND_API_KEY ?? "");
   const { error } = await resend.emails.send({ from: env.EMAIL_FROM, to, subject, html, text });
 
   if (error) {

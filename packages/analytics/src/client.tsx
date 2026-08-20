@@ -44,7 +44,14 @@ async function ensurePostHogInitialized(key: string, host: string): Promise<Post
       });
       posthogSingleton = posthog;
       return posthog;
-    })();
+    })().catch((error: unknown) => {
+      // Review fix (M5 cycle): reset on failure so a transient CDN/network error on the
+      // dynamic import doesn't stay cached as a rejection for the whole page lifetime —
+      // the next route change's PageviewTracker effect retries cleanly (same pattern as
+      // track.ts server-side).
+      posthogInitPromise = undefined;
+      throw error;
+    });
   }
   return posthogInitPromise;
 }

@@ -177,6 +177,33 @@ export const ENV_REGISTRY = [
     secret: true,
   },
   {
+    name: "LLM_MODEL_CHEAP",
+    group: "llm",
+    description:
+      "Override the routed model id for the 'cheap' quality tier of the active LLM profile.",
+    example: "claude-haiku-4-5",
+    required: false,
+    secret: false,
+  },
+  {
+    name: "LLM_MODEL_BALANCED",
+    group: "llm",
+    description:
+      "Override the routed model id for the 'balanced' quality tier of the active LLM profile.",
+    example: "claude-sonnet-4-6",
+    required: false,
+    secret: false,
+  },
+  {
+    name: "LLM_MODEL_HIGH",
+    group: "llm",
+    description:
+      "Override the routed model id for the 'high' quality tier of the active LLM profile.",
+    example: "claude-opus-5",
+    required: false,
+    secret: false,
+  },
+  {
     name: "RESEND_API_KEY",
     group: "email",
     description:

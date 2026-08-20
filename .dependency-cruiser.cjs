@@ -156,23 +156,28 @@ module.exports = {
     {
       name: "dag-config-imports-no-workspace-package",
       severity: "error",
-      comment: "packages/config is the DAG root — it must not import any other workspace package.",
+      comment:
+        "packages/config is the DAG root — it must not import any other workspace " +
+        "package. (email/analytics/observability/llm added in M5, plan F.10.13 — the M4 " +
+        "packages were missing from this ban list.)",
       from: {
         path: "^packages/config/",
       },
       to: {
-        path: "^packages/(auth|db|core)/",
+        path: "^packages/(auth|db|core|email|analytics|observability|llm)/",
       },
     },
     {
       name: "dag-db-imports-only-config",
       severity: "error",
-      comment: "packages/db may depend on packages/config only (DAG: config ← db).",
+      comment:
+        "packages/db may depend on packages/config only (DAG: config ← db). " +
+        "(email/analytics/observability/llm added in M5, plan F.10.13.)",
       from: {
         path: "^packages/db/",
       },
       to: {
-        path: "^packages/(auth|core)/",
+        path: "^packages/(auth|core|email|analytics|observability|llm)/",
       },
     },
     {
@@ -186,7 +191,7 @@ module.exports = {
         path: "^packages/auth/",
       },
       to: {
-        path: "^packages/(core|analytics|observability)/",
+        path: "^packages/(core|analytics|observability|llm)/",
       },
     },
     {
@@ -211,7 +216,7 @@ module.exports = {
         path: "^packages/email/",
       },
       to: {
-        path: "^packages/(auth|db|core|analytics|observability)/",
+        path: "^packages/(auth|db|core|analytics|observability|llm)/",
       },
     },
     {
@@ -222,7 +227,7 @@ module.exports = {
         path: "^packages/analytics/",
       },
       to: {
-        path: "^packages/(auth|db|core|email|observability)/",
+        path: "^packages/(auth|db|core|email|observability|llm)/",
       },
     },
     {
@@ -233,7 +238,7 @@ module.exports = {
         path: "^packages/observability/",
       },
       to: {
-        path: "^packages/(auth|db|core|email|analytics)/",
+        path: "^packages/(auth|db|core|email|analytics|llm)/",
       },
     },
     {
@@ -279,15 +284,84 @@ module.exports = {
       name: "otel-api-only-in-observability",
       severity: "error",
       comment:
-        "@opentelemetry/api is confined to packages/observability, which owns the no-op " +
-        "tracer seam. packages/llm (M5) consumes the tracer via @factory/observability, " +
-        "not by importing @opentelemetry/api directly — this rule's `from` gains " +
-        "^packages/llm/ in M5 if that changes.",
+        "@opentelemetry/api is confined to packages/observability, the single owner of " +
+        "the OTel seam. packages/llm (M5) consumes the tracer AND SpanStatusCode via " +
+        "@factory/observability re-exports — post-review fix: the F.2.5 plan let llm " +
+        "import the api package directly, but one enum did not justify eroding the seam.",
       from: {
         pathNot: "^packages/observability/",
       },
       to: {
         path: "(^|/)node_modules/@opentelemetry/",
+      },
+    },
+    {
+      name: "no-unresolvable-imports",
+      severity: "error",
+      comment:
+        "An import that enhanced-resolve cannot resolve is (in pnpm's strict layout) " +
+        "almost always an UNDECLARED dependency — a runtime crash waiting to happen, and " +
+        "worse: dependency-cruiser silently skips unresolvable edges, so a vendor-SDK " +
+        "import of an undeclared package would slip past every confinement rule in this " +
+        'file. Discovered during M5\'s fixture proofs: `import "ai"` from packages/email ' +
+        "resolved to nothing and fired nothing.",
+      from: {
+        path: "^(apps|packages)/",
+        // next-env.d.ts is Next-generated and references `next/image-types/global`,
+        // which only resolves under the "types" export condition — deliberately excluded
+        // from conditionNames below (see the M3 note there). Generated file, exempt.
+        pathNot: "(^|/)next-env\\.d\\.ts$",
+      },
+      to: {
+        couldNotResolve: true,
+        // apps/web's "@/*" tsconfig alias (shadcn idiom, M2) only ever targets files
+        // INSIDE apps/web, so these edges carry no boundary information; depcruise's
+        // enhancedResolveOptions schema rejects an `alias` key, and tsc already fails
+        // any typo'd "@/..." import — exempting is both safe and the only clean option.
+        pathNot: "^@/",
+      },
+    },
+    {
+      name: "ai-sdk-only-in-llm",
+      severity: "error",
+      comment:
+        "The Vercel AI SDK core (`ai`) and every provider package (@ai-sdk/*, " +
+        "@openrouter/*) are confined to packages/llm (spec §8.4: no LLM provider calls " +
+        "outside the gateway). Providers are additionally loaded via guarded dynamic " +
+        "import only on their active profile branch (plan F.2.3).",
+      from: {
+        pathNot: "^packages/llm/",
+      },
+      to: {
+        path: "(^|/)node_modules/(ai|@ai-sdk|@openrouter)(/|$)",
+      },
+    },
+    {
+      name: "dag-llm-imports-config-db-core-observability",
+      severity: "error",
+      comment:
+        "packages/llm may depend on packages/config, packages/db (llm_calls accounting), " +
+        "packages/core (the ./untrusted subpath), and packages/observability (tracer) — " +
+        "plan F.2.1. It must NOT import auth, email, or analytics.",
+      from: {
+        path: "^packages/llm/",
+      },
+      to: {
+        path: "^packages/(auth|email|analytics)/",
+      },
+    },
+    {
+      name: "dag-core-no-llm",
+      severity: "error",
+      comment:
+        "packages/core must not import packages/llm — llm sits ABOVE core in the DAG " +
+        "(config ← db ← {auth,email,observability} ← core ← llm ← web, plan F.2.1); the " +
+        "reverse edge would be a cycle via @factory/core/untrusted.",
+      from: {
+        path: "^packages/core/",
+      },
+      to: {
+        path: "^packages/llm/",
       },
     },
   ],

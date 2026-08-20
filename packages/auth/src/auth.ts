@@ -32,9 +32,24 @@ import { magicLink } from "better-auth/plugins";
 
 import { getCapabilities, getEnv } from "@factory/config";
 import { getDb, schema } from "@factory/db";
-import { send } from "@factory/email";
+import { send, type SendResult } from "@factory/email";
 
 import { deriveAuthOptions } from "./options";
+
+/**
+ * Review fix (M5 cycle): `send()` reports non-delivery as a typed result, and silently
+ * discarding it here made Better Auth believe the email went out — the user sits on
+ * "check your email" forever (e.g. RESEND_API_KEY set but EMAIL_FROM missing →
+ * 'not-configured', or a provider outage → 'provider-error'). `console` is the dev
+ * transport's honest "logged, not delivered" and must NOT fail the flow; anything else
+ * undelivered throws so Better Auth surfaces an error instead of faking success.
+ * (`disabled` can't reach here — both callers guard on the email capability.)
+ */
+function assertDelivered(what: string, result: SendResult): void {
+  if (!result.delivered && result.reason !== "console") {
+    throw new Error(`${what} not delivered (${result.reason})`);
+  }
+}
 
 const env = getEnv();
 const capabilities = getCapabilities();
@@ -56,7 +71,7 @@ export const auth = betterAuth({
       // mean Better Auth shouldn't call this while email is disabled, but never attempt a
       // send (and never render) if it does.
       if (!emailEnabled) return;
-      await send("verify-email", user.email, { url });
+      assertDelivered("verification email", await send("verify-email", user.email, { url }));
     },
   },
   // `undefined` → Better Auth's same-origin default.
@@ -69,7 +84,7 @@ export const auth = betterAuth({
     ? [
         magicLink({
           async sendMagicLink({ email, url }) {
-            await send("magic-link", email, { url });
+            assertDelivered("magic link email", await send("magic-link", email, { url }));
           },
         }),
       ]

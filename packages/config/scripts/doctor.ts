@@ -12,6 +12,8 @@
  * parser (no dotenv dependency) merged under real `process.env`, so shell-exported vars
  * always win over the file. Always exits 0 — this is a report, not a gate.
  */
+import { readFileSync } from "node:fs";
+
 import { deriveCapabilities, type Capabilities, type ServiceName } from "../src/capabilities";
 import { readMergedEnv } from "../src/env-file";
 import { EnvValidationError, parseEnv } from "../src/env";
@@ -84,6 +86,95 @@ function printAuthSection(env: RawEnv, mode: AppMode): void {
   console.log("");
 }
 
+type Quality = "cheap" | "balanced" | "high";
+const QUALITIES: readonly Quality[] = ["cheap", "balanced", "high"];
+
+type RoutingKey = "local" | "openrouter" | "direct-anthropic" | "direct-openai";
+
+type ModelsJson = Partial<Record<RoutingKey, Partial<Record<Quality, string>>>>;
+type PricingJson = Record<string, { inputUsdPerMTok?: number; outputUsdPerMTok?: number }>;
+
+const LLM_MODEL_ENV_VARS: Record<Quality, EnvVarName> = {
+  cheap: "LLM_MODEL_CHEAP",
+  balanced: "LLM_MODEL_BALANCED",
+  high: "LLM_MODEL_HIGH",
+};
+
+/**
+ * Reads a JSON file from `packages/llm`, resolved relative to this script's own file
+ * location — via `fs`, NEVER `import` (F.2.10: `packages/config` is the DAG root and
+ * must not gain an import edge to `packages/llm`). Missing or unparseable files degrade
+ * to `undefined`; callers turn that into a single warning line, never a crash.
+ */
+function readLlmJson(relativePath: string): unknown {
+  try {
+    const raw = readFileSync(new URL(relativePath, import.meta.url), "utf8");
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/** direct-anthropic wins over direct-openai when both credentials happen to be set (F.5, matching `hasCredentialsFor`'s ANTHROPIC-first rule). */
+function resolveRoutingKey(profile: "local" | "openrouter" | "direct", env: RawEnv): RoutingKey {
+  if (profile === "direct") {
+    return env.ANTHROPIC_API_KEY ? "direct-anthropic" : "direct-openai";
+  }
+  return profile;
+}
+
+/**
+ * Prints the active profile's resolved tier→model routing table (env overrides applied
+ * and marked), plus pricing-rot warnings for any routed non-local model missing from
+ * `pricing.json`, and an openrouter-specific note about provider-reported cost.
+ */
+function printLlmRoutingSection(profile: "local" | "openrouter" | "direct", env: RawEnv): void {
+  const models = readLlmJson("../../llm/models.json");
+  if (!isRecord(models)) {
+    console.log(
+      "    ⚠ packages/llm/models.json is missing or unparseable — routing table unavailable",
+    );
+    return;
+  }
+
+  const routingKey = resolveRoutingKey(profile, env);
+  const table = (models as ModelsJson)[routingKey];
+  if (!isRecord(table)) {
+    console.log(
+      `    ⚠ packages/llm/models.json has no '${routingKey}' entry — routing table unavailable`,
+    );
+    return;
+  }
+
+  const pricingRaw = readLlmJson("../../llm/pricing.json");
+  const pricing = isRecord(pricingRaw) ? (pricingRaw as PricingJson) : undefined;
+  if (!pricing) {
+    console.log(
+      "    ⚠ packages/llm/pricing.json is missing or unparseable — cost accounting warnings unavailable",
+    );
+  }
+
+  console.log(`    routing (${routingKey}):`);
+  for (const quality of QUALITIES) {
+    const override = env[LLM_MODEL_ENV_VARS[quality]];
+    const model = override || table[quality];
+    if (!model) continue;
+    console.log(`      ${quality}: ${model}${override ? " (env override)" : ""}`);
+
+    if (routingKey !== "local" && pricing && !pricing[model]) {
+      console.log(`    ⚠ cost accounting will record unknown cost for ${model}`);
+    }
+  }
+
+  if (routingKey === "openrouter") {
+    console.log("    note: actual cost is provider-reported (OpenRouter usage.cost)");
+  }
+}
+
 function printHeader(mode: AppMode): void {
   console.log("Fabulous Factory — pnpm factory:doctor");
   console.log(`mode: ${mode}`);
@@ -149,6 +240,9 @@ function printServiceLine(
       console.log(
         `    warning: LLM_PROFILE=${env.LLM_PROFILE} is set but its credentials are missing — falling back to disabled`,
       );
+    }
+    if (capabilities.llm !== "disabled") {
+      printLlmRoutingSection(capabilities.llm, env);
     }
   }
 
