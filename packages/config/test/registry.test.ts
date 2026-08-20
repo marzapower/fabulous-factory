@@ -28,6 +28,7 @@ describe("ENV_REGISTRY invariants", () => {
   it("gives every var a group", () => {
     const validGroups = new Set([
       "core",
+      "auth",
       "billing",
       "llm",
       "email",
@@ -63,7 +64,33 @@ describe("ENV_REGISTRY invariants", () => {
   it("covers every service group used by later milestones", () => {
     const groups = new Set(ENV_REGISTRY.map((spec) => spec.group));
     expect(groups).toEqual(
-      new Set(["core", "billing", "llm", "email", "jobs", "analytics", "observability"]),
+      new Set(["core", "auth", "billing", "llm", "email", "jobs", "analytics", "observability"]),
     );
+  });
+});
+
+describe("ENV_REGISTRY — auth vars (M2)", () => {
+  const secretVars = ["BETTER_AUTH_SECRET", "GOOGLE_CLIENT_SECRET", "GITHUB_CLIENT_SECRET"];
+  const nonSecretVars = ["GOOGLE_CLIENT_ID", "GITHUB_CLIENT_ID"];
+
+  it("registers all five auth vars in the 'auth' group, none required", () => {
+    for (const name of [...secretVars, ...nonSecretVars]) {
+      const spec = ENV_REGISTRY.find((s) => s.name === name);
+      expect(spec, `${name} missing from ENV_REGISTRY`).toBeDefined();
+      expect(spec?.group).toBe("auth");
+      expect(spec?.required).toBe(false);
+    }
+  });
+
+  it("marks BETTER_AUTH_SECRET and both OAuth client secrets as secret", () => {
+    for (const name of secretVars) {
+      expect(ENV_REGISTRY.find((s) => s.name === name)?.secret).toBe(true);
+    }
+  });
+
+  it("does not mark either OAuth client ID as secret", () => {
+    for (const name of nonSecretVars) {
+      expect(ENV_REGISTRY.find((s) => s.name === name)?.secret).toBe(false);
+    }
   });
 });

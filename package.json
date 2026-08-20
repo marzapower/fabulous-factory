@@ -16,6 +16,9 @@
     "test": "vitest run",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "factory:doctor": "tsx packages/config/scripts/doctor.ts",
+    "db:migrate": "tsx packages/db/scripts/migrate.ts",
+    "db:seed": "tsx packages/db/scripts/seed.ts",
+    "db:generate": "pnpm --filter @factory/db exec drizzle-kit generate",
     "gen:env-example": "tsx packages/config/scripts/gen-env-example.ts",
     "prepare": "husky"
   },
