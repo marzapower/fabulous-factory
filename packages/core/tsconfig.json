@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Same rationale as packages/db and packages/auth: this package reads node:net /
+    // node:tls builtins directly (safe-fetch.ts) and Next's route-handler types expect
+    // @types/node to be present.
+    "types": ["node"]
+  },
+  "include": ["src", "test"]
+}

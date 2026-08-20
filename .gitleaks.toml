@@ -1,0 +1,19 @@
+# Secret-scanning config (design spec §8.5, plan D.1 + D.9.6).
+#
+# Extends gitleaks' own default ruleset (https://github.com/gitleaks/gitleaks — the
+# built-in `gitleaks.toml`) rather than replacing it, then layers a path allowlist for
+# files that legitimately contain example/placeholder secrets: `.env.example` (every
+# value is a documented placeholder, never a real one — see packages/config's registry),
+# research/design docs (deliberate example keys/connection strings used to illustrate
+# provider setup), and the lockfile (dependency metadata, not source we author).
+#
+# CI runs this exact config (`--config .gitleaks.toml`) so local and CI results agree.
+[extend]
+useDefault = true
+
+[allowlist]
+paths = [
+  '''\.env\.example$''',
+  '''^docs/.*''',
+  '''^pnpm-lock\.yaml$''',
+]

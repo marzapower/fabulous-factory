@@ -10,11 +10,11 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
@@ -45,11 +45,11 @@ jobs:
       # and creates the auth tables via the migrator; see packages/db/test/integration.
       TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
@@ -57,6 +57,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm lint
+
+      # Architecture boundary rules (design spec §8.4, plan D.5 + D.7): dependency-cruiser
+      # enforces the packages/config ← db ← auth ← core ← web DAG and the vendor-SDK/
+      # process.env confinement rules. Runs right after lint, before format/typecheck/test
+      # — a boundary violation is a structural problem worth failing fast on.
+      - run: pnpm boundaries
 
       - run: pnpm format:check
 
@@ -88,11 +94,11 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
@@ -123,3 +129,108 @@ jobs:
 
           kill "$SERVER_PID" 2>/dev/null || true
           exit $status
+
+  # CI security gates (design spec §8.5, plan D.7 + D.1 + D.9.6): secret scanning,
+  # dependency audit, and SAST. Runs in parallel with `quality` — these gates don't depend
+  # on the app building. Each tool is invoked as a plain container step (D.1: gitleaks'
+  # own GitHub Action requires an org license and runs on a Node version GitHub is
+  # retiring; semgrep's hosted `semgrep ci` requires an account) rather than a marketplace
+  # action, so nothing here needs a token/secret to run.
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # gitleaks scans full git history (D.9.6), not just the working tree — needs
+          # every commit, not the default single-commit shallow clone.
+          fetch-depth: 0
+
+      - name: gitleaks (secret scanning, full history)
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 \
+            git /repo --config /repo/.gitleaks.toml --redact --no-banner
+
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # GREEN via explicit version floors, not silent suppression (plan D.9.6): the 3
+      # high-severity advisories transitive through `next` (sharp CVE-2026-33327 family —
+      # GHSA-f88m-g3jw-g9cj; postcss source-map path traversal — GHSA-6g55-p6wh-862q and
+      # GHSA-r28c-9q8g-f849) are resolved by pinning minimum patched versions via
+      # `overrides` in pnpm-workspace.yaml (sharp>=0.35.0, postcss>=8.5.18), so
+      # `pnpm audit --prod --audit-level high` reports 0 high+ advisories. Those overrides
+      # are a stopgap, not a permanent fix — drop them once `next` itself ships with
+      # patched ranges for both transitive deps.
+      - name: pnpm audit (prod, high+)
+        run: pnpm audit --prod --audit-level high
+
+      # SAST: OWASP Top Ten ruleset, anonymously fetchable from the semgrep registry (no
+      # token needed — D.1). PRs scan only files changed since the PR's base commit to
+      # keep runtime reasonable (D.7); push-to-main runs the full scan.
+      - name: semgrep (OWASP Top Ten)
+        env:
+          SEMGREP_BASELINE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+        run: |
+          set -e
+          if [ -n "$SEMGREP_BASELINE_SHA" ]; then
+            docker run --rm -v "$PWD:/src" semgrep/semgrep:1.173.0 \
+              semgrep scan --config p/owasp-top-ten --error --baseline-commit "$SEMGREP_BASELINE_SHA"
+          else
+            docker run --rm -v "$PWD:/src" semgrep/semgrep:1.173.0 \
+              semgrep scan --config p/owasp-top-ten --error
+          fi
+
+  # Guarded zones (design spec §8.5, plan D.7 + D.9.15): PRs touching security-sensitive
+  # paths must carry a completed security checklist in the PR description (template:
+  # .github/PULL_REQUEST_TEMPLATE.md) before merge.
+  guarded-zones:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Require the security checklist on guarded-zone changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # Read via env var, not templated straight into the script (D.9.15): the PR
+          # body is attacker-controlled free text, and interpolating
+          # `${{ github.event.pull_request.body }}` directly into `run:` would let it
+          # inject shell commands. `env:` hands it over as inert data instead. Also
+          # tolerates a null body — GitHub renders an unset body as an empty string here,
+          # which the grep below simply fails to match (falls through to the error path,
+          # not a crash).
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -e
+          # Three-dot (merge-base) diff, not two-dot: two-dot compares the two snapshots
+          # directly and would surface files that changed on main *after* this branch
+          # forked as "PR-touched," even though the PR itself never touched them (M3).
+          # Three-dot diffs HEAD against the merge-base of BASE and HEAD, showing only
+          # what this branch actually changed since it diverged.
+          CHANGED=$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA" -- \
+            packages/auth packages/core packages/billing apps/web/middleware.ts packages/db/migrations)
+
+          if [ -z "$CHANGED" ]; then
+            echo "No guarded-zone paths touched — nothing to check."
+            exit 0
+          fi
+
+          echo "Guarded-zone paths touched by this PR:"
+          echo "$CHANGED"
+
+          if printf '%s' "$PR_BODY" | grep -qF -- '- [x] security-checklist'; then
+            echo "Security checklist confirmed in the PR body."
+            exit 0
+          fi
+
+          echo "::error::This PR touches a guarded zone (packages/auth, packages/core, packages/billing, apps/web/middleware.ts, or packages/db/migrations) but its description is missing the completed security checklist. Fill in the checklist from .github/PULL_REQUEST_TEMPLATE.md and check the '- [x] security-checklist' line."
+          exit 1
