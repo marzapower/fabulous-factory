@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Same rationale as packages/config: this package reads process.env-derived values
+    // and node: builtins (pg, node:url in scripts) — declare @types/node explicitly.
+    "types": ["node"]
+  },
+  "include": ["src", "scripts", "test"]
+}

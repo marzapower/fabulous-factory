@@ -19,22 +19,19 @@ export function CapabilityPanel() {
   const { capabilities } = useClientConfig();
 
   return (
-    <section style={{ marginTop: "2rem" }}>
-      <h2 style={{ fontSize: "1.1rem", marginBottom: "0.75rem" }}>Capabilities</h2>
-      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: "0.4rem" }}>
+    <section className="mt-8">
+      <h2 className="mb-3 text-lg font-semibold">Capabilities</h2>
+      <ul className="grid gap-2">
         {(Object.keys(SERVICE_LABELS) as Array<keyof typeof SERVICE_LABELS>).map((service) => {
           const enabled = capabilities[service];
           return (
             <li
               key={service}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "0.5rem 0.75rem",
-                borderRadius: 6,
-                background: enabled ? "#e8f7ee" : "#f4f4f5",
-                color: enabled ? "#1a7f43" : "#71717a",
-              }}
+              className={
+                enabled
+                  ? "flex items-center justify-between rounded-md bg-primary/10 px-3 py-2 text-sm text-primary"
+                  : "flex items-center justify-between rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground"
+              }
             >
               <span>{SERVICE_LABELS[service]}</span>
               <span>{enabled ? "Enabled" : "Disabled"}</span>

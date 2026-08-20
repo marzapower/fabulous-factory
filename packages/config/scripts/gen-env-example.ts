@@ -13,8 +13,9 @@ import { fileURLToPath } from "node:url";
 
 import { ENV_REGISTRY, type EnvVarSpec, type ServiceGroup } from "../src/registry";
 
-const GROUP_ORDER: readonly ServiceGroup[] = [
+export const GROUP_ORDER: readonly ServiceGroup[] = [
   "core",
+  "auth",
   "billing",
   "llm",
   "email",
@@ -25,6 +26,7 @@ const GROUP_ORDER: readonly ServiceGroup[] = [
 
 const GROUP_TITLES: Record<ServiceGroup, string> = {
   core: "Core",
+  auth: "Auth",
   billing: "Billing (Stripe)",
   llm: "LLM gateway",
   email: "Email",

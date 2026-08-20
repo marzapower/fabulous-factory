@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./client": "./src/client.tsx"
+    "./client": "./src/client.tsx",
+    "./node": "./src/node.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

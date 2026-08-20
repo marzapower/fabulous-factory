@@ -11,7 +11,7 @@
  */
 
 export type ServiceGroup =
-  "core" | "billing" | "llm" | "email" | "jobs" | "analytics" | "observability";
+  "core" | "auth" | "billing" | "llm" | "email" | "jobs" | "analytics" | "observability";
 
 export interface EnvVarSpec {
   /** e.g. "STRIPE_SECRET_KEY" */
@@ -53,6 +53,58 @@ export const ENV_REGISTRY = [
     example: "http://localhost:3000",
     required: false,
     secret: false,
+  },
+  {
+    name: "FACTORY_SKIP_MIGRATIONS",
+    group: "core",
+    description:
+      "Set to '1' to skip the automatic pending-migration run chained into 'pnpm dev' (for teams that manage migrations explicitly).",
+    example: "1",
+    required: false,
+    secret: false,
+  },
+  {
+    name: "BETTER_AUTH_SECRET",
+    group: "auth",
+    description:
+      "Secret used to sign and encrypt session tokens. Optional in development (built-in dev fallback), REQUIRED in production — auth endpoints fail without it.",
+    example: "replace-with-your-own-random-32-char-secret",
+    required: false,
+    secret: true,
+  },
+  {
+    name: "GOOGLE_CLIENT_ID",
+    group: "auth",
+    description:
+      "Google OAuth client ID. The 'google' sign-in provider is enabled only when this and GOOGLE_CLIENT_SECRET are both set.",
+    example: "your-google-client-id.apps.googleusercontent.com",
+    required: false,
+    secret: false,
+  },
+  {
+    name: "GOOGLE_CLIENT_SECRET",
+    group: "auth",
+    description: "Google OAuth client secret.",
+    example: "GOCSPX-your-google-client-secret",
+    required: false,
+    secret: true,
+  },
+  {
+    name: "GITHUB_CLIENT_ID",
+    group: "auth",
+    description:
+      "GitHub OAuth client ID. The 'github' sign-in provider is enabled only when this and GITHUB_CLIENT_SECRET are both set.",
+    example: "your-github-oauth-client-id",
+    required: false,
+    secret: false,
+  },
+  {
+    name: "GITHUB_CLIENT_SECRET",
+    group: "auth",
+    description: "GitHub OAuth client secret.",
+    example: "your-github-oauth-client-secret",
+    required: false,
+    secret: true,
   },
   {
     name: "BILLING_PROVIDER",

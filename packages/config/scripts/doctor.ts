@@ -8,52 +8,14 @@
  * print the same `EnvValidationError` issues `getEnv()` would throw, never to bail out.
  * This script never installs `server-only` and never imports `src/index.ts`.
  *
- * Loads `.env` via a tiny hand-rolled parser (no dotenv dependency) merged under real
- * `process.env`, so shell-exported vars always win over the file. Always exits 0 — this
- * is a report, not a gate.
+ * Loads `.env` via `readMergedEnv()` (see `../src/env-file.ts`) — a tiny hand-rolled
+ * parser (no dotenv dependency) merged under real `process.env`, so shell-exported vars
+ * always win over the file. Always exits 0 — this is a report, not a gate.
  */
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { deriveCapabilities, type Capabilities, type ServiceName } from "../src/capabilities";
+import { readMergedEnv } from "../src/env-file";
 import { EnvValidationError, parseEnv } from "../src/env";
 import { ENV_REGISTRY, type AppMode, type EnvVarName, type RawEnv } from "../src/registry";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(__dirname, "../../..");
-const DOTENV_PATH = path.join(REPO_ROOT, ".env");
-
-/** Tiny hand-rolled .env parser — no dotenv dependency for a report-only script. */
-function parseDotEnv(content: string): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const rawLine of content.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-    const eq = line.indexOf("=");
-    if (eq === -1) continue;
-    const key = line.slice(0, eq).trim();
-    let value = line.slice(eq + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    result[key] = value;
-  }
-  return result;
-}
-
-function loadEnv(): RawEnv {
-  const fromFile = existsSync(DOTENV_PATH) ? parseDotEnv(readFileSync(DOTENV_PATH, "utf8")) : {};
-  const merged: RawEnv = {};
-  for (const spec of ENV_REGISTRY) {
-    const value = process.env[spec.name] ?? fromFile[spec.name];
-    if (value !== undefined && value !== "") merged[spec.name] = value;
-  }
-  return merged;
-}
 
 function resolveMode(): AppMode {
   const nodeEnv = process.env.NODE_ENV;
@@ -83,6 +45,44 @@ const SERVICE_VARS: Record<ServiceName, EnvVarName[]> = {
   analytics: ["POSTHOG_KEY"],
   errors: ["SENTRY_DSN"],
 };
+
+const AUTH_SOCIAL_PROVIDERS: ReadonlyArray<{
+  name: string;
+  idVar: EnvVarName;
+  secretVar: EnvVarName;
+}> = [
+  { name: "google", idVar: "GOOGLE_CLIENT_ID", secretVar: "GOOGLE_CLIENT_SECRET" },
+  { name: "github", idVar: "GITHUB_CLIENT_ID", secretVar: "GITHUB_CLIENT_SECRET" },
+];
+
+/**
+ * Auth is always-on (email/password), unlike the optional services above — so it gets its
+ * own section rather than a `ServiceName` entry. OAuth providers light up per-provider by
+ * key presence; `BETTER_AUTH_SECRET` gets a warning in production (auth endpoints fail
+ * without it) and an advisory in development (Better Auth's built-in dev fallback covers
+ * it, but it must be set before deploying).
+ */
+function printAuthSection(env: RawEnv, mode: AppMode): void {
+  console.log("✓ auth: email/password (always on)");
+
+  for (const provider of AUTH_SOCIAL_PROVIDERS) {
+    const enabled = Boolean(env[provider.idVar] && env[provider.secretVar]);
+    console.log(`    ${enabled ? "✓" : "✗"} ${provider.name}: ${enabled ? "enabled" : "disabled"}`);
+    if (!enabled) {
+      console.log(`      enable with: ${provider.idVar} + ${provider.secretVar}`);
+    }
+  }
+
+  if (env.BETTER_AUTH_SECRET) {
+    console.log(`    ✓ BETTER_AUTH_SECRET=${maskSecret(env.BETTER_AUTH_SECRET)}`);
+  } else if (mode === "production") {
+    console.log("    ⚠ BETTER_AUTH_SECRET is not set — auth endpoints will fail until set");
+  } else {
+    console.log("    ⚠ BETTER_AUTH_SECRET is not set — set it before deploying to production");
+  }
+
+  console.log("");
+}
 
 function printHeader(mode: AppMode): void {
   console.log("Fabulous Factory — pnpm factory:doctor");
@@ -173,12 +173,13 @@ function printServiceLine(
 }
 
 function main(): void {
-  const env = loadEnv();
+  const env = readMergedEnv();
   const mode = resolveMode();
   const capabilities = deriveCapabilities(env, mode);
 
   printHeader(mode);
   printValidationIssues(env);
+  printAuthSection(env, mode);
 
   for (const service of Object.keys(SERVICE_TITLES) as ServiceName[]) {
     printServiceLine(service, capabilities, env, mode);

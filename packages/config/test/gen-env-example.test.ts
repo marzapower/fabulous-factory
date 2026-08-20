@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { ENV_REGISTRY } from "../src/registry";
-import { generateEnvExample, isEnvExampleUpToDate } from "../scripts/gen-env-example";
+import { GROUP_ORDER, generateEnvExample, isEnvExampleUpToDate } from "../scripts/gen-env-example";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_ENV_EXAMPLE_PATH = path.resolve(__dirname, "../../../.env.example");
@@ -49,7 +49,16 @@ describe("generateEnvExample", () => {
 
   it("groups vars under their ServiceGroup, in declared order", () => {
     const output = generateEnvExample();
-    const order = ["Core", "Billing", "LLM gateway", "Email", "Jobs", "Analytics", "Observability"];
+    const order = [
+      "Core",
+      "Auth",
+      "Billing",
+      "LLM gateway",
+      "Email",
+      "Jobs",
+      "Analytics",
+      "Observability",
+    ];
     let lastIndex = -1;
     for (const title of order) {
       const index = output.indexOf(title);
@@ -62,6 +71,16 @@ describe("generateEnvExample", () => {
   it("matches the checked-in root .env.example exactly (golden file)", () => {
     const disk = readFileSync(ROOT_ENV_EXAMPLE_PATH, "utf8");
     expect(disk).toBe(generateEnvExample());
+  });
+
+  it("has every ENV_REGISTRY group represented in GROUP_ORDER (else vars silently drop)", () => {
+    const usedGroups = new Set(ENV_REGISTRY.map((spec) => spec.group));
+    for (const group of usedGroups) {
+      expect(
+        GROUP_ORDER,
+        `${group} is used in ENV_REGISTRY but missing from GROUP_ORDER`,
+      ).toContain(group);
+    }
   });
 });
 

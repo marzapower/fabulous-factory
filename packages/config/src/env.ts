@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { readMergedEnv } from "./env-file";
 import { ENV_REGISTRY, type EnvVarName, type RawEnv } from "./registry";
 
 // Vars whose value must be a well-formed URL when present. Not every var needs this —
@@ -88,10 +89,21 @@ export function parseEnv(source: Partial<Record<EnvVarName, string | undefined>>
 
 let cachedEnv: Env | undefined;
 
-/** Memoized. Reads `process.env` once per process. Throws `EnvValidationError`. */
+/**
+ * Memoized. Reads the MERGED env view once per process: the repo-root `.env` file merged
+ * UNDER real `process.env` (shell/platform vars always win), same as every Node script.
+ *
+ * This is deliberate: the documented quickstart puts `.env` at the workspace root (spec
+ * §8.1), but Next.js only auto-loads env files from the app directory — and in dev it
+ * evaluates routes in a worker where `next.config.ts` side effects don't propagate. Since
+ * ALL env access already flows through this package (boundary rule §8.4), loading the
+ * file here gives the app, the migrator, and doctor one identical env view with no
+ * framework machinery. In production bundles the file simply doesn't exist and this
+ * degrades to plain `process.env`. Throws `EnvValidationError`.
+ */
 export function getEnv(): Env {
   if (!cachedEnv) {
-    cachedEnv = parseEnv(process.env as Partial<Record<EnvVarName, string | undefined>>);
+    cachedEnv = parseEnv(readMergedEnv());
   }
   return cachedEnv;
 }

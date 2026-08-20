@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // This package reads process.env indirectly via @factory/config and uses node:
+    // builtins nowhere directly, but next/headers, next/navigation, and better-auth's
+    // Node-targeted types all expect @types/node to be present.
+    "types": ["node"]
+  },
+  "include": ["src", "test"]
+}
