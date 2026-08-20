@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // This package's automatic @types/* inclusion doesn't pick up @types/node reliably
+    // in this workspace layout; declare it explicitly (this package reads process.env
+    // and node: builtins in src/env.ts, src/index.ts, and scripts/*).
+    "types": ["node"],
+    // The root base config targets server code only (lib: ["es2022"]). This package's
+    // client.tsx and its jsdom-environment tests need DOM types too.
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src", "scripts", "test"]
+}

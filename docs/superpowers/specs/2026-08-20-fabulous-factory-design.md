@@ -16,7 +16,7 @@ It is a generally-available open-source project (MIT license), not tailored to a
 
 ### Differentiators vs existing boilerplates
 
-1. **Agent guardrails, structurally enforced.** Not prose in an AGENTS.md — mandatory `defineHandler()`/`defineAction()` wrappers that make auth and input validation required arguments, boundary lint that makes vendor-SDK leakage impossible, guarded zones, and convention-encoding SAST. An agent (or a tired human) *cannot* merge a route without an auth decision. This is the headline feature and ships first in the build order.
+1. **Agent guardrails, structurally enforced.** Not prose in an AGENTS.md — mandatory `defineHandler()`/`defineAction()` wrappers that make auth and input validation required arguments, boundary lint that makes vendor-SDK leakage impossible, guarded zones, and convention-encoding SAST. An agent (or a tired human) _cannot_ merge a route without an auth decision. This is the headline feature and ships first in the build order.
 2. **Zero-config boot, proven by CI.** No service signup wall before first `pnpm dev`. Next.js + Postgres are the only hard requirements, and CI boots the minimal profile on every PR to keep the promise honest.
 3. **Graceful degradation as a contract.** Every external service is optional, resolved from the environment **at request time on the server** (never baked in at build time — see §5.1), and replaced by a well-defined fallback when absent.
 4. **Provider-agnostic seams** exactly where lock-in hurts: billing (`BillingProvider` interface; Stripe adapter in v1, seam proven by the `disabled` adapter) and LLM (any provider via Vercel AI SDK profiles, including local models).
@@ -24,7 +24,7 @@ It is a generally-available open-source project (MIT license), not tailored to a
 ### Non-goals of the design (honesty clauses)
 
 - The template is a **snapshot, not a subscription**: an adopted copy is a fork by design; the template's value must be delivered on day one, not through an update stream (§11, §13).
-- The template does not court the no-code audience. Its floor is "can run `pnpm dev` or click *Open in Codespaces*" — a developer, assisted heavily by agents (§8).
+- The template does not court the no-code audience. Its floor is "can run `pnpm dev` or click _Open in Codespaces_" — a developer, assisted heavily by agents (§8).
 
 ## 2. Core principle: graceful degradation
 
@@ -40,24 +40,24 @@ Rules every package must obey:
 
 ## 3. Frozen stack
 
-| Concern | Choice | Notes |
-|---|---|---|
-| Framework | Next.js 15 (App Router) | RSC-first; no separate worker deploy (jobs run in-app) |
-| Language | TypeScript (strict) | |
-| Database | Postgres | Neon/Supabase/local Docker all fine |
-| ORM | Drizzle | schema + migrations in `packages/db` |
-| UI | Tailwind CSS + shadcn/ui | |
-| Package manager | pnpm workspaces | internal packages consumed as TS source, no per-package build step, no Turborepo in v1 |
-| Auth | Better Auth | self-hosted in Postgres, no per-MAU cost; its schema lives in our migrations — version pinned, bumps are a migration event (§13) |
-| Billing | `BillingProvider` interface; adapters: **Stripe** + `disabled` fallback | seam is proven by the `disabled` adapter + contract suite; Polar/other MoR adapters are v2 / community (§11) |
-| Jobs/queue/cron | Inngest | runs inside the Next.js app; local dev via `inngest dev`; self-hosted OSS server supported with documented caveats (§12) |
-| LLM | Gateway on **Vercel AI SDK** | profiles: `local` (Ollama/MLX/OpenAI-compatible), `openrouter` (prod default), `direct` (Anthropic/OpenAI) |
-| Email | Resend + react-email | `console` transport in dev; `disabled` in prod when unconfigured |
-| Analytics + flags | PostHog | no-op fallback |
-| Errors | Sentry | no-op fallback |
-| LLM observability | OpenTelemetry spans from the gateway | consumer-agnostic seam; Langfuse (or any OTel backend) via a docs guide, not a wired dependency (§11) |
-| Deploy | Vercel **and** Docker (both first-class) | `output: 'standalone'`; nothing Vercel-proprietary in app code |
-| CI | GitHub Actions | |
+| Concern           | Choice                                                                  | Notes                                                                                                                            |
+| ----------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Framework         | Next.js 15 (App Router)                                                 | RSC-first; no separate worker deploy (jobs run in-app)                                                                           |
+| Language          | TypeScript (strict)                                                     |                                                                                                                                  |
+| Database          | Postgres                                                                | Neon/Supabase/local Docker all fine                                                                                              |
+| ORM               | Drizzle                                                                 | schema + migrations in `packages/db`                                                                                             |
+| UI                | Tailwind CSS + shadcn/ui                                                |                                                                                                                                  |
+| Package manager   | pnpm workspaces                                                         | internal packages consumed as TS source, no per-package build step, no Turborepo in v1                                           |
+| Auth              | Better Auth                                                             | self-hosted in Postgres, no per-MAU cost; its schema lives in our migrations — version pinned, bumps are a migration event (§13) |
+| Billing           | `BillingProvider` interface; adapters: **Stripe** + `disabled` fallback | seam is proven by the `disabled` adapter + contract suite; Polar/other MoR adapters are v2 / community (§11)                     |
+| Jobs/queue/cron   | Inngest                                                                 | runs inside the Next.js app; local dev via `inngest dev`; self-hosted OSS server supported with documented caveats (§12)         |
+| LLM               | Gateway on **Vercel AI SDK**                                            | profiles: `local` (Ollama/MLX/OpenAI-compatible), `openrouter` (prod default), `direct` (Anthropic/OpenAI)                       |
+| Email             | Resend + react-email                                                    | `console` transport in dev; `disabled` in prod when unconfigured                                                                 |
+| Analytics + flags | PostHog                                                                 | no-op fallback                                                                                                                   |
+| Errors            | Sentry                                                                  | no-op fallback                                                                                                                   |
+| LLM observability | OpenTelemetry spans from the gateway                                    | consumer-agnostic seam; Langfuse (or any OTel backend) via a docs guide, not a wired dependency (§11)                            |
+| Deploy            | Vercel **and** Docker (both first-class)                                | `output: 'standalone'`; nothing Vercel-proprietary in app code                                                                   |
+| CI                | GitHub Actions                                                          |                                                                                                                                  |
 
 The stack is **frozen**: the template does not offer framework/DB variants. Adapter seams exist only for billing and LLM.
 
@@ -106,7 +106,7 @@ fabulous-factory/
 
 ### 5.1 `packages/config` — capability map (keystone)
 
-**The blocker this section fixes:** `NEXT_PUBLIC_*` values are inlined at *build* time, but the Docker path builds one image in CI (with no service env) and receives real env at *container runtime*. Any capability signal that travels through `NEXT_PUBLIC_*` — or through statically prerendered HTML — is frozen at build time and breaks the degradation contract. Therefore:
+**The blocker this section fixes:** `NEXT_PUBLIC_*` values are inlined at _build_ time, but the Docker path builds one image in CI (with no service env) and receives real env at _container runtime_. Any capability signal that travels through `NEXT_PUBLIC_*` — or through statically prerendered HTML — is frozen at build time and breaks the degradation contract. Therefore:
 
 - **The capability map is server-only.** `packages/config` reads `process.env` once server-side, validates with zod, and derives a typed capability map, e.g. `services.billing: 'stripe' | 'disabled'`, `services.llm: 'local' | 'openrouter' | 'direct' | 'disabled'`, `services.email: 'resend' | 'console' | 'disabled'`. The module imports the platform `server-only` poison **and** is covered by a boundary lint rule (§8.4) — belt and suspenders against client bundling.
 - **No capability signal ever travels via `NEXT_PUBLIC_*`.** Client components that need capability facts or public config (e.g. the PostHog public key) receive them from a server component through a `ClientConfigProvider` — resolved at request time, so a CI-built Docker image lights up correctly from runtime env.
@@ -127,9 +127,13 @@ Deliberately minimal lifecycle interface — "user pays → subscription active 
 
 ```ts
 interface BillingProvider {
-  createCheckout(opts: { userId: string; plan: PlanId; successUrl: string }): Promise<{ url: string }>;
+  createCheckout(opts: {
+    userId: string;
+    plan: PlanId;
+    successUrl: string;
+  }): Promise<{ url: string }>;
   getPortalUrl(userId: string): Promise<{ url: string } | null>;
-  handleWebhook(req: Request): Promise<WebhookResult>;   // verifies signature, returns normalized events
+  handleWebhook(req: Request): Promise<WebhookResult>; // verifies signature, returns normalized events
 }
 ```
 
@@ -180,13 +184,13 @@ Cost discipline baked in as example code: **no LLM call when the hash didn't cha
 
 **Degradation matrix (this is the living documentation of the core principle):**
 
-| Missing service | Behavior |
-|---|---|
-| billing | unlimited free monitors, no checkout UI |
-| llm | raw text diffs, no semantic summaries |
-| email | in-app feed only; auth runs without verification + no magic links (§5.2) |
-| jobs | manual "check now" button instead of cron |
-| analytics/errors | silent no-op |
+| Missing service  | Behavior                                                                 |
+| ---------------- | ------------------------------------------------------------------------ |
+| billing          | unlimited free monitors, no checkout UI                                  |
+| llm              | raw text diffs, no semantic summaries                                    |
+| email            | in-app feed only; auth runs without verification + no magic links (§5.2) |
+| jobs             | manual "check now" button instead of cron                                |
+| analytics/errors | silent no-op                                                             |
 
 Adopters delete the monitor domain logic and keep the wiring; a `docs/guides/make-it-yours.md` guide lists exactly what to remove/rename. **A live deployment of this demo is part of the distribution plan (§13)** — the degradation story must be seeable, not just readable.
 
@@ -198,11 +202,11 @@ Adopters delete the monitor domain logic and keep the wiring; a `docs/guides/mak
   1. commitlint + `@commitlint/config-conventional` via a husky `commit-msg` hook — rejects non-conforming messages locally, for humans and agents alike;
   2. CI validates the PR title (covers squash merges and `--no-verify` bypasses);
   3. a rule in CLAUDE.md/AGENTS.md so agents write conforming messages on the first try.
-  Future direction: structured messages enable automated changelog + semantic versioning (changesets) later.
+     Future direction: structured messages enable automated changelog + semantic versioning (changesets) later.
 
 ## 8. Agent-first operation model
 
-**Premise:** the operator of a cloned template is a **product-focused solo developer plus an AI agent team**. The human's scarce resource is time, and all of it should go into designing the product — not building or maintaining infrastructure. The division of labor: *the human states intent, the agents do the work, the repository enforces the rules*. Both human and agent are fallible; deterministic tooling is the only incorruptible party. The human is technical enough to run `pnpm dev` — the design does not pretend otherwise — but must never *need* to hand-write infrastructure, security plumbing, or boilerplate.
+**Premise:** the operator of a cloned template is a **product-focused solo developer plus an AI agent team**. The human's scarce resource is time, and all of it should go into designing the product — not building or maintaining infrastructure. The division of labor: _the human states intent, the agents do the work, the repository enforces the rules_. Both human and agent are fallible; deterministic tooling is the only incorruptible party. The human is technical enough to run `pnpm dev` — the design does not pretend otherwise — but must never _need_ to hand-write infrastructure, security plumbing, or boilerplate.
 
 ### 8.1 Zero-hassle bootstrap
 
@@ -215,7 +219,7 @@ The first hour is designed, not assumed:
 
 ### 8.2 The repo is the agents' memory
 
-Agents retain nothing between sessions. Every decision persists as an artifact: ADRs record *why*, SPEC.md records *what*, and **PRODUCT.md is the human's document** — plain-language product definition ("people pay €9/month to watch 5 pages each") that agents translate into specs. All are pre-structured templates, so no session starts from zero context. **Single-source rule for mirrors:** skill playbooks and `docs/agents/conventions.md` are canonical; `AGENTS.md` is a thin pointer, never a copy — a CI staleness check fails if a mirror diverges.
+Agents retain nothing between sessions. Every decision persists as an artifact: ADRs record _why_, SPEC.md records _what_, and **PRODUCT.md is the human's document** — plain-language product definition ("people pay €9/month to watch 5 pages each") that agents translate into specs. All are pre-structured templates, so no session starts from zero context. **Single-source rule for mirrors:** skill playbooks and `docs/agents/conventions.md` are canonical; `AGENTS.md` is a thin pointer, never a copy — a CI staleness check fails if a mirror diverges.
 
 ### 8.3 Repo-shipped agent skills + deterministic scaffolds
 
@@ -223,9 +227,9 @@ Agents retain nothing between sessions. Every decision persists as an artifact: 
 
 ### 8.4 Consistency: structural enforcement (the headline feature)
 
-The previous design enforced conventions by *detecting* violations with custom lint/semgrep rules ("every handler must call `requireSession()`"). Detection across wrappers, higher-order handlers, and re-exports is fragile — false negatives are silent security holes, false positives teach agents to fight the linter. **v1 enforces structurally instead: the safe way is the only way that compiles and lints.**
+The previous design enforced conventions by _detecting_ violations with custom lint/semgrep rules ("every handler must call `requireSession()`"). Detection across wrappers, higher-order handlers, and re-exports is fragile — false negatives are silent security holes, false positives teach agents to fight the linter. **v1 enforces structurally instead: the safe way is the only way that compiles and lints.**
 
-- **`defineHandler()` / `defineAction()` (in `packages/core`) are the only legal way to declare a route handler or server action.** Their signatures *require* an auth mode (`'required' | 'public'` — no default) and a zod input schema (or explicit `input: 'none'`); they accept an optional `rateLimit` policy (§8.5). Auth, validation, rate limiting, and error shaping run inside the wrapper — an agent cannot forget them, because there is nowhere to write a raw handler.
+- **`defineHandler()` / `defineAction()` (in `packages/core`) are the only legal way to declare a route handler or server action.** Their signatures _require_ an auth mode (`'required' | 'public'` — no default) and a zod input schema (or explicit `input: 'none'`); they accept an optional `rateLimit` policy (§8.5). Auth, validation, rate limiting, and error shaping run inside the wrapper — an agent cannot forget them, because there is nowhere to write a raw handler.
 - **One dumb, robust lint rule** replaces the fragile clever ones: raw `export async function GET/POST/...` in route files and raw exported functions in `"use server"` files are forbidden. Dumb rules don't have false negatives.
 - **Boundary rules in CI** (dependency-cruiser / eslint-boundaries): no vendor SDK import outside its adapter package; no LLM provider calls outside `packages/llm`; no `process.env` reads outside `packages/config`; no `packages/config` (server) imports from client components — backstopped by the `server-only` poison (§5.1). Webhook routes use `defineHandler({ auth: 'public', input: 'none', webhook: adapter })` — signature verification replaces the zod body, covered by contract tests.
 - **Contract tests** define "same": every billing adapter, email transport, and no-op fallback passes one shared interface suite.
@@ -235,7 +239,7 @@ The previous design enforced conventions by *detecting* violations with custom l
 
 AI-generated code carries an OWASP-class vulnerability in roughly 45% of cases (see research reports); the human reviewer may not catch what a senior engineer would. Defenses, most deterministic first:
 
-- **Secure-by-default topology (opt-out, not opt-in), enforced at two layers:** middleware provides the first, *optimistic* layer (route allowlist — public routes are explicit) but is **not the security boundary** (cf. CVE-2025-29927, the middleware-bypass class): the real boundary is `defineHandler`/`defineAction`'s mandatory auth mode (§8.4). Security headers and CSRF protection preconfigured. Drizzle parameterization kills SQL injection by construction.
+- **Secure-by-default topology (opt-out, not opt-in), enforced at two layers:** middleware provides the first, _optimistic_ layer (route allowlist — public routes are explicit) but is **not the security boundary** (cf. CVE-2025-29927, the middleware-bypass class): the real boundary is `defineHandler`/`defineAction`'s mandatory auth mode (§8.4). Security headers and CSRF protection preconfigured. Drizzle parameterization kills SQL injection by construction.
 - **Rate limiting lives in the wrapper, not in middleware** (edge middleware cannot open a TCP connection to Postgres): `defineHandler`'s `rateLimit` option uses a Postgres-backed fixed-window primitive (dedicated table, periodic pruning; no extra infra). Public handlers — exactly the ones that need limiting — declare a policy or an explicit `rateLimit: 'none'`. Documented caveats: under a volumetric attack the limiter itself loads the DB (it protects abuse of expensive endpoints, not L7 DDoS — that's the CDN/proxy's job), and a Redis-backed swap seam exists for scale.
 - **Outbound fetch safety (SSRF):** any feature that fetches user-supplied URLs (the demo does, on a cron) must use the shipped `safeFetch()` helper (`packages/core`): scheme allowlist, public-DNS resolution with private/link-local/metadata ranges denied, size/time limits, and re-validation on redirects.
 - **Guarded zones:** `packages/auth`, `packages/billing`, `packages/core`, `middleware.ts`, and DB migrations are declared sensitive. CI flags any PR touching them and requires a security checklist; agent instructions mandate a human-confirmation pause plus an independent fresh-context security review before merging changes there.
@@ -244,22 +248,22 @@ AI-generated code carries an OWASP-class vulnerability in roughly 45% of cases (
 
 ### 8.6 The Adoption Ledger (slim)
 
-The template must be **molded** — the adopter needs to *see* what still carries the factory's fingerprints (shipped theme, placeholder legal pages, demo logic). v1 keeps this deliberately small: **a manifest, a status command, and a preflight gate.** No ack ceremony, no overlay UI, no normalized hashing — those were cut as over-build (§11).
+The template must be **molded** — the adopter needs to _see_ what still carries the factory's fingerprints (shipped theme, placeholder legal pages, demo logic). v1 keeps this deliberately small: **a manifest, a status command, and a preflight gate.** No ack ceremony, no overlay UI, no normalized hashing — those were cut as over-build (§11).
 
 - `.factory/manifest.json` lists ~8 factory defaults a real product must eventually own: file path(s), **plain content hash of the shipped bytes**, severity, and the skill that addresses it (`design-system` → `apps/web/styles/theme.css` → `brand-it`; plus `product-def`, `app-identity`, `demo-logic`, `legal-pages`, `email-templates`, ...).
 - **Detection:** current hash == shipped hash → still factory default; differs → touched; missing → removed (also fine). Known, accepted limitation (documented in the manifest itself): a formatter pass or trivial edit flips an item to "touched" — the ledger is a guide for the agent conversation, and the preflight's per-item recipes (not the hash alone) are what gate shipping. Honest and simple beats clever and fragile.
 - **Two surfaces:** `pnpm factory:status` (also inside `pnpm doctor`) — agent-readable report: what's default, why it matters, which skill fixes it; `pnpm preflight` — the ship-readiness gate, run by CI and the `pre-ship-check` skill.
 - **Two stages** in `.factory/config.json`: `prototype` (everything advisory — mold freely, ship ugly) and `production` (severity items block preflight: identity, legal, demo removal, no test keys, unverified-auth warning acknowledged §5.2).
 
-The loop closes conversationally: the human asks their agent *"what's left to make this mine?"* → agent runs `factory:status` → follows the linked skill → item turns green. The ledger is the shared to-do list between human, agents, and CI.
+The loop closes conversationally: the human asks their agent _"what's left to make this mine?"_ → agent runs `factory:status` → follows the linked skill → item turns green. The ledger is the shared to-do list between human, agents, and CI.
 
 ### 8.7 Handoff: template repo vs product repo
 
 Two audiences with opposite goals — contributors building the template, adopters customizing away from it — need different agent instructions. v1 keeps the mechanism minimal; the previous mode-field/remote-heuristic machinery was cut (§11):
 
 - **Mode is inferred from one physical fact: the presence of `.factory/handoff/`.** Present → this is the template repo or an un-initialized clone (root CLAUDE.md/skills are the factory-dev set). Absent → a product repo.
-- **`pnpm factory:init` — one-shot, one-way, no interactivity:** promote `.factory/handoff/` over the root CLAUDE.md/AGENTS.md/skills, delete factory-dev-only skills and the handoff directory, set `stage: prototype`, print "ask your agent: *what's left to make this mine?*". Product definition and branding are NOT bundled — the ledger sequences them and the agent handles the process from there.
-- **Guard (advisory-only, never blocking):** while `.factory/handoff/` exists, `pnpm doctor` and CI print: *"This repo hasn't been initialized as a product. Run `pnpm factory:init` (contributors to the template itself: set `FACTORY_DEV=1` to silence this)."* Because the guard keys on the handoff directory — not on git remotes — it fires correctly for template-repo clones, forks, and tarball downloads alike, and needs no git at all.
+- **`pnpm factory:init` — one-shot, one-way, no interactivity:** promote `.factory/handoff/` over the root CLAUDE.md/AGENTS.md/skills, delete factory-dev-only skills and the handoff directory, set `stage: prototype`, print "ask your agent: _what's left to make this mine?_". Product definition and branding are NOT bundled — the ledger sequences them and the agent handles the process from there.
+- **Guard (advisory-only, never blocking):** while `.factory/handoff/` exists, `pnpm doctor` and CI print: _"This repo hasn't been initialized as a product. Run `pnpm factory:init` (contributors to the template itself: set `FACTORY_DEV=1` to silence this)."_ Because the guard keys on the handoff directory — not on git remotes — it fires correctly for template-repo clones, forks, and tarball downloads alike, and needs no git at all.
 - Shared rules live once in `docs/agents/conventions.md`, referenced by both instruction sets; the deterministic layer (§8.4–8.5, commitlint, degradation contract) sits below both modes and is untouched by the handoff.
 
 **Rejected alternatives:** a single CLAUDE.md with mode-conditional prose (context bloat + probabilistic enforcement, banned everywhere else); a separate private repo for factory tooling (splits the agent memory from the code, hostile to open-source contribution); a declared `mode` field + git-remote heuristic (previous design — more state to keep consistent, worse edge-case behavior than the handoff-presence check).
@@ -309,7 +313,7 @@ Two first-class, equally supported paths — the adopter picks one, the code is 
   - base: app + Postgres + migrate — `docker compose up` **is** the minimal-boot quickstart;
   - `jobs`: adds the self-hosted OSS Inngest server, with the signing/event-key wiring between app and server spelled out in the guide. Honest caveat in the guide: the OSS server is younger than the rest of the stack and lags Inngest Cloud on some features; the Cloud free tier is the low-friction default even for Docker-path apps;
   - `llm`: adds Ollama for the `local` LLM profile.
-  Runs on any VPS, Fly.io, Railway, Coolify, etc.
+    Runs on any VPS, Fly.io, Railway, Coolify, etc.
 
 **Health endpoint disclosure rule:** the public `/api/health` returns liveness/readiness status only. The full capability map (which providers are configured — recon data for an attacker) is available exclusively via `pnpm doctor` and, if exposed over HTTP at all, behind authentication.
 
@@ -320,10 +324,10 @@ Constraint reinforced: no code path may depend on Vercel-specific APIs; anything
 The engineering is unobservable without distribution; this section is the template's own PRODUCT.md.
 
 - **Positioning:** "The Next.js starter built for agent-driven development — your agents can't wreck auth, billing, or your database, because the repo won't let them." Lead with structural enforcement (§8.4–8.5) and zero-config boot; the ledger and skills are supporting cast. Primary audience: solo devs building products with Claude Code/Cursor-class agents.
-- **README** leads with the motto — *the human states intent, the agents do the work, the repository enforces the rules* — the degradation matrix, and a 5-minute quickstart (Codespaces button first).
+- **README** leads with the motto — _the human states intent, the agents do the work, the repository enforces the rules_ — the degradation matrix, and a 5-minute quickstart (Codespaces button first).
 - **Live demo:** the page-monitor demo runs at a public URL (Vercel free tier), linked from the README — including a visible "what's disabled here and why" panel, making graceful degradation demonstrable.
-- **Launch plan (v1 release checklist):** Show HN + r/nextjs + X/Bluesky thread anchored on the enforcement story ("I made a starter where the agent *can't* forget auth"); a short screencast of an agent building a feature end-to-end through `fabulous-feature`; submission to the shadcn/Next.js template galleries.
-- **Maintenance stance, stated honestly in the README:** the template is a **snapshot, not a subscription**. Tagged releases; Renovate config shipped (serves adopters *and* keeps the template itself current); pinned versions for the youngest dependencies (Better Auth — bumps are migration events and get a release note; Inngest OSS server). No promise of eternal freshness — the promise is that what you clone today is coherent, tested, and yours.
+- **Launch plan (v1 release checklist):** Show HN + r/nextjs + X/Bluesky thread anchored on the enforcement story ("I made a starter where the agent _can't_ forget auth"); a short screencast of an agent building a feature end-to-end through `fabulous-feature`; submission to the shadcn/Next.js template galleries.
+- **Maintenance stance, stated honestly in the README:** the template is a **snapshot, not a subscription**. Tagged releases; Renovate config shipped (serves adopters _and_ keeps the template itself current); pinned versions for the youngest dependencies (Better Auth — bumps are migration events and get a release note; Inngest OSS server). No promise of eternal freshness — the promise is that what you clone today is coherent, tested, and yours.
 - **Future funnel (v2 candidate):** extract the enforcement kernel (`packages/core` wrappers + boundary presets + semgrep rules) as a standalone installable package — independently valuable, and an acquisition channel for the template.
 - The repo dogfoods its own factory layer (ADRs, specs, skills) — the repo itself is the demo of the method.
 

@@ -12,14 +12,14 @@ Da questi numeri deriva una regola architetturale fondamentale:
 
 Per esempio, prendendo come scenario puramente illustrativo **50 operazioni al mese per utente, 3.000 token input + 700 output ciascuna**, il solo costo modello standard sarebbe circa:
 
-| Modello | Costo LLM / utente / mese nello scenario | Ruolo consigliato |
-|---|---:|---|
-| Claude Fable 5 | **$3,25** | sviluppo difficile, refactor, agenti lunghi, task offline ad alto valore |
-| Claude Opus 5 | **$1,63** | reviewer, escalation, output premium |
-| GPT‑5.6 Sol | **$1,80** | reasoning/coding OpenAI ad alta qualità |
-| GPT‑5.6 Terra | **$0,72** | runtime intermedio |
-| Claude Sonnet 5 | **$0,65** | runtime Anthropic bilanciato |
-| GPT‑5.6 Luna | **$0,072** | classificazioni, extraction, routing, task semplici |
+| Modello         | Costo LLM / utente / mese nello scenario | Ruolo consigliato                                                        |
+| --------------- | ---------------------------------------: | ------------------------------------------------------------------------ |
+| Claude Fable 5  |                                **$3,25** | sviluppo difficile, refactor, agenti lunghi, task offline ad alto valore |
+| Claude Opus 5   |                                **$1,63** | reviewer, escalation, output premium                                     |
+| GPT‑5.6 Sol     |                                **$1,80** | reasoning/coding OpenAI ad alta qualità                                  |
+| GPT‑5.6 Terra   |                                **$0,72** | runtime intermedio                                                       |
+| Claude Sonnet 5 |                                **$0,65** | runtime Anthropic bilanciato                                             |
+| GPT‑5.6 Luna    |                               **$0,072** | classificazioni, extraction, routing, task semplici                      |
 
 I valori sono calcoli su uno scenario uniforme, non benchmark di consumo reale; i prezzi sottostanti sono quelli ufficiali correnti. citeturn15search0turn24view0
 
@@ -59,7 +59,7 @@ Dovrebbe essere:
 
 Auth, billing, tenant, cron, queue, email, analytics, feature flag, prompt registry, model gateway, audit, cost accounting e CI/CD devono essere condivisi. A quel punto il costo marginale per testare il progetto successivo precipita.
 
-Con il tuo profilo tecnico, imposterei la metrica principale non come *tempo di sviluppo*, ma:
+Con il tuo profilo tecnico, imposterei la metrica principale non come _tempo di sviluppo_, ma:
 
 > **giorni da ipotesi a primo pagamento.**
 
@@ -108,8 +108,8 @@ generate({
   task: "contract_analysis",
   quality: "high",
   dataClass: "confidential",
-  maxCostCents: 8
-})
+  maxCostCents: 8,
+});
 ```
 
 e non soltanto `model: "fable"`.
@@ -187,15 +187,15 @@ interface GenerateResult<T> {
 
 Routing iniziale:
 
-| Tipo di workload | Primary | Escalation | Note |
-|---|---|---|---|
-| classificazione/extraction semplice | GPT‑5.6 Luna | Terra | structured output |
-| sintesi breve | Luna/Sonnet | Terra | cache del system prompt |
-| analisi articolata | Terra | Opus | escalation solo su failure/eval |
-| documenti complessi | Opus | Fable | attenzione a retention |
-| coding interno | Fable | Opus reviewer | costo imputato a R&D |
-| bulk async | Luna/Terra Batch | Opus Batch | nessun requisito real-time |
-| dato molto sensibile | policy-dependent | policy-dependent | bloccare modelli non compatibili |
+| Tipo di workload                    | Primary          | Escalation       | Note                             |
+| ----------------------------------- | ---------------- | ---------------- | -------------------------------- |
+| classificazione/extraction semplice | GPT‑5.6 Luna     | Terra            | structured output                |
+| sintesi breve                       | Luna/Sonnet      | Terra            | cache del system prompt          |
+| analisi articolata                  | Terra            | Opus             | escalation solo su failure/eval  |
+| documenti complessi                 | Opus             | Fable            | attenzione a retention           |
+| coding interno                      | Fable            | Opus reviewer    | costo imputato a R&D             |
+| bulk async                          | Luna/Terra Batch | Opus Batch       | nessun requisito real-time       |
+| dato molto sensibile                | policy-dependent | policy-dependent | bloccare modelli non compatibili |
 
 Prompt caching è particolarmente importante nei workload agentici con istruzioni, tool e contesto ripetuti. Anthropic fattura i cache hit di Fable a $1/M invece di $10/M e quelli di Opus a $0,50/M invece di $5/M; le sue API permettono caching automatico o breakpoint espliciti. citeturn15search0turn15search9turn15search18 Anche OpenAI supporta prompt caching e pubblica pricing dedicato per cached input. citeturn23search12turn24view0
 
@@ -219,16 +219,16 @@ modello premium
 
 Le cifre qui sotto sono **stime progettuali mie**, non forecast di mercato. Assumono: lavoro tecnico tuo non contabilizzato; infrastruttura essenziale; crescita founder-led senza budget pubblicitario significativo; orizzonte iniziale circa 2–6 mesi; MRR già al netto dell'illusione “100.000 utenti in tre settimane”.
 
-| Nome | Descrizione | Tech stack | Tempo | Costo iniziale* | MRR stimato | Complessità | Note |
-|---|---|---|---:|---:|---:|---:|---|
-| **Model/API Change Radar** | Monitora pricing, changelog e documentazione di API/AI/SaaS; semantic diff, severity e digest | TS, Hono/Next, Workers/Cron, Postgres/D1, queue, Luna/Terra, Stripe, email | 1,5–2,5 sett. | €40–120 | **€250–1.200** | 2/5 | 25–80 clienti a €9–19. Differenziarlo dai monitor generici con fonti curate e impact analysis |
-| **ANAC Tender Brief Verticale** | Filtra bandi per una nicchia, valuta fit, scadenze, requisiti e produce briefing | TS/Python, Postgres, ANAC OCDS, worker, LLM structured output, email | 2–3 sett. | €50–150 | **€300–1.500** | 3/5 | Prezzo €19–39. ANAC pubblica open data sugli appalti italiani anche in OCDS. citeturn15search2turn15search8turn15search29 |
-| **LLM Regression Gate** | GitHub Action/App che esegue golden prompts, schema checks, judge e blocca PR se la qualità degrada | GitHub Actions, TS, provider gateway, DB, Langfuse opzionale | 2–3 sett. | €50–150 | **€180–1.000** | 3/5 | €9–29/repo. Non competere con piattaforme LLM complete: “un YAML, un gate, fine” |
-| **Release Notes → Customer Digest** | Da commit/release/ticket produce changelog cliente, email e post con approval | Next/TS, GitHub webhooks, DB, LLM, email, Stripe | 1–2 sett. | €30–100 | **€180–800** | 2/5 | €9–19; facile da costruire, moat basso, serve verticalizzazione |
-| **CSV Cleanup & Enrichment API** | Normalizza categorie, entità, indirizzi/campi e produce confidence score | Python/FastAPI o TS, queue, object storage, Luna/Terra, Stripe Meter | 1,5–2 sett. | €40–120 | **€100–700** | 2/5 | Ideale pay-per-use/prepaid; privacy e commoditizzazione sono i rischi principali |
-| **Agency Scope Guard** | Controlla proposal/SOW: incongruenze, assunzioni mancanti, scope creep, timeline rischiose | Next, object storage, parser, LLM, prompt registry | 1,5–2,5 sett. | €40–120 | **€200–1.000** | 2,5/5 | €15–29. Posizionarlo come QA operativo, non consulenza legale |
-| **Vendor Policy Change Radar** | Monitora ToS, privacy policy e pricing dei vendor di un'azienda e segnala variazioni | Stesso core del Change Radar + semantic diff + alerts | 2–3 sett. | €50–150 | **€300–1.500** | 3/5 | €19–49; riutilizza quasi completamente il progetto numero uno |
-| **Google Review Copilot verticale** | Queue di recensioni, suggerimento risposta coerente col brand e approvazione umana | Next, OAuth, GBP API, DB, scheduler, LLM | 2,5–4 sett. | €100–250 | **€300–1.500** | 4/5 | API e onboarding aumentano la frizione; non lo metterei nei primi tre |
+| Nome                                | Descrizione                                                                                         | Tech stack                                                                 |         Tempo | Costo iniziale* |    MRR stimato | Complessità | Note                                                                                                                           |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------: | --------------: | -------------: | ----------: | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Model/API Change Radar**          | Monitora pricing, changelog e documentazione di API/AI/SaaS; semantic diff, severity e digest       | TS, Hono/Next, Workers/Cron, Postgres/D1, queue, Luna/Terra, Stripe, email | 1,5–2,5 sett. |         €40–120 | **€250–1.200** |         2/5 | 25–80 clienti a €9–19. Differenziarlo dai monitor generici con fonti curate e impact analysis                                  |
+| **ANAC Tender Brief Verticale**     | Filtra bandi per una nicchia, valuta fit, scadenze, requisiti e produce briefing                    | TS/Python, Postgres, ANAC OCDS, worker, LLM structured output, email       |     2–3 sett. |         €50–150 | **€300–1.500** |         3/5 | Prezzo €19–39. ANAC pubblica open data sugli appalti italiani anche in OCDS. citeturn15search2turn15search8turn15search29 |
+| **LLM Regression Gate**             | GitHub Action/App che esegue golden prompts, schema checks, judge e blocca PR se la qualità degrada | GitHub Actions, TS, provider gateway, DB, Langfuse opzionale               |     2–3 sett. |         €50–150 | **€180–1.000** |         3/5 | €9–29/repo. Non competere con piattaforme LLM complete: “un YAML, un gate, fine”                                               |
+| **Release Notes → Customer Digest** | Da commit/release/ticket produce changelog cliente, email e post con approval                       | Next/TS, GitHub webhooks, DB, LLM, email, Stripe                           |     1–2 sett. |         €30–100 |   **€180–800** |         2/5 | €9–19; facile da costruire, moat basso, serve verticalizzazione                                                                |
+| **CSV Cleanup & Enrichment API**    | Normalizza categorie, entità, indirizzi/campi e produce confidence score                            | Python/FastAPI o TS, queue, object storage, Luna/Terra, Stripe Meter       |   1,5–2 sett. |         €40–120 |   **€100–700** |         2/5 | Ideale pay-per-use/prepaid; privacy e commoditizzazione sono i rischi principali                                               |
+| **Agency Scope Guard**              | Controlla proposal/SOW: incongruenze, assunzioni mancanti, scope creep, timeline rischiose          | Next, object storage, parser, LLM, prompt registry                         | 1,5–2,5 sett. |         €40–120 | **€200–1.000** |       2,5/5 | €15–29. Posizionarlo come QA operativo, non consulenza legale                                                                  |
+| **Vendor Policy Change Radar**      | Monitora ToS, privacy policy e pricing dei vendor di un'azienda e segnala variazioni                | Stesso core del Change Radar + semantic diff + alerts                      |     2–3 sett. |         €50–150 | **€300–1.500** |         3/5 | €19–49; riutilizza quasi completamente il progetto numero uno                                                                  |
+| **Google Review Copilot verticale** | Queue di recensioni, suggerimento risposta coerente col brand e approvazione umana                  | Next, OAuth, GBP API, DB, scheduler, LLM                                   |   2,5–4 sett. |        €100–250 | **€300–1.500** |         4/5 | API e onboarding aumentano la frizione; non lo metterei nei primi tre                                                          |
 
 \*Costo operativo iniziale indicativo, escluso il tuo lavoro e abbonamenti developer già posseduti.
 
@@ -401,32 +401,32 @@ flowchart LR
 
 ### Template operativo
 
-| Fase | Deliverable | Gate per procedere |
-|---|---|---|
-| **Segnale** | problema + persona + evento ricorrente | sai descriverlo senza usare la parola “AI” |
-| **Scoring** | idea score 0–100 | ≥70 secondo la tua rubrica |
-| **Pre‑validation** | landing, prezzo, CTA | prospect lascia email/demo o tenta di pagare |
-| **Concierge** | risultato prodotto manualmente | almeno 3–5 persone lo reputano utile |
-| **Spec** | 1 JTBD, flusso principale, error states | zero feature “nice to have” |
-| **Eval** | 20–100 casi golden | qualità misurabile prima del coding AI |
-| **Vertical slice** | input → output → billing | un utente può completare il job intero |
-| **Beta** | 3–10 utenti | activation e costo/task accettabili |
-| **Paid** | checkout reale | almeno un estraneo paga |
-| **Canary** | 5–10% traffico | errori/costi/eval non degradano |
-| **Scale** | async, batch, cache | unit economics già sane |
-| **Kill / archive** | export + stop billing + delete | nessuna traction oppure maintenance tax eccessiva |
+| Fase               | Deliverable                             | Gate per procedere                                |
+| ------------------ | --------------------------------------- | ------------------------------------------------- |
+| **Segnale**        | problema + persona + evento ricorrente  | sai descriverlo senza usare la parola “AI”        |
+| **Scoring**        | idea score 0–100                        | ≥70 secondo la tua rubrica                        |
+| **Pre‑validation** | landing, prezzo, CTA                    | prospect lascia email/demo o tenta di pagare      |
+| **Concierge**      | risultato prodotto manualmente          | almeno 3–5 persone lo reputano utile              |
+| **Spec**           | 1 JTBD, flusso principale, error states | zero feature “nice to have”                       |
+| **Eval**           | 20–100 casi golden                      | qualità misurabile prima del coding AI            |
+| **Vertical slice** | input → output → billing                | un utente può completare il job intero            |
+| **Beta**           | 3–10 utenti                             | activation e costo/task accettabili               |
+| **Paid**           | checkout reale                          | almeno un estraneo paga                           |
+| **Canary**         | 5–10% traffico                          | errori/costi/eval non degradano                   |
+| **Scale**          | async, batch, cache                     | unit economics già sane                           |
+| **Kill / archive** | export + stop billing + delete          | nessuna traction oppure maintenance tax eccessiva |
 
 La rubrica di ideazione che userei è:
 
-| Dimensione | Peso |
-|---|---:|
-| problema/evento ricorrente | 25% |
-| willingness to pay | 20% |
-| facilità di raggiungere il buyer | 15% |
-| MVP ≤ circa due settimane | 15% |
-| costo variabile basso | 10% |
-| rischio privacy/legal basso | 10% |
-| flywheel distributivo | 5% |
+| Dimensione                       | Peso |
+| -------------------------------- | ---: |
+| problema/evento ricorrente       |  25% |
+| willingness to pay               |  20% |
+| facilità di raggiungere il buyer |  15% |
+| MVP ≤ circa due settimane        |  15% |
+| costo variabile basso            |  10% |
+| rischio privacy/legal basso      |  10% |
+| flywheel distributivo            |   5% |
 
 Questi pesi sono una mia euristica operativa. Sono volutamente sbilanciati su ricorrenza, pagamento e distribuzione anziché sulla sofisticazione tecnica.
 
@@ -635,14 +635,14 @@ Le tempistiche e gli obblighi effettivi dipendono dai termini contrattuali, dal 
 
 ### Modello di monetizzazione per tipo di problema
 
-| Situazione | Monetizzazione migliore | Esempio |
-|---|---|---|
-| evento esterno ricorrente | **subscription** | Change Radar, Tender Radar |
-| task costoso richiesto dall'utente | **pay-per-use / credits** | CSV enrichment |
-| uso stabile + picchi | **base fee + overage** | API |
-| prodotto con costo marginale quasi zero | **freemium** | 1 monitor gratuito |
-| audience pubblica rilevante | **affiliate / ads** | directory, comparatori |
-| integrazione machine-to-machine | **API licensing** | enrichment/evaluation API |
+| Situazione                              | Monetizzazione migliore   | Esempio                    |
+| --------------------------------------- | ------------------------- | -------------------------- |
+| evento esterno ricorrente               | **subscription**          | Change Radar, Tender Radar |
+| task costoso richiesto dall'utente      | **pay-per-use / credits** | CSV enrichment             |
+| uso stabile + picchi                    | **base fee + overage**    | API                        |
+| prodotto con costo marginale quasi zero | **freemium**              | 1 monitor gratuito         |
+| audience pubblica rilevante             | **affiliate / ads**       | directory, comparatori     |
+| integrazione machine-to-machine         | **API licensing**         | enrichment/evaluation API  |
 
 Stripe supporta sia subscription sia metering per usage-based billing; i Billing Meters aggregano eventi di utilizzo legati ai prezzi e possono essere definiti anche attraverso tooling infrastrutturale. citeturn18search37turn18search29 Il Customer Portal evita inoltre di sviluppare da zero gestione carta, piano e cancellazione. citeturn18search9
 
@@ -770,16 +770,16 @@ webhook retry
 
 Per i progetti analizzati userei questo ordine:
 
-| Canale | Quando | Asset |
-|---|---|---|
-| **direct founder outreach** | sempre all'inizio | demo personalizzata |
-| **SEO utility** | problema cercabile | calculator, diff, database pubblico |
-| **niche community** | buyer tecnico | post dimostrativo, non spam |
-| **GitHub/open source** | devtool | action/template/free CLI |
-| **integration marketplace** | SaaS B2B | GitHub, Slack, ecc. |
-| **Product Hunt** | lancio | spike di visibilità/feedback |
-| **content from product** | monitor/dati | report automatici condivisibili |
-| **referral** | output collaborativo | “share report” |
+| Canale                      | Quando               | Asset                               |
+| --------------------------- | -------------------- | ----------------------------------- |
+| **direct founder outreach** | sempre all'inizio    | demo personalizzata                 |
+| **SEO utility**             | problema cercabile   | calculator, diff, database pubblico |
+| **niche community**         | buyer tecnico        | post dimostrativo, non spam         |
+| **GitHub/open source**      | devtool              | action/template/free CLI            |
+| **integration marketplace** | SaaS B2B             | GitHub, Slack, ecc.                 |
+| **Product Hunt**            | lancio               | spike di visibilità/feedback        |
+| **content from product**    | monitor/dati         | report automatici condivisibili     |
+| **referral**                | output collaborativo | “share report”                      |
 
 Product Hunt stessa tratta il launch come un modo per ottenere early adopters e feedback; lo userei quindi come **evento di lancio**, non come motore MRR permanente. citeturn8search2turn8search6
 
@@ -831,15 +831,15 @@ Userei quattro blocchi, non quaranta dashboard.
 
 **Business**
 
-| Metrica | Perché |
-|---|---|
-| MRR | dimensione recurring |
-| net new MRR | crescita vera |
-| ARPA | valore medio |
-| logo churn rolling | stabilità |
-| revenue churn | perdita economica |
-| trial → paid | pricing/fit |
-| payment failures | churn involontario |
+| Metrica            | Perché               |
+| ------------------ | -------------------- |
+| MRR                | dimensione recurring |
+| net new MRR        | crescita vera        |
+| ARPA               | valore medio         |
+| logo churn rolling | stabilità            |
+| revenue churn      | perdita economica    |
+| trial → paid       | pricing/fit          |
+| payment failures   | churn involontario   |
 
 Stripe espone dati di subscription, invoice, customer, usage meter e MRR utilizzabili per analisi di billing. citeturn18search25
 
@@ -1140,11 +1140,11 @@ SELECT * FROM customer_database → prompt
 
 Classificazione:
 
-| Classe | Esempi | Regola |
-|---|---|---|
-| public | siti, changelog | modello libero entro policy |
-| internal | log non personali | provider approvato |
-| personal | email, nomi, ticket | minimizzare + retention review |
+| Classe    | Esempi                       | Regola                          |
+| --------- | ---------------------------- | ------------------------------- |
+| public    | siti, changelog              | modello libero entro policy     |
+| internal  | log non personali            | provider approvato              |
+| personal  | email, nomi, ticket          | minimizzare + retention review  |
 | sensitive | salute, segreti, credenziali | default deny / flusso specifico |
 
 Per OpenAI, le Response sono salvate per 30 giorni di default, ma è possibile disabilitare il salvataggio con `store:false`; per clienti idonei esistono inoltre Modified Abuse Monitoring e Zero Data Retention, soggetti ad approvazione. citeturn23search25turn23search0
@@ -1567,14 +1567,14 @@ Return:
 
 La sequenza che sceglierei è questa:
 
-| Periodo | Prodotto | Obiettivo |
-|---|---|---|
-| **settimana iniziale** | shared micro‑SaaS kit | billing, auth, model gateway, analytics, worker, CI |
-| **settimane successive** | Model/API Change Radar | primo MRR + motore monitoring riutilizzabile |
-| **subito dopo** | Change Radar validation | 3–5 paganti, kill/continue |
-| **fase seguente** | ANAC Tender Brief | riuso scheduler, notification, ranking, billing |
-| **fase seguente** | ANAC vertical validation | trovare una singola nicchia pagante |
-| **fase finale iniziale** | LLM Regression Gate | devtool dogfooding + distribuzione GitHub |
+| Periodo                  | Prodotto                 | Obiettivo                                           |
+| ------------------------ | ------------------------ | --------------------------------------------------- |
+| **settimana iniziale**   | shared micro‑SaaS kit    | billing, auth, model gateway, analytics, worker, CI |
+| **settimane successive** | Model/API Change Radar   | primo MRR + motore monitoring riutilizzabile        |
+| **subito dopo**          | Change Radar validation  | 3–5 paganti, kill/continue                          |
+| **fase seguente**        | ANAC Tender Brief        | riuso scheduler, notification, ranking, billing     |
+| **fase seguente**        | ANAC vertical validation | trovare una singola nicchia pagante                 |
+| **fase finale iniziale** | LLM Regression Gate      | devtool dogfooding + distribuzione GitHub           |
 
 #### Priorità massima: Model/API Change Radar
 
