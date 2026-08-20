@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Mirrors packages/auth and packages/config: this package reads process.env
+    // indirectly via @factory/config only, but @sentry/node's and @opentelemetry/api's
+    // types (and vitest's node-environment globals) expect @types/node to be present.
+    "types": ["node"]
+  },
+  "include": ["src", "test"]
+}

@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 
 import { deriveAuthOptions } from "../src/options";
 
-// Auth is always-on and, in M2, independent of every capability flag — content doesn't
-// matter for these tests, only that a well-formed Capabilities object is passed through.
+// A well-formed default Capabilities object. Auth itself is always-on, but since M4 the
+// email capability drives verification/magic-link — tests that exercise that override the
+// `email` field explicitly.
 const CAPABILITIES: Capabilities = {
   billing: "disabled",
   llm: "disabled",
@@ -15,7 +16,7 @@ const CAPABILITIES: Capabilities = {
 };
 
 describe("deriveAuthOptions — requireEmailVerification", () => {
-  it("is always false (TODO(M4))", () => {
+  it("is false when email is disabled", () => {
     expect(deriveAuthOptions({}, CAPABILITIES).requireEmailVerification).toBe(false);
 
     const fullEnv: RawEnv = {
@@ -25,6 +26,42 @@ describe("deriveAuthOptions — requireEmailVerification", () => {
       GITHUB_CLIENT_SECRET: "hsecret",
     };
     expect(deriveAuthOptions(fullEnv, CAPABILITIES).requireEmailVerification).toBe(false);
+  });
+
+  it("is true whenever email is enabled (console or resend), regardless of env", () => {
+    const consoleCapabilities: Capabilities = { ...CAPABILITIES, email: "console" };
+    const resendCapabilities: Capabilities = { ...CAPABILITIES, email: "resend" };
+
+    expect(deriveAuthOptions({}, consoleCapabilities).requireEmailVerification).toBe(true);
+    expect(deriveAuthOptions({}, resendCapabilities).requireEmailVerification).toBe(true);
+  });
+});
+
+describe("deriveAuthOptions — email feature flags (plan E.9.6)", () => {
+  it("both verification and magicLink are false when email is disabled", () => {
+    const options = deriveAuthOptions({}, CAPABILITIES);
+    expect(options.email).toEqual({ verification: false, magicLink: false });
+  });
+
+  it("both verification and magicLink are true when email is console (dev)", () => {
+    const capabilities: Capabilities = { ...CAPABILITIES, email: "console" };
+    const options = deriveAuthOptions({}, capabilities);
+    expect(options.email).toEqual({ verification: true, magicLink: true });
+  });
+
+  it("both verification and magicLink are true when email is resend", () => {
+    const capabilities: Capabilities = { ...CAPABILITIES, email: "resend" };
+    const options = deriveAuthOptions({}, capabilities);
+    expect(options.email).toEqual({ verification: true, magicLink: true });
+  });
+
+  it("email flags always track requireEmailVerification together", () => {
+    for (const email of ["disabled", "console", "resend"] as const) {
+      const capabilities: Capabilities = { ...CAPABILITIES, email };
+      const options = deriveAuthOptions({}, capabilities);
+      expect(options.email.verification).toBe(options.requireEmailVerification);
+      expect(options.email.magicLink).toBe(options.requireEmailVerification);
+    }
   });
 });
 

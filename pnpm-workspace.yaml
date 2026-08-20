@@ -2,6 +2,8 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
+  # core-js's postinstall only prints a funding banner; no build step needed.
+  core-js: false
   esbuild: true
   sharp: true
 # Supply-chain hardening (spec §8.5; flagged by the semgrep OWASP ruleset):
@@ -15,6 +17,11 @@ trustPolicy: no-downgrade
 # policy drop.
 trustPolicyExclude:
   - undici-types
+  # resend 6.20.0 (current `latest`) was published by a different, legitimate Resend
+  # maintainer than the provenance-attested prior release — a maintainer-rotation gap,
+  # not a takeover. Scoped exclusion so the official email SDK installs; revisit if
+  # resend restores provenance attestation.
+  - resend
 minimumReleaseAgeExclude:
   - lucide-react@1.33.0
 # Security overrides for high-severity advisories reaching us transitively

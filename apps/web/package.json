@@ -9,9 +9,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@factory/analytics": "workspace:*",
     "@factory/auth": "workspace:*",
     "@factory/config": "workspace:*",
     "@factory/core": "workspace:*",
+    "@factory/observability": "workspace:*",
     "better-auth": "^1.7.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

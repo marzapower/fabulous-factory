@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // client.tsx reads window/document indirectly through posthog-js's init call and
+    // next/navigation's usePathname/useSearchParams; the root base config targets server
+    // code only (lib: ["es2022"]) so DOM lib is added here, same as packages/config.
+    "types": ["node"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src", "test"]
+}
