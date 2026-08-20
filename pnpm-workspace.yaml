@@ -4,5 +4,23 @@ packages:
 allowBuilds:
   esbuild: true
   sharp: true
+# Supply-chain hardening (spec §8.5; flagged by the semgrep OWASP ruleset):
+# wait a day before adopting fresh releases, keep the dep tree registry-only,
+# and require explicit approval for build scripts of newly added packages.
+minimumReleaseAge: 1440
+blockExoticSubdeps: true
+trustPolicy: no-downgrade
+# undici-types 6.x is the exact pin of @types/node 22.x (our Node floor); its old
+# releases predate npm provenance, tripping no-downgrade. Scoped exclusion, not a
+# policy drop.
+trustPolicyExclude:
+  - undici-types
 minimumReleaseAgeExclude:
   - lucide-react@1.33.0
+# Security overrides for high-severity advisories reaching us transitively
+# through `next` (sharp libvips CVEs GHSA-f88m-g3jw-g9cj; postcss source-map
+# traversal GHSA-6g55-p6wh-862q / GHSA-r28c-9q8g-f849). Drop each once next
+# ships with patched ranges.
+overrides:
+  sharp: ">=0.35.0"
+  postcss: ">=8.5.18"
