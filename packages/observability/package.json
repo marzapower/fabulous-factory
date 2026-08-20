@@ -1,0 +1,23 @@
+{
+  "name": "@factory/observability",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@factory/config": "workspace:*",
+    "@opentelemetry/api": "^1.9.1",
+    "@sentry/node": "^10.70.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
+  }
+}

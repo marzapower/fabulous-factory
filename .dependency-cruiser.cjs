@@ -176,15 +176,17 @@ module.exports = {
       },
     },
     {
-      name: "dag-auth-imports-only-config-db",
+      name: "dag-auth-imports-config-db-email",
       severity: "error",
       comment:
-        "packages/auth may depend on packages/config and packages/db only (DAG: db ← auth). Must not import packages/core (no cycle, plan D.2).",
+        "packages/auth may depend on packages/config, packages/db, and (from M4) " +
+        "packages/email (sendVerificationEmail/sendMagicLink). Must NOT import " +
+        "packages/core (no cycle, plan D.2) or analytics/observability.",
       from: {
         path: "^packages/auth/",
       },
       to: {
-        path: "^packages/core/",
+        path: "^packages/(core|analytics|observability)/",
       },
     },
     {
@@ -196,6 +198,96 @@ module.exports = {
       },
       to: {
         path: "(^|/)node_modules/undici(/|$)",
+      },
+    },
+    {
+      name: "dag-email-imports-only-config",
+      severity: "error",
+      comment:
+        "packages/email may depend on packages/config only (M4/E.7). It must NOT import " +
+        "packages/auth — the dependency runs auth → email (sendVerificationEmail), never " +
+        "the reverse; an email → auth edge would create a cycle.",
+      from: {
+        path: "^packages/email/",
+      },
+      to: {
+        path: "^packages/(auth|db|core|analytics|observability)/",
+      },
+    },
+    {
+      name: "dag-analytics-imports-only-config",
+      severity: "error",
+      comment: "packages/analytics may depend on packages/config only (M4/E.7).",
+      from: {
+        path: "^packages/analytics/",
+      },
+      to: {
+        path: "^packages/(auth|db|core|email|observability)/",
+      },
+    },
+    {
+      name: "dag-observability-imports-only-config",
+      severity: "error",
+      comment: "packages/observability may depend on packages/config only (M4/E.7).",
+      from: {
+        path: "^packages/observability/",
+      },
+      to: {
+        path: "^packages/(auth|db|core|email|analytics)/",
+      },
+    },
+    {
+      name: "resend-only-in-email",
+      severity: "error",
+      comment:
+        "The Resend SDK may only be imported in packages/email (guarded dynamic import — " +
+        "never loaded on the disabled/console transports).",
+      from: {
+        pathNot: "^packages/email/",
+      },
+      to: {
+        path: "(^|/)node_modules/resend(/|$)",
+      },
+    },
+    {
+      name: "posthog-only-in-analytics",
+      severity: "error",
+      comment:
+        "posthog-node/posthog-js are confined to packages/analytics (server track + client " +
+        "bootstrap); everything else goes through @factory/analytics.",
+      from: {
+        pathNot: "^packages/analytics/",
+      },
+      to: {
+        path: "(^|/)node_modules/posthog-(node|js)(/|$)",
+      },
+    },
+    {
+      name: "sentry-only-in-observability",
+      severity: "error",
+      comment:
+        "@sentry/node is confined to packages/observability (guarded dynamic import — " +
+        "loaded only when SENTRY_DSN is present).",
+      from: {
+        pathNot: "^packages/observability/",
+      },
+      to: {
+        path: "(^|/)node_modules/@sentry(/|$)",
+      },
+    },
+    {
+      name: "otel-api-only-in-observability",
+      severity: "error",
+      comment:
+        "@opentelemetry/api is confined to packages/observability, which owns the no-op " +
+        "tracer seam. packages/llm (M5) consumes the tracer via @factory/observability, " +
+        "not by importing @opentelemetry/api directly — this rule's `from` gains " +
+        "^packages/llm/ in M5 if that changes.",
+      from: {
+        pathNot: "^packages/observability/",
+      },
+      to: {
+        path: "(^|/)node_modules/@opentelemetry/",
       },
     },
   ],

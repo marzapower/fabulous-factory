@@ -25,25 +25,37 @@ export interface SocialProviders {
   github?: SocialProviderCredentials;
 }
 
+/** Which email-dependent auth features are live (plan E.9.6) — decided server-side so the
+ * web layer never has to guess or read a capability itself. Both flags track the same
+ * signal (`capabilities.email !== "disabled"`) but are kept as two fields, not one, since
+ * they gate distinct UI affordances (a "check your email" pending state vs. a magic-link
+ * entry point) that could in principle diverge later. */
+export interface AuthEmailFeatures {
+  verification: boolean;
+  magicLink: boolean;
+}
+
 export interface AuthOptions {
   /**
-   * Always `false` in M2 — email verification posture (spec §5.2) ships in M4, which is
-   * when this starts reflecting real state. Kept as a field now (rather than omitted) so
-   * the web agent's UI can read it directly instead of hardcoding the M2 default itself.
+   * Capability-driven as of M4 (spec §5.2, plan E.9): `true` whenever the email service is
+   * enabled (secure default — verify before granting a session), `false` when email is
+   * `disabled` so auth never deadlocks on an optional service.
    */
   requireEmailVerification: boolean;
+  /** Non-optional (E.9.6) — the web layer decides UI (verify-pending state, magic-link
+   * entry point) from this rather than reading capabilities itself. */
+  email: AuthEmailFeatures;
   socialProviders: SocialProviders;
   enabledProviders: SocialProviderName[];
 }
 
 /**
  * A social provider is enabled iff BOTH its client ID and client secret are present —
- * never just one. `capabilities` is accepted for signature symmetry with the rest of the
- * config package's pure derivation functions; auth itself is always-on and does not yet
- * depend on any capability flag (M2).
+ * never just one. Email verification and magic-link are both capability-driven: live
+ * whenever `capabilities.email !== "disabled"` (spec §5.2, plan E.9.6).
  */
 export function deriveAuthOptions(env: RawEnv, capabilities: Capabilities): AuthOptions {
-  void capabilities;
+  const emailEnabled = capabilities.email !== "disabled";
 
   const socialProviders: SocialProviders = {};
   const enabledProviders: SocialProviderName[] = [];
@@ -65,8 +77,8 @@ export function deriveAuthOptions(env: RawEnv, capabilities: Capabilities): Auth
   }
 
   return {
-    // TODO(M4): flip once email verification posture (spec §5.2) ships.
-    requireEmailVerification: false,
+    requireEmailVerification: emailEnabled,
+    email: { verification: emailEnabled, magicLink: emailEnabled },
     socialProviders,
     enabledProviders,
   };

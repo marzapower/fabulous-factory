@@ -13,7 +13,15 @@ import path from "path";
 // workspace lives on disk.
 const nextConfig: NextConfig = {
   output: "standalone",
-  transpilePackages: ["@factory/config", "@factory/auth", "@factory/db", "@factory/core"],
+  transpilePackages: [
+    "@factory/config",
+    "@factory/auth",
+    "@factory/db",
+    "@factory/core",
+    "@factory/email",
+    "@factory/analytics",
+    "@factory/observability",
+  ],
   outputFileTracingRoot: path.join(__dirname, "../../"),
 
   // Security headers (design spec §8.4/§8.5, plan D.6). Deliberately NO Content-Security-

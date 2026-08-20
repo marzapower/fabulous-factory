@@ -27,13 +27,14 @@ export function SignupForm({ enabledProviders }: SignupFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [socialLoading, setSocialLoading] = useState<"google" | "github" | null>(null);
+  const [verifyPending, setVerifyPending] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error: signUpError } = await authClient.signUp.email({ email, password, name });
+    const { data, error: signUpError } = await authClient.signUp.email({ email, password, name });
 
     if (signUpError) {
       setError(signUpError.message ?? "Unable to create your account.");
@@ -41,8 +42,32 @@ export function SignupForm({ enabledProviders }: SignupFormProps) {
       return;
     }
 
+    // Better Auth's `/sign-up/email` returns `{ token: null, user }` — no active session —
+    // when `requireEmailVerification` is on (plan E.9.1: verified against better-auth
+    // 1.7.1's `signUpEmail` endpoint types, `dist/api/routes/sign-up.d.mts`), and
+    // `{ token: string, user }` with a session cookie already set when it's off (email
+    // disabled — the honest §5.2 fallback). Branch on that returned shape, never on a
+    // client-side capability read: pushing to `/dashboard` with no session would just
+    // bounce straight back to `/login` via `requireSession()`.
+    if (!data?.token) {
+      setLoading(false);
+      setVerifyPending(true);
+      return;
+    }
+
     router.push("/dashboard");
     router.refresh();
+  }
+
+  if (verifyPending) {
+    return (
+      <div className="grid gap-2 text-center">
+        <p className="text-sm font-medium">Check your email to verify your account</p>
+        <p className="text-sm text-muted-foreground">
+          We sent a verification link to {email}. Click it to finish setting up your account.
+        </p>
+      </div>
+    );
   }
 
   async function handleSocial(provider: "google" | "github") {

@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // This package reads process.env indirectly via @factory/config only, but the
+    // templates use DOM-shaped JSX (html/body/a) and @types/react's ambient types
+    // reference lib.dom.d.ts; the root base config targets server code only
+    // (lib: ["es2022"]), so DOM needs adding here (same pattern as packages/config).
+    "types": ["node"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src", "test"]
+}
