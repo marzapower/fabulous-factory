@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   constructorSpy: vi.fn(),
   captureMock: vi.fn(),
   isFeatureEnabledMock: vi.fn(),
-  shutdownMock: vi.fn(),
+  flushMock: vi.fn(),
   getCapabilitiesMock: vi.fn(),
   getEnvMock: vi.fn(),
 }));
@@ -29,8 +29,8 @@ vi.mock("posthog-node", () => {
     isFeatureEnabled(...args: unknown[]) {
       return mocks.isFeatureEnabledMock(...args);
     }
-    shutdown(...args: unknown[]) {
-      return mocks.shutdownMock(...args);
+    flush(...args: unknown[]) {
+      return mocks.flushMock(...args);
     }
   }
   return { PostHog: FakePostHog };
@@ -155,10 +155,10 @@ describe("flushAnalytics()", () => {
     const { flushAnalytics } = await import("../src/shutdown");
 
     await expect(flushAnalytics()).resolves.toBeUndefined();
-    expect(mocks.shutdownMock).not.toHaveBeenCalled();
+    expect(mocks.flushMock).not.toHaveBeenCalled();
   });
 
-  it("flushes and stops the singleton once track() has created it", async () => {
+  it("flushes the singleton's queue once track() has created it (flush, never shutdown — review fix M5)", async () => {
     mocks.getCapabilitiesMock.mockReturnValue(capabilities("posthog"));
     mocks.getEnvMock.mockReturnValue({ POSTHOG_KEY: "phc_test" });
     const { track } = await import("../src/track");
@@ -169,6 +169,6 @@ describe("flushAnalytics()", () => {
 
     await flushAnalytics();
 
-    expect(mocks.shutdownMock).toHaveBeenCalledTimes(1);
+    expect(mocks.flushMock).toHaveBeenCalledTimes(1);
   });
 });

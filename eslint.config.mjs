@@ -38,12 +38,21 @@ function isRouteFile(filename) {
 }
 
 /**
- * The single allowlisted framework-mount file (plan D.9.3(e)): Better Auth's catch-all
- * route is not a handler we write — it destructures `toNextJsHandler(auth)`, which is
- * the documented exception to the raw-handler ban.
+ * Allowlisted framework-mount files (plan D.9.3(e), generalized in G.10.11): routes
+ * that are not handlers we write — each destructures exactly its framework's documented
+ * factory call. Adding a mount = one entry here; the check and the error message both
+ * read this table.
  */
-function isAllowlistedAuthRoute(filename) {
-  return normalize(filename).endsWith("apps/web/app/api/auth/[...all]/route.ts");
+const FRAMEWORK_MOUNTS = [
+  // Better Auth catch-all: `export const { GET, POST } = toNextJsHandler(auth)`.
+  { fileSuffix: "apps/web/app/api/auth/[...all]/route.ts", callee: "toNextJsHandler" },
+  // Inngest serve mount: `export const { GET, POST, PUT } = serve({ client, functions })`.
+  { fileSuffix: "apps/web/app/api/inngest/route.ts", callee: "serve" },
+];
+
+function frameworkMountFor(filename) {
+  const normalized = normalize(filename);
+  return FRAMEWORK_MOUNTS.find((mount) => normalized.endsWith(mount.fileSuffix)) ?? null;
 }
 
 /**
@@ -98,7 +107,7 @@ const noRawHandlerRule = {
       aliasedCallee:
         "`{{name}}` must be initialized with a direct call to the `defineHandler` identifier — aliasing (e.g. `const dh = defineHandler; ... = dh(...)`) is forbidden; the canonical call form is the point (plan D.9.3(d)).",
       badDestructure:
-        "This destructuring export of an HTTP method is not the allowlisted framework mount. Only `app/api/auth/[...all]/route.ts` may destructure `const { GET, POST } = toNextJsHandler(auth)` (shorthand, `const`) (plan D.9.3(e)).",
+        "This destructuring export of an HTTP method is not a registered framework mount. Only the files listed in FRAMEWORK_MOUNTS (eslint.config.mjs) may destructure their documented factory call — shorthand properties, `const`, exact callee (plan D.9.3(e)/G.10.11).",
       badArrayDestructure:
         "`{{name}}` may not be exported via array-destructuring — this is not a legal `defineHandler(...)` call form. Export it as `export const {{name}} = defineHandler(...)` instead (plan D.9.3(b)).",
       nonConstMethod:
@@ -114,7 +123,7 @@ const noRawHandlerRule = {
   create(context) {
     const filename = context.filename ?? context.getFilename();
     const routeFile = isRouteFile(filename);
-    const allowlistedAuthRoute = routeFile && isAllowlistedAuthRoute(filename);
+    const frameworkMount = routeFile ? frameworkMountFor(filename) : null;
     let actionFile = false;
 
     /** Route-file check for one `export const X = ...` / destructuring declarator. */
@@ -152,12 +161,12 @@ const noRawHandlerRule = {
 
         const allShorthand = methodProps.every((p) => p.shorthand);
         if (
-          allowlistedAuthRoute &&
+          frameworkMount &&
           kind === "const" &&
           allShorthand &&
-          isCallToIdentifier(declarator.init, "toNextJsHandler")
+          isCallToIdentifier(declarator.init, frameworkMount.callee)
         ) {
-          return; // exactly the documented exception: `const { GET, POST } = toNextJsHandler(auth)`.
+          return; // exactly this mount's documented exception (FRAMEWORK_MOUNTS above).
         }
         context.report({ node: declarator, messageId: "badDestructure" });
         return;

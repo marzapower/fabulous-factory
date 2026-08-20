@@ -11,7 +11,14 @@
  * is correct here since the client and the `/api/auth/*` mount are always same-origin.
  */
 import { createAuthClient } from "better-auth/react";
+// `magicLinkClient` is exported from `better-auth/client/plugins` (verified in the
+// installed 1.7.1 dist: `dist/client/plugins/index.d.mts` re-exports it from
+// `../../plugins/magic-link/client`) — without it, `authClient.signIn.magicLink` is
+// `undefined` at runtime even though the server plugin is configured (plan G.1/G.10.4).
+import { magicLinkClient } from "better-auth/client/plugins";
 
-export const authClient = createAuthClient();
+export const authClient = createAuthClient({
+  plugins: [magicLinkClient()],
+});
 
 export const { signIn, signUp, signOut, useSession } = authClient;

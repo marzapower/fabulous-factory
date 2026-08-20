@@ -17,11 +17,10 @@ describe("deriveCapabilities — empty env", () => {
     expect(deriveCapabilities({}, "production")).toEqual(DEFAULT);
   });
 
-  it("disables everything except email/jobs falling back to dev defaults in development", () => {
+  it("disables everything except email falling back to console in development (jobs stays disabled without explicit Inngest config)", () => {
     expect(deriveCapabilities({}, "development")).toEqual({
       ...DEFAULT,
       email: "console",
-      jobs: "inngest",
     });
   });
 
@@ -140,23 +139,45 @@ describe("deriveCapabilities — email by mode", () => {
   });
 });
 
-describe("deriveCapabilities — jobs (provisional)", () => {
-  it("is inngest when both Inngest keys are set, in any mode", () => {
+describe("deriveCapabilities — jobs (FINAL rule, plan G.2.3 + G.10.12, review fix: INNGEST_DEV ignored in production)", () => {
+  const modes: AppMode[] = ["development", "production", "test"];
+
+  it("is inngest when both Inngest keys are set, in every mode", () => {
     const env: RawEnv = { INNGEST_EVENT_KEY: "evt_x", INNGEST_SIGNING_KEY: "sign_x" };
-    expect(deriveCapabilities(env, "production").jobs).toBe("inngest");
+    for (const mode of modes) {
+      expect(deriveCapabilities(env, mode).jobs).toBe("inngest");
+    }
   });
 
-  it("defaults to inngest in development when unconfigured (local inngest dev server)", () => {
-    expect(deriveCapabilities({}, "development").jobs).toBe("inngest");
+  it("is inngest when INNGEST_DEV is exactly '1' in development or test (no keys needed)", () => {
+    const env: RawEnv = { INNGEST_DEV: "1" };
+    expect(deriveCapabilities(env, "development").jobs).toBe("inngest");
+    expect(deriveCapabilities(env, "test").jobs).toBe("inngest");
   });
 
-  it("is disabled in production when unconfigured", () => {
-    expect(deriveCapabilities({}, "production").jobs).toBe("disabled");
-  });
-
-  it("is disabled with only one of the two Inngest keys set outside development", () => {
-    const env: RawEnv = { INNGEST_EVENT_KEY: "evt_x" };
+  it("is disabled when INNGEST_DEV is '1' in production (a dev .env copied to prod must not enable jobs)", () => {
+    const env: RawEnv = { INNGEST_DEV: "1" };
     expect(deriveCapabilities(env, "production").jobs).toBe("disabled");
+  });
+
+  it("is disabled when INNGEST_DEV is '0', in every mode", () => {
+    const env: RawEnv = { INNGEST_DEV: "0" };
+    for (const mode of modes) {
+      expect(deriveCapabilities(env, mode).jobs).toBe("disabled");
+    }
+  });
+
+  it("is disabled when unconfigured, in every mode (M1's dev-implies-inngest rule is retired)", () => {
+    for (const mode of modes) {
+      expect(deriveCapabilities({}, mode).jobs).toBe("disabled");
+    }
+  });
+
+  it("is disabled with only one of the two Inngest keys set, in every mode", () => {
+    const env: RawEnv = { INNGEST_EVENT_KEY: "evt_x" };
+    for (const mode of modes) {
+      expect(deriveCapabilities(env, mode).jobs).toBe("disabled");
+    }
   });
 });
 

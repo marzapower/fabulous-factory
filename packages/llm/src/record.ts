@@ -11,6 +11,7 @@
  * is caught and logged, never rethrown.
  */
 import { getDb, schema } from "@factory/db";
+import { captureException } from "@factory/observability";
 
 export interface LlmCallRecord {
   promptId: string | null;
@@ -44,6 +45,10 @@ export async function recordLlmCall(record: LlmCallRecord): Promise<void> {
   try {
     await getDb().insert(schema.llmCalls).values(row);
   } catch (error) {
+    // Fail-open, but VISIBLY (review finding, M5): a broken accounting path means cost
+    // data is silently lost — report it through the errors capability (no-op without
+    // SENTRY_DSN) instead of only a stdout line nobody tails.
     console.error("[@factory/llm] failed to record llm_calls row", error);
+    captureException(error, { source: "recordLlmCall", model: record.model });
   }
 }

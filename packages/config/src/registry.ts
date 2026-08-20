@@ -25,15 +25,23 @@ export interface EnvVarSpec {
   required?: boolean;
   /** `doctor` masks the value when printing it. */
   secret?: boolean;
+  /**
+   * True iff this var's mere PRESENCE can light up a capability (plan G.3.3/G.10.10) —
+   * `doctor` derives each service's enablement-hint var list from
+   * `ENV_REGISTRY.filter(v => v.group === group && v.enables)` instead of a hand-maintained
+   * shadow map. REQUIRED (not optional) for the same uniform-literal-shape reason as
+   * `required`/`secret` below.
+   */
+  enables: boolean;
 }
 
-// Every entry declares `required` and `secret` explicitly (never omitted), even when
-// `false`. With `as const`, an omitted optional key disappears from that literal's type
-// entirely rather than becoming `key?: undefined` — the resulting union of differently
-// shaped literals would then reject uniform `.required`/`.secret` access (TS2339) from
-// code that iterates `ENV_REGISTRY` generically (env.ts, doctor.ts, tests). Explicit
-// booleans on every entry keep the literal shapes uniform and the registry the honest
-// single source of truth for both fields.
+// Every entry declares `required`, `secret`, and `enables` explicitly (never omitted),
+// even when `false`. With `as const`, an omitted optional key disappears from that
+// literal's type entirely rather than becoming `key?: undefined` — the resulting union of
+// differently shaped literals would then reject uniform `.required`/`.secret`/`.enables`
+// access (TS2339) from code that iterates `ENV_REGISTRY` generically (env.ts, doctor.ts,
+// tests). Explicit booleans on every entry keep the literal shapes uniform and the
+// registry the honest single source of truth for all three fields.
 export const ENV_REGISTRY = [
   {
     name: "DATABASE_URL",
@@ -44,6 +52,7 @@ export const ENV_REGISTRY = [
     required: true,
     // A Postgres connection string embeds credentials — doctor must mask it too.
     secret: true,
+    enables: false,
   },
   {
     name: "APP_URL",
@@ -53,6 +62,7 @@ export const ENV_REGISTRY = [
     example: "http://localhost:3000",
     required: false,
     secret: false,
+    enables: false,
   },
   {
     name: "FACTORY_SKIP_MIGRATIONS",
@@ -62,6 +72,7 @@ export const ENV_REGISTRY = [
     example: "1",
     required: false,
     secret: false,
+    enables: false,
   },
   {
     name: "BETTER_AUTH_SECRET",
@@ -71,6 +82,7 @@ export const ENV_REGISTRY = [
     example: "replace-with-your-own-random-32-char-secret",
     required: false,
     secret: true,
+    enables: false,
   },
   {
     name: "GOOGLE_CLIENT_ID",
@@ -80,6 +92,7 @@ export const ENV_REGISTRY = [
     example: "your-google-client-id.apps.googleusercontent.com",
     required: false,
     secret: false,
+    enables: false,
   },
   {
     name: "GOOGLE_CLIENT_SECRET",
@@ -88,6 +101,7 @@ export const ENV_REGISTRY = [
     example: "GOCSPX-your-google-client-secret",
     required: false,
     secret: true,
+    enables: false,
   },
   {
     name: "GITHUB_CLIENT_ID",
@@ -97,6 +111,7 @@ export const ENV_REGISTRY = [
     example: "your-github-oauth-client-id",
     required: false,
     secret: false,
+    enables: false,
   },
   {
     name: "GITHUB_CLIENT_SECRET",
@@ -105,6 +120,7 @@ export const ENV_REGISTRY = [
     example: "your-github-oauth-client-secret",
     required: false,
     secret: true,
+    enables: false,
   },
   {
     name: "BILLING_PROVIDER",
@@ -114,6 +130,7 @@ export const ENV_REGISTRY = [
     example: "stripe",
     required: false,
     secret: false,
+    enables: false,
   },
   {
     name: "STRIPE_SECRET_KEY",
@@ -123,6 +140,7 @@ export const ENV_REGISTRY = [
     example: "sk_test_your_stripe_secret_key",
     required: false,
     secret: true,
+    enables: true,
   },
   {
     name: "STRIPE_WEBHOOK_SECRET",
@@ -131,6 +149,7 @@ export const ENV_REGISTRY = [
     example: "whsec_your_stripe_webhook_secret",
     required: false,
     secret: true,
+    enables: true,
   },
   {
     name: "LLM_PROFILE",
@@ -140,6 +159,7 @@ export const ENV_REGISTRY = [
     example: "openrouter",
     required: false,
     secret: false,
+    enables: false,
   },
   {
     name: "LLM_LOCAL_BASE_URL",
@@ -149,6 +169,7 @@ export const ENV_REGISTRY = [
     example: "http://localhost:11434/v1",
     required: false,
     secret: false,
+    enables: true,
   },
   {
     name: "OPENROUTER_API_KEY",
@@ -158,6 +179,7 @@ export const ENV_REGISTRY = [
     example: "sk-or-your-openrouter-api-key",
     required: false,
     secret: true,
+    enables: true,
   },
   {
     name: "ANTHROPIC_API_KEY",
@@ -166,6 +188,7 @@ export const ENV_REGISTRY = [
     example: "sk-ant-your-anthropic-api-key",
     required: false,
     secret: true,
+    enables: true,
   },
   {
     name: "OPENAI_API_KEY",
@@ -175,33 +198,37 @@ export const ENV_REGISTRY = [
     example: "sk-your-openai-api-key",
     required: false,
     secret: true,
+    enables: true,
   },
   {
     name: "LLM_MODEL_CHEAP",
     group: "llm",
     description:
-      "Override the routed model id for the 'cheap' quality tier of the active LLM profile.",
-    example: "claude-haiku-4-5",
+      "Override the routed model id for the 'cheap' quality tier of the active LLM profile. The id must be valid for THAT profile's provider — OpenRouter ids look like 'anthropic/claude-haiku-4.5', direct Anthropic ids like 'claude-haiku-4-5' (a profile switch invalidates a stale override).",
+    example: "anthropic/claude-haiku-4.5",
     required: false,
     secret: false,
+    enables: false,
   },
   {
     name: "LLM_MODEL_BALANCED",
     group: "llm",
     description:
-      "Override the routed model id for the 'balanced' quality tier of the active LLM profile.",
-    example: "claude-sonnet-4-6",
+      "Override the routed model id for the 'balanced' quality tier of the active LLM profile. The id must be valid for THAT profile's provider — OpenRouter ids look like 'anthropic/claude-haiku-4.5', direct Anthropic ids like 'claude-haiku-4-5' (a profile switch invalidates a stale override).",
+    example: "anthropic/claude-sonnet-4.6",
     required: false,
     secret: false,
+    enables: false,
   },
   {
     name: "LLM_MODEL_HIGH",
     group: "llm",
     description:
-      "Override the routed model id for the 'high' quality tier of the active LLM profile.",
-    example: "claude-opus-5",
+      "Override the routed model id for the 'high' quality tier of the active LLM profile. The id must be valid for THAT profile's provider — OpenRouter ids look like 'anthropic/claude-haiku-4.5', direct Anthropic ids like 'claude-haiku-4-5' (a profile switch invalidates a stale override).",
+    example: "anthropic/claude-opus-5",
     required: false,
     secret: false,
+    enables: false,
   },
   {
     name: "RESEND_API_KEY",
@@ -211,6 +238,7 @@ export const ENV_REGISTRY = [
     example: "re_your_resend_api_key",
     required: false,
     secret: true,
+    enables: true,
   },
   {
     name: "EMAIL_FROM",
@@ -219,6 +247,7 @@ export const ENV_REGISTRY = [
     example: "Fabulous Factory <hello@example.com>",
     required: false,
     secret: false,
+    enables: false,
   },
   {
     name: "INNGEST_EVENT_KEY",
@@ -227,6 +256,7 @@ export const ENV_REGISTRY = [
     example: "your-inngest-event-key",
     required: false,
     secret: true,
+    enables: true,
   },
   {
     name: "INNGEST_SIGNING_KEY",
@@ -235,6 +265,17 @@ export const ENV_REGISTRY = [
     example: "signkey-your-inngest-signing-key",
     required: false,
     secret: true,
+    enables: true,
+  },
+  {
+    name: "INNGEST_DEV",
+    group: "jobs",
+    description:
+      "Set to '1' to run jobs against a local Inngest dev server (`pnpm dlx inngest-cli@1.41.1 dev`). Without this or the two cloud keys, jobs are disabled. Development-only: ignored in production.",
+    example: "1",
+    required: false,
+    secret: false,
+    enables: true,
   },
   {
     name: "POSTHOG_KEY",
@@ -244,6 +285,7 @@ export const ENV_REGISTRY = [
     example: "phc_your_posthog_project_key",
     required: false,
     secret: false,
+    enables: true,
   },
   {
     name: "POSTHOG_HOST",
@@ -252,6 +294,7 @@ export const ENV_REGISTRY = [
     example: "https://us.i.posthog.com",
     required: false,
     secret: false,
+    enables: false,
   },
   {
     name: "SENTRY_DSN",
@@ -260,6 +303,7 @@ export const ENV_REGISTRY = [
     example: "https://examplePublicKey@o0.ingest.sentry.io/0",
     required: false,
     secret: false,
+    enables: true,
   },
 ] as const satisfies readonly EnvVarSpec[];
 

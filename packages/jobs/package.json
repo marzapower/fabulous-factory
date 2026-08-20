@@ -1,0 +1,34 @@
+{
+  "name": "@factory/jobs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@factory/analytics": "workspace:*",
+    "@factory/config": "workspace:*",
+    "@factory/core": "workspace:*",
+    "@factory/db": "workspace:*",
+    "@factory/email": "workspace:*",
+    "@factory/llm": "workspace:*",
+    "@factory/observability": "workspace:*",
+    "diff": "9.0.0",
+    "drizzle-orm": "^0.45.2",
+    "inngest": "4.18.1",
+    "server-only": "^0.0.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@inngest/test": "1.0.0",
+    "@types/node": "^22.20.1",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
+  }
+}
