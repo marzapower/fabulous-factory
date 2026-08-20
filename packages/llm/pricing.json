@@ -1,0 +1,11 @@
+{
+  "claude-haiku-4-5": { "inputUsdPerMTok": 1, "outputUsdPerMTok": 5 },
+  "anthropic/claude-haiku-4.5": { "inputUsdPerMTok": 1, "outputUsdPerMTok": 5 },
+  "claude-sonnet-4-6": { "inputUsdPerMTok": 3, "outputUsdPerMTok": 15 },
+  "anthropic/claude-sonnet-4.6": { "inputUsdPerMTok": 3, "outputUsdPerMTok": 15 },
+  "claude-opus-5": { "inputUsdPerMTok": 5, "outputUsdPerMTok": 25 },
+  "anthropic/claude-opus-5": { "inputUsdPerMTok": 5, "outputUsdPerMTok": 25 },
+  "gpt-5.6-luna": { "inputUsdPerMTok": 0.2, "outputUsdPerMTok": 1.2 },
+  "gpt-5.6-terra": { "inputUsdPerMTok": 2, "outputUsdPerMTok": 12 },
+  "gpt-5.6-sol": { "inputUsdPerMTok": 5, "outputUsdPerMTok": 30 }
+}

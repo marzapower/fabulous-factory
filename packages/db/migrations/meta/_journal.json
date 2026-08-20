@@ -15,6 +15,13 @@
       "when": 1787227880860,
       "tag": "0001_majestic_leo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787235212912,
+      "tag": "0002_previous_agent_brand",
+      "breakpoints": true
     }
   ]
 }

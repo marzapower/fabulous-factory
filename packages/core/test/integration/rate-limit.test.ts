@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { sql } from "drizzle-orm";
-import { Pool } from "pg";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { Client, Pool } from "pg";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // `@factory/db`'s migrations are the single source of truth for `rate_limits`' schema
@@ -28,6 +28,17 @@ describe.skipIf(!TEST_DATABASE_URL)("checkRateLimit (integration)", () => {
   const pool = new Pool({ connectionString: TEST_DATABASE_URL });
   const db = drizzle({ client: pool });
 
+  // Serializes this suite against the other integration suites sharing the disposable
+  // database (see the full explanation in packages/db/test/integration/migrations.test.ts
+  // — same key there and in packages/llm/test/integration/record.test.ts).
+  const INTEGRATION_DB_LOCK_KEY = 4230011;
+  const lockClient = new Client({ connectionString: TEST_DATABASE_URL });
+
+  beforeAll(async () => {
+    await lockClient.connect();
+    await lockClient.query("SELECT pg_advisory_lock($1)", [INTEGRATION_DB_LOCK_KEY]);
+  }, 120_000);
+
   // Self-sufficient (plan D.4): runs the real migrator against `MIGRATIONS_FOLDER`
   // itself rather than assuming an already-migrated database, mirroring
   // packages/db/test/integration/migrations.test.ts.
@@ -48,6 +59,8 @@ describe.skipIf(!TEST_DATABASE_URL)("checkRateLimit (integration)", () => {
   });
 
   afterAll(async () => {
+    await lockClient.query("SELECT pg_advisory_unlock($1)", [INTEGRATION_DB_LOCK_KEY]);
+    await lockClient.end();
     await pool.end();
   });
 

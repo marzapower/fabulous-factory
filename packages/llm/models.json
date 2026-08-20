@@ -1,0 +1,18 @@
+{
+  "local": { "cheap": "llama3.2", "balanced": "llama3.2", "high": "llama3.2" },
+  "openrouter": {
+    "cheap": "anthropic/claude-haiku-4.5",
+    "balanced": "anthropic/claude-sonnet-4.6",
+    "high": "anthropic/claude-opus-5"
+  },
+  "direct-anthropic": {
+    "cheap": "claude-haiku-4-5",
+    "balanced": "claude-sonnet-4-6",
+    "high": "claude-opus-5"
+  },
+  "direct-openai": {
+    "cheap": "gpt-5.6-luna",
+    "balanced": "gpt-5.6-terra",
+    "high": "gpt-5.6-sol"
+  }
+}

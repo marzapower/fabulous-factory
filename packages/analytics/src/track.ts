@@ -28,7 +28,14 @@ async function getPostHogClient(): Promise<import("posthog-node").PostHog> {
       });
       posthogClient = client;
       return client;
-    })();
+    })().catch((error: unknown) => {
+      // Review fix (M5 cycle): without this reset a single transient import/init failure
+      // would stay cached as a rejected promise for the process lifetime, permanently
+      // wedging analytics — same reason packages/observability's errors.ts resets
+      // `sentryReady` in its own .catch.
+      posthogClientPromise = undefined;
+      throw error;
+    });
   }
   return posthogClientPromise;
 }
@@ -75,11 +82,19 @@ export function track(event: string, opts: TrackOptions): void {
  * in one batched call; `isFeatureEnabled` is kept here as the simplest fit for a single
  * boolean gate — reach for `evaluateFlags` directly on the client if you need more.
  *
- * Returns `false` (never throws, never loads posthog-node) when analytics is disabled.
+ * Returns `false` when analytics is disabled (never loads posthog-node) AND on any
+ * SDK load/evaluation failure (review fix, M5 cycle): analytics is best-effort by
+ * contract, so a broken flag lookup must degrade to "flag off", never become a thrown
+ * error inside a route handler.
  */
 export async function isFeatureEnabled(key: string, distinctId: string): Promise<boolean> {
   if (getCapabilities().analytics !== "posthog") return false;
 
-  const client = await getPostHogClient();
-  return (await client.isFeatureEnabled(key, distinctId)) ?? false;
+  try {
+    const client = await getPostHogClient();
+    return (await client.isFeatureEnabled(key, distinctId)) ?? false;
+  } catch (error) {
+    console.error("[@factory/analytics] isFeatureEnabled failed:", error);
+    return false;
+  }
 }

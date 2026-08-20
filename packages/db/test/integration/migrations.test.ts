@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { sql } from "drizzle-orm";
-import { Pool } from "pg";
-import { afterAll, describe, expect, it } from "vitest";
+import { Client, Pool } from "pg";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_FOLDER = path.resolve(__dirname, "../../migrations");
@@ -24,7 +24,24 @@ if (!TEST_DATABASE_URL) {
 describe.skipIf(!TEST_DATABASE_URL)("migrations (integration)", () => {
   const pool = new Pool({ connectionString: TEST_DATABASE_URL });
 
+  // The db, core, and llm integration suites all target the SAME disposable database and
+  // each drops/recreates the `public`+`drizzle` schemas — but vitest runs test files in
+  // parallel workers, so without coordination they race (duplicate-key on
+  // `CREATE SCHEMA`, deadlocks on `DROP ... CASCADE`; latent since M3, first reliably
+  // visible when M5 added the third suite on a many-core machine). A session-level
+  // advisory lock (same key in all three files) serializes the suites; it auto-releases
+  // if a worker dies. Held on a dedicated client so pooled queries never touch it.
+  const INTEGRATION_DB_LOCK_KEY = 4230011;
+  const lockClient = new Client({ connectionString: TEST_DATABASE_URL });
+
+  beforeAll(async () => {
+    await lockClient.connect();
+    await lockClient.query("SELECT pg_advisory_lock($1)", [INTEGRATION_DB_LOCK_KEY]);
+  }, 120_000);
+
   afterAll(async () => {
+    await lockClient.query("SELECT pg_advisory_unlock($1)", [INTEGRATION_DB_LOCK_KEY]);
+    await lockClient.end();
     await pool.end();
   });
 
