@@ -1,0 +1,22 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^15.5.23",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "@factory/config": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "@types/react": "^19.2.18",
+    "@types/node": "^22.20.1"
+  }
+}

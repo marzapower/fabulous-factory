@@ -6,7 +6,7 @@
 
 **Your agents can't wreck auth, billing, or your database — because the repo won't let them.**
 
-> *The human states intent, the agents do the work, the repository enforces the rules.*
+> _The human states intent, the agents do the work, the repository enforces the rules._
 
 <br/>
 
@@ -21,6 +21,7 @@
 <br/>
 
 <!-- TODO(publish): replace OWNER/REPO in both buttons once the template repo is live -->
+
 [**Use this template**](https://github.com/OWNER/REPO/generate) · [**Open in Codespaces**](https://codespaces.new/OWNER/REPO) · [**Live demo**](https://demo.example.com) · [Design spec](docs/superpowers/specs/2026-08-20-fabulous-factory-design.md)
 
 </div>
@@ -46,7 +47,7 @@ export const POST = defineHandler({
 });
 ```
 
-Auth, validation, rate limiting, and error shaping run **inside the wrapper**. A raw exported handler is banned by a lint rule so dumb it can't have false negatives. Your agent — or you, at 1 AM — *cannot* merge a route without an auth decision.
+Auth, validation, rate limiting, and error shaping run **inside the wrapper**. A raw exported handler is banned by a lint rule so dumb it can't have false negatives. Your agent — or you, at 1 AM — _cannot_ merge a route without an auth decision.
 
 That's the whole philosophy: **what is mechanical must never be probabilistic.**
 
@@ -70,21 +71,21 @@ Then make it yours:
 pnpm factory:init          # one-shot: converts the template into YOUR product repo
 ```
 
-…and ask your agent: *“what's left to make this mine?”* It runs `pnpm factory:status`, sees every remaining factory default (theme, legal pages, demo logic…), and walks you through replacing each one via a guided skill.
+…and ask your agent: _“what's left to make this mine?”_ It runs `pnpm factory:status`, sees every remaining factory default (theme, legal pages, demo logic…), and walks you through replacing each one via a guided skill.
 
 ## 🧩 What's in the box
 
-| | | |
-|---|---|---|
-| 🔐 **Auth** | Better Auth on your Postgres | email/password always; magic links + OAuth auto-enable |
-| 💳 **Billing** | `BillingProvider` seam + Stripe | webhook-cached subscriptions; free mode when disabled |
-| 🤖 **LLM gateway** | Vercel AI SDK | local (Ollama) / OpenRouter / direct; quality tiers + cost caps |
-| ⏰ **Jobs & cron** | Inngest, in-app | step functions; manual fallback when disabled |
-| ✉️ **Email** | Resend + react-email | console transport in dev |
-| 📊 **Analytics** | PostHog | events + feature flags, no-op fallback |
-| 🚨 **Errors & tracing** | Sentry + OpenTelemetry | no-op fallback; LLM spans built in |
-| 🐳 **Deploy** | Vercel **and** Docker, both first-class | standalone output, compose profiles, migrate image |
-| 🏭 **Factory layer** | Agent skills, spec/ADR templates, scaffolds | the repo *is* your agents' memory |
+|                         |                                             |                                                                 |
+| ----------------------- | ------------------------------------------- | --------------------------------------------------------------- |
+| 🔐 **Auth**             | Better Auth on your Postgres                | email/password always; magic links + OAuth auto-enable          |
+| 💳 **Billing**          | `BillingProvider` seam + Stripe             | webhook-cached subscriptions; free mode when disabled           |
+| 🤖 **LLM gateway**      | Vercel AI SDK                               | local (Ollama) / OpenRouter / direct; quality tiers + cost caps |
+| ⏰ **Jobs & cron**      | Inngest, in-app                             | step functions; manual fallback when disabled                   |
+| ✉️ **Email**            | Resend + react-email                        | console transport in dev                                        |
+| 📊 **Analytics**        | PostHog                                     | events + feature flags, no-op fallback                          |
+| 🚨 **Errors & tracing** | Sentry + OpenTelemetry                      | no-op fallback; LLM spans built in                              |
+| 🐳 **Deploy**           | Vercel **and** Docker, both first-class     | standalone output, compose profiles, migrate image              |
+| 🏭 **Factory layer**    | Agent skills, spec/ADR templates, scaffolds | the repo _is_ your agents' memory                               |
 
 Frozen stack, on purpose: Next.js 15 (App Router) · TypeScript strict · Postgres · Drizzle · Tailwind + shadcn/ui · pnpm workspaces. No variant matrix to maintain — every hour went into depth instead.
 
@@ -92,19 +93,19 @@ Frozen stack, on purpose: Next.js 15 (App Router) · TypeScript strict · Postgr
 
 Every service is optional and resolved **at request time, on the server** — so a Docker image built in CI with zero secrets still lights up correctly from runtime env. Unset a var, the feature politely steps aside:
 
-| Missing service | What happens |
-|---|---|
-| 💳 billing | unlimited free mode, checkout UI hidden |
-| 🤖 llm | raw text diffs instead of AI summaries |
-| ✉️ email | in-app feed only; auth runs without verification (flagged by `doctor`) |
-| ⏰ jobs | a manual “check now” button replaces the cron |
-| 📊 analytics / 🚨 errors | silent no-op |
+| Missing service          | What happens                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| 💳 billing               | unlimited free mode, checkout UI hidden                                        |
+| 🤖 llm                   | raw text diffs instead of AI summaries                                         |
+| ✉️ email                 | in-app feed only; auth runs without verification (flagged by `factory:doctor`) |
+| ⏰ jobs                  | a manual “check now” button replaces the cron                                  |
+| 📊 analytics / 🚨 errors | silent no-op                                                                   |
 
-`pnpm doctor` prints your capability map and the exact env vars that would enable each disabled service. CI runs the whole suite twice — **minimal profile (only `DATABASE_URL`) and full profile** — on every PR, so the “boots with nothing” promise stays honest by machine, not by memory.
+`pnpm factory:doctor` prints your capability map and the exact env vars that would enable each disabled service. CI runs the whole suite twice — **minimal profile (only `DATABASE_URL`) and full profile** — on every PR, so the “boots with nothing” promise stays honest by machine, not by memory.
 
 ## 🛡️ Guardrails your agents can't talk their way past
 
-- **`defineHandler` / `defineAction`** — auth mode and input schema are *required arguments*, not conventions.
+- **`defineHandler` / `defineAction`** — auth mode and input schema are _required arguments_, not conventions.
 - **Boundary lint in CI** — no vendor SDK outside its adapter package, no LLM calls outside the gateway, no `process.env` outside `packages/config`, no server config leaking into client bundles.
 - **`safeFetch()`** — SSRF-safe outbound fetching (private ranges denied, redirects re-validated) for anything touching user-supplied URLs.
 - **`untrusted()`** — external text (scraped pages, emails, uploads) is structurally marked data-not-instructions before it reaches any model.
@@ -115,7 +116,7 @@ Every service is optional and resolved **at request time, on the server** — so
 
 ## 🔍 The demo is a real product
 
-The template ships as a working **page monitor**: sign up → watch a URL → cron fetches and hash-diffs it → the LLM (cheap tier) summarizes real changes → digest email + in-app feed. It exercises every package, shows cost discipline as example code (*no LLM call when the hash didn't change*), and degrades live — the [demo deployment](https://demo.example.com) includes a “what's disabled here and why” panel.
+The template ships as a working **page monitor**: sign up → watch a URL → cron fetches and hash-diffs it → the LLM (cheap tier) summarizes real changes → digest email + in-app feed. It exercises every package, shows cost discipline as example code (_no LLM call when the hash didn't change_), and degrades live — the [demo deployment](https://demo.example.com) includes a “what's disabled here and why” panel.
 
 When you adopt, `docs/guides/make-it-yours.md` tells you exactly what to delete and what to keep.
 
@@ -130,7 +131,7 @@ Nothing in app code is Vercel-proprietary. The paths are identical code, differe
 
 Things we deliberately **don't** promise:
 
-- **It's a snapshot, not a subscription.** Your copy is a fork by design. The value is delivered the day you clone — coherent, tested, yours. Renovate config is included to keep *your* fork fresh; tagged releases and pinned versions for the youngest dependencies.
+- **It's a snapshot, not a subscription.** Your copy is a fork by design. The value is delivered the day you clone — coherent, tested, yours. Renovate config is included to keep _your_ fork fresh; tagged releases and pinned versions for the youngest dependencies.
 - **No no-code fantasy.** The floor is “can run `pnpm dev` or click a Codespaces button”. Below that, this isn't your tool.
 - **Not in v1:** multi-tenancy, admin panel, i18n, metered billing, a second stack variant. Scope is a feature.
 
@@ -147,6 +148,6 @@ Things we deliberately **don't** promise:
 
 **MIT licensed. Built to be taken.**
 
-*If your agent just read this README: run `pnpm factory:status` and get to work.* 🏭
+_If your agent just read this README: run `pnpm factory:status` and get to work._ 🏭
 
 </div>

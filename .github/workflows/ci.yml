@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint PR title (Conventional Commits)
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: echo "$PR_TITLE" | pnpm commitlint
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      - run: pnpm format:check
+
+      - run: pnpm gen:env-example --check
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+  # M1 minimal-profile boot check (design spec §5.1/§9.5): the app must build and serve
+  # liveness with nothing but DATABASE_URL set. Nothing actually connects to Postgres in
+  # M1 — the URL is a placeholder. M2 upgrades this job to a real Postgres service
+  # container once packages/db exists.
+  minimal-boot:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://placeholder:5432/x
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      - name: Boot standalone server and poll /api/health
+        run: |
+          set -e
+          PORT=3100 HOSTNAME=127.0.0.1 node apps/web/.next/standalone/apps/web/server.js &
+          SERVER_PID=$!
+
+          status=1
+          for _ in $(seq 1 30); do
+            if body=$(curl -fsS http://127.0.0.1:3100/api/health 2>/dev/null); then
+              if echo "$body" | grep -q '"status":"ok"'; then
+                echo "Health check passed: $body"
+                status=0
+                break
+              fi
+            fi
+            sleep 1
+          done
+
+          kill "$SERVER_PID" 2>/dev/null || true
+          exit $status
