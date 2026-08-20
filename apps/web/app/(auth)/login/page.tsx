@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
-  const { enabledProviders } = deriveAuthOptions(getEnv(), getCapabilities());
+  const { enabledProviders, email } = deriveAuthOptions(getEnv(), getCapabilities());
 
   return (
     <main className="flex min-h-svh items-center justify-center p-6">
@@ -20,7 +20,7 @@ export default function LoginPage() {
           <CardDescription>Welcome back to Fabulous Factory.</CardDescription>
         </CardHeader>
         <CardContent>
-          <LoginForm enabledProviders={enabledProviders} />
+          <LoginForm enabledProviders={enabledProviders} magicLinkEnabled={email.magicLink} />
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
             <Link href="/signup" className="underline underline-offset-4">

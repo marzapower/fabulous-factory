@@ -51,7 +51,14 @@ function ensureSentryInitialized(): Promise<SentryModule | undefined> {
  * shared init promise, so it still reports once init completes.
  */
 export function captureException(err: unknown, context?: Record<string, unknown>): void {
-  if (getCapabilities().errors === "disabled") return;
+  // Reporting must NEVER throw (M6 fix): `getCapabilities()` re-throws EnvValidationError
+  // on a broken env, which would turn error reporting inside a caller's catch block into
+  // a second error source — exactly where callers are least prepared for one.
+  try {
+    if (getCapabilities().errors === "disabled") return;
+  } catch {
+    return;
+  }
 
   void ensureSentryInitialized().then((Sentry) => {
     Sentry?.captureException(err, context ? { extra: context } : undefined);
@@ -66,7 +73,12 @@ export function captureMessage(
   message: string,
   level: "info" | "warning" | "error" = "info",
 ): void {
-  if (getCapabilities().errors === "disabled") return;
+  // Same never-throw contract as captureException above.
+  try {
+    if (getCapabilities().errors === "disabled") return;
+  } catch {
+    return;
+  }
 
   void ensureSentryInitialized().then((Sentry) => {
     Sentry?.captureMessage(message, level);

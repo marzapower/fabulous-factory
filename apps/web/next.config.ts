@@ -21,6 +21,10 @@ const nextConfig: NextConfig = {
     "@factory/email",
     "@factory/analytics",
     "@factory/observability",
+    // M6: the jobs package (and the llm package it pulls in as TS source — an M5 gap
+    // that never surfaced because nothing imported @factory/llm from the app yet).
+    "@factory/llm",
+    "@factory/jobs",
   ],
   outputFileTracingRoot: path.join(__dirname, "../../"),
 

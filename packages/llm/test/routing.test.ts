@@ -149,8 +149,12 @@ describe("resolveModel — env overrides", () => {
   });
 });
 
-describe("resolveModel — custom models table", () => {
+describe("resolveModel — custom models table (llm's optional-models wrapper param)", () => {
   it("reads from a caller-supplied ModelsConfig instead of DEFAULT_MODELS", () => {
+    // Structural coverage of resolveModel's own custom-table behavior lives in
+    // packages/config/test/llm-routing.test.ts (plan G.3.2) — this case stays here
+    // specifically to prove llm's thin wrapper still forwards an explicit `models`
+    // argument instead of always falling back to DEFAULT_MODELS.
     const models: ModelsConfig = {
       local: { cheap: "a", balanced: "b", high: "c" },
       openrouter: { cheap: "d", balanced: "e", high: "f" },

@@ -60,11 +60,16 @@ function deriveEmail(env: RawEnv, mode: AppMode): Capabilities["email"] {
 }
 
 function deriveJobs(env: RawEnv, mode: AppMode): Capabilities["jobs"] {
-  // Provisional rule, refined in M6: full credentials always enable Inngest; in
-  // development it also enables against the local `inngest dev` server (degrades
-  // gracefully if that server isn't running — M6 owns the final semantics).
+  // FINAL rule (plan G.2.3 + G.10.12), refined by the review fix below — retires M1's
+  // provisional "development implies inngest": Inngest v4 defaults to CLOUD mode, so
+  // without INNGEST_DEV=1 the client would throw on send() rather than talk to a local
+  // dev server. Enabled iff either both cloud keys are present (any mode) or
+  // INNGEST_DEV is the exact string "1" AND mode isn't production — "0", any other
+  // value, or a stray dev-only var surviving into a production env (e.g. a dev .env
+  // copied to prod) all stay disabled. This also gates `client.ts`'s `isDev` flag: a
+  // production env can never end up in Inngest's signature-skipping dev mode.
   if (env.INNGEST_EVENT_KEY && env.INNGEST_SIGNING_KEY) return "inngest";
-  if (mode === "development") return "inngest";
+  if (env.INNGEST_DEV === "1" && mode !== "production") return "inngest";
   return "disabled";
 }
 

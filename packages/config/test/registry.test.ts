@@ -67,6 +67,27 @@ describe("ENV_REGISTRY invariants", () => {
       new Set(["core", "auth", "billing", "llm", "email", "jobs", "analytics", "observability"]),
     );
   });
+
+  it("declares `enables` explicitly (boolean, never omitted) on every entry", () => {
+    for (const spec of ENV_REGISTRY) {
+      expect(typeof spec.enables, `${spec.name}.enables must be a boolean`).toBe("boolean");
+    }
+  });
+
+  it("has a non-empty `enables` set for every service group doctor derives hints from (G.3.3/G.10.10)", () => {
+    const serviceGroups = [
+      "billing",
+      "llm",
+      "email",
+      "jobs",
+      "analytics",
+      "observability",
+    ] as const;
+    for (const group of serviceGroups) {
+      const enablers = ENV_REGISTRY.filter((spec) => spec.group === group && spec.enables);
+      expect(enablers.length, `group '${group}' has no enables:true vars`).toBeGreaterThan(0);
+    }
+  });
 });
 
 describe("ENV_REGISTRY — auth vars (M2)", () => {

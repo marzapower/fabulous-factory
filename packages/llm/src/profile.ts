@@ -57,7 +57,12 @@ async function buildProviderFactory(
   if (profile === "openrouter") {
     const { createOpenRouter } = await import("@openrouter/ai-sdk-provider");
     const provider = createOpenRouter({ apiKey: env.OPENROUTER_API_KEY });
-    return (modelId) => provider.chat(modelId);
+    // `usage.include` is opt-in AT THE SDK LEVEL, and lives on the per-model chat
+    // settings (OpenRouterSharedSettings), not the provider factory — verified in the
+    // 3.0.0 dist. Without it OpenRouter may omit `usage.cost` from responses and
+    // generate.ts's 'reported' cost path silently never fires, degrading every
+    // openrouter row to pricing.json estimates (review finding, M5).
+    return (modelId) => provider.chat(modelId, { usage: { include: true } });
   }
 
   // profile === "direct"

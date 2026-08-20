@@ -53,5 +53,6 @@ read Part A plus ONLY the active milestone's file.
 | D    | M3 enforcement kernel          | `milestones/m3-enforcement-kernel.md` |
 | E    | M4 thin services               | `milestones/m4-thin-services.md`      |
 | F    | M5 LLM gateway                 | `milestones/m5-llm-gateway.md`        |
+| G    | M6 jobs + demo loop            | `milestones/m6-jobs-demo.md`          |
 
 New milestones append a row here and a new file there (G=M6 → `m6-jobs-demo.md`, …).

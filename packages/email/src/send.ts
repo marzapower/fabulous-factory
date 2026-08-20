@@ -51,6 +51,7 @@ async function getResendClient(apiKey: string): Promise<import("resend").Resend>
 const SUBJECTS: Record<TemplateName, string> = {
   "verify-email": "Verify your email address",
   "magic-link": "Your sign-in link",
+  "change-digest": "Change detected",
 };
 
 export async function send<T extends TemplateName>(

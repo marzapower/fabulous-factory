@@ -13,15 +13,19 @@
     "@factory/auth": "workspace:*",
     "@factory/config": "workspace:*",
     "@factory/core": "workspace:*",
+    "@factory/db": "workspace:*",
+    "@factory/jobs": "workspace:*",
     "@factory/observability": "workspace:*",
     "better-auth": "^1.7.1",
+    "inngest": "4.18.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.33.0",
     "next": "^15.5.23",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

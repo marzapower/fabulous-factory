@@ -17,7 +17,21 @@ import { readFileSync } from "node:fs";
 import { deriveCapabilities, type Capabilities, type ServiceName } from "../src/capabilities";
 import { readMergedEnv } from "../src/env-file";
 import { EnvValidationError, parseEnv } from "../src/env";
-import { ENV_REGISTRY, type AppMode, type EnvVarName, type RawEnv } from "../src/registry";
+import {
+  resolveDirectRoutingKey,
+  resolveModel,
+  TIER_ENV_KEY,
+  type ModelsConfig,
+  type Quality,
+} from "../src/llm-routing";
+import {
+  ENV_REGISTRY,
+  type AppMode,
+  type EnvVarName,
+  type EnvVarSpec,
+  type RawEnv,
+  type ServiceGroup,
+} from "../src/registry";
 
 function resolveMode(): AppMode {
   const nodeEnv = process.env.NODE_ENV;
@@ -38,15 +52,27 @@ const SERVICE_TITLES: Record<ServiceName, string> = {
   errors: "errors",
 };
 
-// Which registry vars are relevant enablement hints per service.
-const SERVICE_VARS: Record<ServiceName, EnvVarName[]> = {
-  billing: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"],
-  llm: ["OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "LLM_LOCAL_BASE_URL"],
-  email: ["RESEND_API_KEY"],
-  jobs: ["INNGEST_EVENT_KEY", "INNGEST_SIGNING_KEY"],
-  analytics: ["POSTHOG_KEY"],
-  errors: ["SENTRY_DSN"],
+// `ServiceName` (capabilities.ts) and `ServiceGroup` (registry.ts) are two different
+// vocabularies for the same six optional services — this is the one place that maps
+// between them. `errors` (the capability name) corresponds to the `observability`
+// registry group; every other pair shares its name.
+const SERVICE_GROUPS: Record<ServiceName, ServiceGroup> = {
+  billing: "billing",
+  llm: "llm",
+  email: "email",
+  jobs: "jobs",
+  analytics: "analytics",
+  errors: "observability",
 };
+
+/**
+ * Registry-derived enablement hints for a service (plan G.3.3/G.10.10) — replaces a
+ * hand-maintained shadow map that could (and did) drift from the registry.
+ */
+function serviceHints(service: ServiceName): EnvVarSpec[] {
+  const group = SERVICE_GROUPS[service];
+  return ENV_REGISTRY.filter((spec) => spec.group === group && spec.enables);
+}
 
 const AUTH_SOCIAL_PROVIDERS: ReadonlyArray<{
   name: string;
@@ -86,19 +112,9 @@ function printAuthSection(env: RawEnv, mode: AppMode): void {
   console.log("");
 }
 
-type Quality = "cheap" | "balanced" | "high";
 const QUALITIES: readonly Quality[] = ["cheap", "balanced", "high"];
 
-type RoutingKey = "local" | "openrouter" | "direct-anthropic" | "direct-openai";
-
-type ModelsJson = Partial<Record<RoutingKey, Partial<Record<Quality, string>>>>;
 type PricingJson = Record<string, { inputUsdPerMTok?: number; outputUsdPerMTok?: number }>;
-
-const LLM_MODEL_ENV_VARS: Record<Quality, EnvVarName> = {
-  cheap: "LLM_MODEL_CHEAP",
-  balanced: "LLM_MODEL_BALANCED",
-  high: "LLM_MODEL_HIGH",
-};
 
 /**
  * Reads a JSON file from `packages/llm`, resolved relative to this script's own file
@@ -119,36 +135,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-/** direct-anthropic wins over direct-openai when both credentials happen to be set (F.5, matching `hasCredentialsFor`'s ANTHROPIC-first rule). */
-function resolveRoutingKey(profile: "local" | "openrouter" | "direct", env: RawEnv): RoutingKey {
-  if (profile === "direct") {
-    return env.ANTHROPIC_API_KEY ? "direct-anthropic" : "direct-openai";
-  }
-  return profile;
-}
-
 /**
  * Prints the active profile's resolved tier→model routing table (env overrides applied
- * and marked), plus pricing-rot warnings for any routed non-local model missing from
- * `pricing.json`, and an openrouter-specific note about provider-reported cost.
+ * and marked, via the shared `resolveModel`/`resolveDirectRoutingKey`/`TIER_ENV_KEY` —
+ * plan G.3.2: this used to be a hand-rolled fork of the same override logic), plus
+ * pricing-rot warnings for any routed non-local model missing from `pricing.json`, and an
+ * openrouter-specific note about provider-reported cost.
  */
 function printLlmRoutingSection(profile: "local" | "openrouter" | "direct", env: RawEnv): void {
-  const models = readLlmJson("../../llm/models.json");
-  if (!isRecord(models)) {
+  const modelsRaw = readLlmJson("../../llm/models.json");
+  if (!isRecord(modelsRaw)) {
     console.log(
       "    ⚠ packages/llm/models.json is missing or unparseable — routing table unavailable",
     );
     return;
   }
 
-  const routingKey = resolveRoutingKey(profile, env);
-  const table = (models as ModelsJson)[routingKey];
+  const routingKey = profile === "direct" ? resolveDirectRoutingKey(env) : profile;
+  const table = modelsRaw[routingKey];
   if (!isRecord(table)) {
     console.log(
       `    ⚠ packages/llm/models.json has no '${routingKey}' entry — routing table unavailable`,
     );
     return;
   }
+  // Shape-validated only as far as the existing isRecord guards ever went (whole-file
+  // record, active routing-key sub-table a record) — trusted as a ModelsConfig from here
+  // on, same level of trust the pre-refactor code placed in it.
+  const models = modelsRaw as unknown as ModelsConfig;
 
   const pricingRaw = readLlmJson("../../llm/pricing.json");
   const pricing = isRecord(pricingRaw) ? (pricingRaw as PricingJson) : undefined;
@@ -160,10 +174,25 @@ function printLlmRoutingSection(profile: "local" | "openrouter" | "direct", env:
 
   console.log(`    routing (${routingKey}):`);
   for (const quality of QUALITIES) {
-    const override = env[LLM_MODEL_ENV_VARS[quality]];
-    const model = override || table[quality];
+    const { model } = resolveModel(profile, quality, env, models);
     if (!model) continue;
+    const overrideVar = TIER_ENV_KEY[quality];
+    const override = env[overrideVar];
     console.log(`      ${quality}: ${model}${override ? " (env override)" : ""}`);
+
+    if (override) {
+      // Heuristic only (review fix): openrouter ids look like 'anthropic/claude-...'
+      // (contain a slash), local/direct ids don't — a stale override left over from a
+      // profile switch is a common way to end up here. Calm, single-line, never fails.
+      const looksOpenrouter = model.includes("/");
+      if (routingKey === "openrouter" && !looksOpenrouter) {
+        console.log(`    ⚠ ${overrideVar}='${model}' does not look like an openrouter model id`);
+      } else if (routingKey !== "openrouter" && looksOpenrouter) {
+        console.log(
+          `    ⚠ ${overrideVar}='${model}' looks like an openrouter model id, but the active routing key is '${routingKey}'`,
+        );
+      }
+    }
 
     if (routingKey !== "local" && pricing && !pricing[model]) {
       console.log(`    ⚠ cost accounting will record unknown cost for ${model}`);
@@ -211,21 +240,25 @@ function printServiceLine(
   console.log(`${glyph} ${SERVICE_TITLES[service]}: ${adapter}`);
 
   if (enabled) {
-    for (const varName of SERVICE_VARS[service]) {
-      const value = env[varName];
+    for (const spec of serviceHints(service)) {
+      const value = env[spec.name as EnvVarName];
       if (!value) continue;
-      const spec = ENV_REGISTRY.find((s) => s.name === varName);
-      const shown = spec?.secret ? maskSecret(value) : value;
-      console.log(`    ${varName}=${shown}`);
+      const shown = spec.secret ? maskSecret(value) : value;
+      console.log(`    ${spec.name}=${shown}`);
     }
   } else {
-    const hints = SERVICE_VARS[service]
-      .map((varName) => ENV_REGISTRY.find((spec) => spec.name === varName))
-      .filter((spec): spec is (typeof ENV_REGISTRY)[number] => spec !== undefined);
+    const hints = serviceHints(service);
     const names = hints.map((spec) => spec.name);
-    // llm's hint vars are alternatives (any single one enables a profile); billing/jobs
-    // need every listed var set together — "+" would misleadingly imply llm needs all.
-    const enableWith = service === "llm" ? `any of: ${names.join(", ")}` : names.join(" + ");
+    // llm's hint vars are alternatives (any single one enables a profile); billing needs
+    // every listed var set together — "+" fits it exactly. jobs (registry order: the two
+    // cloud keys, then INNGEST_DEV — G.10.12's pinned 2-AND-then-1-OR shape) needs the
+    // last var alone OR every var before it together.
+    const enableWith =
+      service === "llm"
+        ? `any of: ${names.join(", ")}`
+        : service === "jobs"
+          ? `${names.slice(0, -1).join(" + ")}, or ${names.at(-1)}`
+          : names.join(" + ");
     console.log(`    enable with: ${enableWith}`);
     for (const spec of hints) {
       console.log(`      ${spec.name}: ${spec.description}`);
@@ -252,15 +285,26 @@ function printServiceLine(
     );
   }
 
-  if (
-    service === "jobs" &&
-    adapter === "inngest" &&
-    mode === "development" &&
-    !(env.INNGEST_EVENT_KEY && env.INNGEST_SIGNING_KEY)
-  ) {
-    console.log(
-      "    note: using the local `inngest dev` server (no INNGEST_EVENT_KEY/INNGEST_SIGNING_KEY set)",
-    );
+  if (service === "jobs") {
+    if (adapter === "inngest") {
+      // Mode-independent per the FINAL rule (plan G.2.3/G.10.12): whichever signal lit
+      // the capability determines the mode note, regardless of dev/prod/test.
+      console.log(
+        env.INNGEST_EVENT_KEY && env.INNGEST_SIGNING_KEY
+          ? "    note: Inngest cloud mode"
+          : "    note: local dev-server mode (inngest-cli dev)",
+      );
+    } else {
+      console.log(
+        "    local dev hint: set INNGEST_DEV=1 and run `pnpm dlx inngest-cli@1.41.1 dev` to enable jobs without cloud keys",
+      );
+    }
+    if (env.INNGEST_DEV === "1" && mode === "production") {
+      // Review fix: INNGEST_DEV must never enable jobs (or Inngest's signature-skipping
+      // dev mode) in production — surfaced here as a warning rather than a silent
+      // no-op, since a dev .env copied to prod is exactly how this var ends up set.
+      console.log("    ⚠ INNGEST_DEV=1 is set but ignored in production");
+    }
   }
 
   console.log("");

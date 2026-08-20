@@ -110,19 +110,19 @@ module.exports = {
       },
     },
     {
-      name: "no-bare-drizzle-outside-db-core",
+      name: "no-bare-drizzle-outside-db-core-jobs",
       severity: "error",
       comment:
         "The bare `drizzle-orm` entry (query-expression builders — `sql`, `eq`, `lt`, " +
-        "etc.) is confined to packages/db and packages/core (plan D.4: the rate limiter's " +
-        "atomic upsert needs these operators at the call site against @factory/db's " +
-        "`getDb()` handle) plus test fixtures. Everywhere else — including apps/web and " +
-        "packages/auth — must go through @factory/db instead of importing drizzle-orm " +
-        "directly (M2: previously only the node-postgres driver subpath was banned here, " +
-        "leaving the bare entry point open to a direct import from outside the DAG's " +
-        "intended drizzle-consumers).",
+        "etc.) is confined to packages/db, packages/core (plan D.4: the rate limiter's " +
+        "atomic upsert), and packages/jobs (M6: the demo pipeline's queries and the " +
+        "per-monitor pg_advisory_xact_lock need the operators against `getDb()` — same " +
+        "rationale as core) plus test fixtures. Everywhere else — including apps/web and " +
+        "packages/auth — must go through @factory/db or @factory/jobs instead of " +
+        "importing drizzle-orm directly. The actual connection still only ever happens " +
+        "inside packages/db's getDb()/migrator.",
       from: {
-        pathNot: "^packages/(db|core)/|^packages/[^/]+/test/",
+        pathNot: "^packages/(db|core|jobs)/|^packages/[^/]+/test/",
       },
       to: {
         path: "(^|/)node_modules/drizzle-orm(/|$)",
@@ -153,31 +153,43 @@ module.exports = {
         path: "^apps/",
       },
     },
+    // ---- Closed-form DAG allowlists (plan G.3.1 — M5 review follow-up) ----
+    //
+    // Every `dag-*` rule below is DENY-BY-DEFAULT: `from` pins one package, `to` bans
+    // ALL of `^packages/` except an explicit `pathNot` allowlist (which always includes
+    // the package itself — self-imports through the workspace alias are harmless and
+    // shouldn't need a carve-out per rule). A brand-new package therefore gets ZERO
+    // workspace import access until a maintainer explicitly widens some other package's
+    // `pathNot` to admit it — the previous shape (each rule hand-listing the packages
+    // IT bans) silently missed newly-added packages instead: `dag-config-imports-no-
+    // workspace-package` had to be patched in M5 (plan F.10.13) because
+    // email/analytics/observability/llm were absent from its ban list, and this same gap
+    // recurred at M4 for the M2/M3-era packages. Deny-by-default makes that class of gap
+    // structurally impossible — an omission now under-ALLOWS instead of under-BANS.
+    // Order mirrors the DAG itself: config ← db ← {auth,email,analytics,observability} ←
+    // core ← llm ← jobs ← web (web is an app, unrestricted — no rule needed).
     {
       name: "dag-config-imports-no-workspace-package",
       severity: "error",
-      comment:
-        "packages/config is the DAG root — it must not import any other workspace " +
-        "package. (email/analytics/observability/llm added in M5, plan F.10.13 — the M4 " +
-        "packages were missing from this ban list.)",
+      comment: "packages/config is the DAG root — it must not import any other workspace package.",
       from: {
         path: "^packages/config/",
       },
       to: {
-        path: "^packages/(auth|db|core|email|analytics|observability|llm)/",
+        path: "^packages/",
+        pathNot: "^packages/config/",
       },
     },
     {
       name: "dag-db-imports-only-config",
       severity: "error",
-      comment:
-        "packages/db may depend on packages/config only (DAG: config ← db). " +
-        "(email/analytics/observability/llm added in M5, plan F.10.13.)",
+      comment: "packages/db may depend on packages/config only (DAG: config ← db).",
       from: {
         path: "^packages/db/",
       },
       to: {
-        path: "^packages/(auth|core|email|analytics|observability|llm)/",
+        path: "^packages/",
+        pathNot: "^packages/(config|db)/",
       },
     },
     {
@@ -186,12 +198,31 @@ module.exports = {
       comment:
         "packages/auth may depend on packages/config, packages/db, and (from M4) " +
         "packages/email (sendVerificationEmail/sendMagicLink). Must NOT import " +
-        "packages/core (no cycle, plan D.2) or analytics/observability.",
+        "packages/core (no cycle, plan D.2) or analytics/observability/llm/jobs.",
       from: {
         path: "^packages/auth/",
       },
       to: {
-        path: "^packages/(core|analytics|observability|llm)/",
+        path: "^packages/",
+        pathNot: "^packages/(config|db|email|auth)/",
+      },
+    },
+    {
+      name: "dag-core-imports-config-db-auth",
+      severity: "error",
+      comment:
+        "packages/core may depend on packages/config, packages/db, and packages/auth " +
+        "(plan D.2/F.2.1). Must NOT import llm — llm sits ABOVE core in the DAG (config ← " +
+        "db ← {auth,email,observability} ← core ← llm ← jobs ← web); the reverse edge " +
+        "would be a cycle via @factory/core/untrusted (subsumes the former standalone " +
+        "dag-core-no-llm rule — now just an omission from this allowlist, per the " +
+        "deny-by-default rationale above).",
+      from: {
+        path: "^packages/core/",
+      },
+      to: {
+        path: "^packages/",
+        pathNot: "^packages/(config|db|auth|core)/",
       },
     },
     {
@@ -216,7 +247,8 @@ module.exports = {
         path: "^packages/email/",
       },
       to: {
-        path: "^packages/(auth|db|core|analytics|observability|llm)/",
+        path: "^packages/",
+        pathNot: "^packages/(config|email)/",
       },
     },
     {
@@ -227,7 +259,8 @@ module.exports = {
         path: "^packages/analytics/",
       },
       to: {
-        path: "^packages/(auth|db|core|email|observability|llm)/",
+        path: "^packages/",
+        pathNot: "^packages/(config|analytics)/",
       },
     },
     {
@@ -238,7 +271,8 @@ module.exports = {
         path: "^packages/observability/",
       },
       to: {
-        path: "^packages/(auth|db|core|email|analytics|llm)/",
+        path: "^packages/",
+        pathNot: "^packages/(config|observability)/",
       },
     },
     {
@@ -337,31 +371,89 @@ module.exports = {
       },
     },
     {
+      name: "inngest-only-in-jobs",
+      severity: "error",
+      comment:
+        "inngest (and @inngest/*, e.g. the @inngest/test dev dependency) are confined to " +
+        "packages/jobs — the Inngest client, functions, and demo pipeline all live there " +
+        "(plan G.4). One narrow exception below: the framework-mount route may import the " +
+        "inngest/next subpath only, mirroring the better-auth precedent at the top of this " +
+        "file (auth-route-mount-next-js-subpath-only).",
+      from: {
+        pathNot: ["^packages/jobs/", "^apps/web/app/api/inngest/route\\.ts$"],
+      },
+      to: {
+        path: "(^|/)node_modules/(inngest|@inngest)(/|$)",
+      },
+    },
+    {
+      name: "inngest-route-mount-next-subpath-only",
+      severity: "error",
+      comment:
+        "The allowlisted framework-mount file may import inngest, but only the inngest/next " +
+        "subpath (serve) — any other inngest import there defeats the point of the " +
+        "allowlist. Matched on the PHYSICAL resolved path, same reasoning as the " +
+        'better-auth subpath rules above: inngest@4.18.1\'s package.json exports "./next" ' +
+        'as { types, import: "./next.js", require: "./next.cjs" } ("type": "module" ' +
+        "at the package root) — under this config's conditionNames (node, import, " +
+        'require, default; "types" deliberately excluded, same reasoning as the ' +
+        "better-auth rule above) enhanced-resolve walks the exports object's OWN key " +
+        'order filtered to those conditions, landing on "import" before "require", ' +
+        "which resolves to .../node_modules/inngest/next.js — verified directly against " +
+        "the installed 4.18.1 dist under pnpm's node_modules layout.",
+      from: {
+        path: "^apps/web/app/api/inngest/route\\.ts$",
+      },
+      to: {
+        path: "(^|/)node_modules/(inngest|@inngest)(/|$)",
+        pathNot: "/inngest/next\\.js$",
+      },
+    },
+    {
+      name: "diff-only-in-jobs",
+      severity: "error",
+      comment:
+        "diff (the diffLines LLM-disabled-fallback excerpt, plan G.2.5/G.10.3/G.10.7) is " +
+        "confined to packages/jobs — checkMonitor is its only consumer, and it is a " +
+        "packages/jobs dependency per G.10.3 (superseding the earlier apps/web placement " +
+        "in G.3.4).",
+      from: {
+        pathNot: "^packages/jobs/",
+      },
+      to: {
+        path: "(^|/)node_modules/diff(/|$)",
+      },
+    },
+    {
       name: "dag-llm-imports-config-db-core-observability",
       severity: "error",
       comment:
         "packages/llm may depend on packages/config, packages/db (llm_calls accounting), " +
         "packages/core (the ./untrusted subpath), and packages/observability (tracer) — " +
-        "plan F.2.1. It must NOT import auth, email, or analytics.",
+        "plan F.2.1. It must NOT import auth, email, analytics, or jobs.",
       from: {
         path: "^packages/llm/",
       },
       to: {
-        path: "^packages/(auth|email|analytics)/",
+        path: "^packages/",
+        pathNot: "^packages/(config|db|core|observability|llm)/",
       },
     },
     {
-      name: "dag-core-no-llm",
+      name: "dag-jobs-imports-config-db-core-llm-email-analytics-observability",
       severity: "error",
       comment:
-        "packages/core must not import packages/llm — llm sits ABOVE core in the DAG " +
-        "(config ← db ← {auth,email,observability} ← core ← llm ← web, plan F.2.1); the " +
-        "reverse edge would be a cycle via @factory/core/untrusted.",
+        "packages/jobs (M6) may depend on packages/config, packages/db (monitors/" +
+        "monitor_events), packages/core (safeFetch/untrusted), packages/llm (change " +
+        "summaries), packages/email (change-digest), packages/analytics (track), and " +
+        "packages/observability (captureException) — plan G.2.1. Must NOT import auth — " +
+        "nothing above jobs in the DAG except apps/web.",
       from: {
-        path: "^packages/core/",
+        path: "^packages/jobs/",
       },
       to: {
-        path: "^packages/llm/",
+        path: "^packages/",
+        pathNot: "^packages/(config|db|core|llm|email|analytics|observability|jobs)/",
       },
     },
   ],

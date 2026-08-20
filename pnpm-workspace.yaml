@@ -4,6 +4,10 @@ packages:
 allowBuilds:
   # core-js's postinstall only prints a funding banner; no build step needed.
   core-js: false
+  # protobufjs (transitive: inngest → OTel auto-instrumentation → grpc-js) uses its
+  # postinstall only to stamp version metadata; the library works without it, and those
+  # OTel deps are lazily imported by inngest anyway (G.1). Denied like core-js.
+  protobufjs: false
   esbuild: true
   sharp: true
 # Supply-chain hardening (spec §8.5; flagged by the semgrep OWASP ruleset):

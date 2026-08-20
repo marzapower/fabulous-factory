@@ -1,3 +1,10 @@
+// Server-only on purpose (review finding, M5): the brand is a Symbol, which does NOT
+// survive client→server serialization — a client component branding user input would
+// produce an object whose brand silently evaporates in transit, so the LLM prompt
+// assembler would treat that external content as trusted. Poisoning the module keeps
+// `untrusted()` where the brand actually works: on the server, at ingestion points.
+import "server-only";
+
 const UNTRUSTED_BRAND = Symbol("untrusted");
 
 /**

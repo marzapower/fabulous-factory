@@ -1,19 +1,29 @@
 import { AnalyticsProvider } from "@factory/analytics/client";
 import { requireSession } from "@factory/auth";
-import { getClientConfig } from "@factory/config";
+import { getClientConfig, isEnabled } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
+import { MAX_MONITORS, listMonitorsForUser, listRecentEventsForUser } from "@factory/jobs";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MonitorsCard } from "@/components/demo/monitors-card";
+import { FeedCard } from "@/components/demo/feed-card";
 import { CapabilityPanel } from "../capability-panel";
 
 // Capability-conditional UI must render dynamically (design spec §5.1), and this page's
 // contents are gated on a live session lookup besides — never statically prerendered.
 export const dynamic = "force-dynamic";
 
+const FEED_LIMIT = 20;
+
 export default async function DashboardPage() {
   const session = await requireSession({ redirectTo: "/login" });
   const config = getClientConfig();
+
+  const [monitors, events] = await Promise.all([
+    listMonitorsForUser(session.user.id),
+    listRecentEventsForUser(session.user.id, FEED_LIMIT),
+  ]);
 
   return (
     <ClientConfigProvider config={config}>
@@ -36,6 +46,22 @@ export default async function DashboardPage() {
               <SignOutButton />
             </CardContent>
           </Card>
+
+          <MonitorsCard
+            monitors={monitors}
+            maxMonitors={MAX_MONITORS}
+            jobsEnabled={isEnabled("jobs")}
+          />
+
+          <FeedCard
+            events={events.map((event) => ({
+              id: event.id,
+              monitorName: event.monitorName,
+              kind: event.kind,
+              summary: event.summary,
+              createdAt: event.createdAt,
+            }))}
+          />
 
           <CapabilityPanel />
         </main>

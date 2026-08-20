@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 
+import { ChangeDigestTemplate, type ChangeDigestProps } from "./change-digest";
 import { MagicLinkTemplate, type MagicLinkProps } from "./magic-link";
 import { VerifyEmailTemplate, type VerifyEmailProps } from "./verify-email";
 
@@ -10,6 +11,7 @@ import { VerifyEmailTemplate, type VerifyEmailProps } from "./verify-email";
 export interface TemplateProps {
   "verify-email": VerifyEmailProps;
   "magic-link": MagicLinkProps;
+  "change-digest": ChangeDigestProps;
 }
 
 export type TemplateName = keyof TemplateProps;
@@ -18,6 +20,7 @@ export type TemplateName = keyof TemplateProps;
 export const TEMPLATES: { [K in TemplateName]: (props: TemplateProps[K]) => ReactElement } = {
   "verify-email": VerifyEmailTemplate,
   "magic-link": MagicLinkTemplate,
+  "change-digest": ChangeDigestTemplate,
 };
 
-export type { MagicLinkProps, VerifyEmailProps };
+export type { ChangeDigestProps, MagicLinkProps, VerifyEmailProps };

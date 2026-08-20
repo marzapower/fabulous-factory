@@ -397,3 +397,35 @@ verification pass. Disposition:
   needs a product decision in the M6 UI pass (resend affordance or `sendOnSignIn`);
   (b) doctor's duplicated routing semantics (also flagged by the altitude pass, F.11):
   consolidation candidate — hoist the pure routing module below config — M6 pre-work.
+
+### F.13 Late finder reports (first review run's finders, delivered after F.12)
+
+The crashed first review's finder agents self-resumed and reported after the M5 commit;
+their new findings were fixed in-tree during the M6 cycle (they ride the M6 milestone
+commit, as M4's fixes rode M5's):
+
+- **OpenRouter reported-cost was dead code** (cross-file tracer, CONFIRMED against the
+  3.0.0 dist): `usage.include` is opt-in at the SDK level and lives on the per-model chat
+  settings — without it responses omit `usage.cost` and every openrouter row silently
+  degraded to pricing.json estimates while doctor claimed provider-reported accuracy.
+  `provider.chat(modelId, { usage: { include: true } })` now opts in. (The M5 research
+  report's "always on per current docs" claim did not hold at the request layer.)
+- **`LLM_MODEL_*` registry examples were profile-format traps**: direct-Anthropic ids
+  offered as examples break 100% of calls when uncommented on the openrouter profile.
+  Descriptions now state the id must match the ACTIVE profile's provider format;
+  examples switched to OpenRouter format (the recommended prod default).
+- **`untrusted.ts` regained the `server-only` poison**: the F.2.2 subpath export made it
+  importable from client components, where the Symbol brand cannot survive
+  client→server serialization — external content would arrive server-side unbranded and
+  be fenced as trusted. No legitimate client consumer existed.
+- **`recordLlmCall` failures now `captureException`** (reuse finding): a broken
+  accounting path was a stdout-only failure, invisible to the errors capability even
+  when Sentry is configured.
+- **`flushAnalytics()` uses `flush()`, not `shutdown()`** (M4 code): posthog-node's
+  shutdown is once-per-process; calling it per `after()` teardown as the doc comment
+  suggested would kill the feature-flag poller and race concurrent captures.
+- Remaining late findings were duplicates of F.12 items (auth SendResult, budget cap,
+  posthog init reset — already fixed) or additions to the recorded follow-up list:
+  `SERVICE_VARS` in doctor is a shadow map of the registry's `group` field
+  (registry-driven hints, M6+); the three degradation contracts (typed result vs no-op
+  vs throw) deserve a documented convention before M6's demo consumers multiply.
