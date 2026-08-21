@@ -9,7 +9,11 @@ export {
   type FeedEvent,
 } from "./demo/check-monitor";
 export { recordMonitorError } from "./demo/record-error";
-export { MAX_MONITORS, EMAIL_THROTTLE_SECONDS } from "./demo/constants";
+export {
+  MONITOR_HARD_CEILING,
+  monitorLimitMessage,
+  EMAIL_THROTTLE_SECONDS,
+} from "./demo/constants";
 export {
   listMonitorsForUser,
   countMonitorsForUser,

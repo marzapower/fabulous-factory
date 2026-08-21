@@ -3,7 +3,7 @@ import { and, count, desc, eq, sql } from "drizzle-orm";
 import { ApiError } from "@factory/core";
 import { getDb, schema } from "@factory/db";
 
-import { MAX_MONITORS, MONITOR_LIMIT_MESSAGE } from "./constants";
+import { hardCeilingMessage, MONITOR_HARD_CEILING, monitorLimitMessage } from "./constants";
 
 /** Re-exported so callers never need to import `@factory/db`'s schema directly for the
  * demo domain (plan G.4). Kept as the full row shape for `createMonitorRow`'s return —
@@ -55,8 +55,9 @@ export async function listMonitorsForUser(userId: string): Promise<MonitorListIt
     .orderBy(desc(schema.monitors.createdAt));
 }
 
-/** Count of monitors owned by `userId` — backs the `MAX_MONITORS` cap check inside
- * `createMonitorRow`, and the dashboard's n/`MAX_MONITORS` chip. */
+/** Count of monitors owned by `userId` — backs the cap check inside `createMonitorRow`,
+ * and the dashboard's n/limit chip (the limit itself comes from the caller's resolved
+ * entitlement, not from this function). */
 export async function countMonitorsForUser(userId: string): Promise<number> {
   const [row] = await getDb()
     .select({ value: count() })
@@ -66,18 +67,38 @@ export async function countMonitorsForUser(userId: string): Promise<number> {
 }
 
 /**
- * Enforces `MAX_MONITORS` INSIDE the same transaction as the insert (review fix) — the
- * previous count-then-throw at the action layer raced: two concurrent requests could
- * both read a count one under the cap and both insert, landing the user one over it.
- * `pg_advisory_xact_lock(hashtext('monitor-cap:' || userId))` serializes concurrent
- * creates for the SAME user (a different user's cap check never blocks on this one),
- * so the count read inside the lock is guaranteed current for the write that follows it.
+ * Enforces the caller's entitlement cap INSIDE the same transaction as the insert
+ * (review fix) — the previous count-then-throw at the action layer raced: two
+ * concurrent requests could both read a count one under the cap and both insert,
+ * landing the user one over it. `pg_advisory_xact_lock(hashtext('monitor-cap:' ||
+ * userId))` serializes concurrent creates for the SAME user (a different user's cap
+ * check never blocks on this one), so the count read inside the lock is guaranteed
+ * current for the write that follows it.
+ *
+ * `monitorLimit` ARRIVES as a param, resolved by the caller (plan H.10.9): this function
+ * must NEVER call into billing itself (no jobs → billing DAG edge) and must NEVER open a
+ * second `getDb()`/transaction inside this one (pool-exhaustion deadlock) — entitlement
+ * resolution is entirely the action layer's job. `null` means "no plan-specific limit"
+ * (billing disabled, or an unlimited plan), NOT "no limit at all" — the effective cap is
+ * always clamped to `MONITOR_HARD_CEILING`, the absolute abuse floor enforced in every
+ * profile (plan H.10.16).
  */
 export async function createMonitorRow(input: {
   userId: string;
   name: string;
   url: string;
+  monitorLimit: number | null;
 }): Promise<Monitor> {
+  const effectiveLimit =
+    input.monitorLimit === null
+      ? MONITOR_HARD_CEILING
+      : Math.min(input.monitorLimit, MONITOR_HARD_CEILING);
+  // The cap that actually fired (H.10 review fix): `null` (unlimited plan / billing
+  // disabled) or a plan limit ABOVE the ceiling both mean the ceiling — not the plan — is
+  // what's enforcing `effectiveLimit`, and the user-facing wording must say so; a plan
+  // limit at or below the ceiling is a real plan restriction, worded accordingly.
+  const isHardCeiling = input.monitorLimit === null || input.monitorLimit > MONITOR_HARD_CEILING;
+
   return getDb().transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${"monitor-cap:" + input.userId}))`);
 
@@ -85,8 +106,9 @@ export async function createMonitorRow(input: {
       .select({ value: count() })
       .from(schema.monitors)
       .where(eq(schema.monitors.userId, input.userId));
-    if ((row?.value ?? 0) >= MAX_MONITORS) {
-      throw new ApiError(422, "monitor_limit_reached", MONITOR_LIMIT_MESSAGE);
+    if ((row?.value ?? 0) >= effectiveLimit) {
+      const message = isHardCeiling ? hardCeilingMessage() : monitorLimitMessage(effectiveLimit);
+      throw new ApiError(422, "monitor_limit_reached", message);
     }
 
     const [inserted] = await tx

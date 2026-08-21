@@ -11,10 +11,12 @@ import { Label } from "@/components/ui/label";
 
 export interface AddMonitorFormProps {
   atLimit: boolean;
-  maxMonitors: number;
+  /** Plan-aware copy from `@factory/jobs`'s `monitorLimitMessage` — the ONE source for
+   * this wording (m7-billing.md H.10.12), never duplicated here. */
+  limitMessage: string;
 }
 
-export function AddMonitorForm({ atLimit, maxMonitors }: AddMonitorFormProps) {
+export function AddMonitorForm({ atLimit, limitMessage }: AddMonitorFormProps) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
@@ -53,8 +55,7 @@ export function AddMonitorForm({ atLimit, maxMonitors }: AddMonitorFormProps) {
   if (atLimit) {
     return (
       <p className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-        You&apos;ve reached the {maxMonitors}-monitor limit for this demo. Delete one to add
-        another.
+        {limitMessage}
       </p>
     );
   }

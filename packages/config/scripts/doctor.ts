@@ -24,6 +24,7 @@ import {
   type ModelsConfig,
   type Quality,
 } from "../src/llm-routing";
+import { PLANS, type Plan } from "../src/plans";
 import {
   ENV_REGISTRY,
   type AppMode,
@@ -204,6 +205,30 @@ function printLlmRoutingSection(profile: "local" | "openrouter" | "direct", env:
   }
 }
 
+/**
+ * Doctor's billing extensions (H.2.2, H.10.14/18(f)) — never crashes, reads `PLANS` via
+ * a direct import (config-internal, allowed per the task split).
+ */
+function printBillingSection(env: RawEnv): void {
+  for (const plan of Object.values(PLANS) as Plan[]) {
+    if (plan.priceUsdMonthly === null) continue; // free plans are never purchased
+    const ref = plan.providerRefs.stripe;
+    if (!ref || /REPLACE/.test(ref)) {
+      console.log(
+        `    ⚠ plan '${plan.id}' has a missing or placeholder Stripe price ref (providerRefs.stripe) — replace before going live`,
+      );
+    }
+  }
+
+  if (!env.APP_URL) {
+    console.log("    ⚠ APP_URL is not set — checkout/portal redirect URLs will point at localhost");
+  }
+
+  console.log(
+    "    note: pin the Stripe webhook endpoint's API version to the SDK's (payloads render at the ENDPOINT version)",
+  );
+}
+
 function printHeader(mode: AppMode): void {
   console.log("Fabulous Factory — pnpm factory:doctor");
   console.log(`mode: ${mode}`);
@@ -305,6 +330,10 @@ function printServiceLine(
       // no-op, since a dev .env copied to prod is exactly how this var ends up set.
       console.log("    ⚠ INNGEST_DEV=1 is set but ignored in production");
     }
+  }
+
+  if (service === "billing" && adapter === "stripe") {
+    printBillingSection(env);
   }
 
   console.log("");

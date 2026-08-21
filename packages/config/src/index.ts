@@ -1,8 +1,10 @@
 import "server-only";
 
+import { getAppUrl } from "./app-url";
 import { deriveCapabilities, type Capabilities, type ServiceName } from "./capabilities";
 import { getEnv as readEnv, EnvValidationError, type Env } from "./env";
 import { resolveDirectRoutingKey, resolveModel, TIER_ENV_KEY } from "./llm-routing";
+import { FREE_PLAN_ID, PLANS, type Plan, type PlanId } from "./plans";
 import { buildClientConfig, type ClientConfig } from "./public-config";
 import { ENV_REGISTRY, type AppMode } from "./registry";
 
@@ -13,6 +15,8 @@ export type { ClientConfig } from "./public-config";
 export type { Env, EnvIssue } from "./env";
 export { resolveDirectRoutingKey, resolveModel, TIER_ENV_KEY };
 export type { ModelsConfig, Quality, RoutingEnv, RoutingKey, TierTable } from "./llm-routing";
+export { FREE_PLAN_ID, PLANS, getAppUrl };
+export type { Plan, PlanId };
 
 function resolveMode(): AppMode {
   const nodeEnv = process.env.NODE_ENV;

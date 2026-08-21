@@ -54,6 +54,9 @@ importers:
       '@factory/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@factory/billing':
+        specifier: workspace:*
+        version: link:../../packages/billing
       '@factory/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -189,6 +192,40 @@ importers:
       react:
         specifier: ^19.2.8
         version: 19.2.8
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@2.3.0))(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+
+  packages/billing:
+    dependencies:
+      '@factory/config':
+        specifier: workspace:*
+        version: link:../config
+      '@factory/db':
+        specifier: workspace:*
+        version: link:../db
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(kysely@0.29.5)(pg@8.23.0)
+      server-only:
+        specifier: ^0.0.1
+        version: 0.0.1
+      stripe:
+        specifier: 22.5.0
+        version: 22.5.0(@types/node@22.20.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.1
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
+      pg:
+        specifier: ^8.23.0
+        version: 8.23.0
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
@@ -4035,6 +4072,15 @@ packages:
     resolution: {integrity: sha512-vavAMRXOgBVNF6nyEEmL3DBK19iRpDcoIwW+swQ+CbGiu7lju6t+JklA1MHweoWtadgt4ISVUsXLyDq34ddcwA==}
     engines: {node: '>=4'}
 
+  stripe@22.5.0:
+    resolution: {integrity: sha512-QVwMwriC0bbySx6R4dpsvJ0W//GojC1kwWVS6rPSoVqDUIZX4Hy3TaUrd2AZeXEAaKbfWIjQjvo3vKAReHZ0vQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/node': '>=18'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+
   styled-jsx@5.1.6:
     resolution: {integrity: sha512-qSVyDTeMotdvQYoHWLNGwRFJHC+i+ZvdBRYosOFgC+Wg1vx4frN2/RG/NA7SYqqvKNLf39P2LSRA2pu6n0XYZA==}
     engines: {node: '>= 12.0.0'}
@@ -7721,6 +7767,10 @@ snapshots:
       ansi-regex: 6.3.0
 
   strip-bom@3.0.0: {}
+
+  stripe@22.5.0(@types/node@22.20.1):
+    optionalDependencies:
+      '@types/node': 22.20.1
 
   styled-jsx@5.1.6(react@19.2.8):
     dependencies:

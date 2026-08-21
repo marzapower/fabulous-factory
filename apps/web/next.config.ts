@@ -25,6 +25,9 @@ const nextConfig: NextConfig = {
     // that never surfaced because nothing imported @factory/llm from the app yet).
     "@factory/llm",
     "@factory/jobs",
+    // M7: billing (stripe SDK confined behind a guarded dynamic import inside the
+    // package, per boundary rule stripe-only-in-billing).
+    "@factory/billing",
   ],
   outputFileTracingRoot: path.join(__dirname, "../../"),
 

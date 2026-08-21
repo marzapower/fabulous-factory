@@ -3,6 +3,8 @@
 import { z } from "zod";
 
 import { ApiError, defineAction } from "@factory/core";
+import { describeBillingError, getBillingProvider, getEntitlement } from "@factory/billing";
+import { getAppUrl, PLANS, type PlanId } from "@factory/config";
 import {
   checkMonitor,
   createMonitorRow,
@@ -20,18 +22,102 @@ const createMonitorInput = z.object({
 });
 
 /**
- * Auth "required" per plan G.2.10/G.6. `MAX_MONITORS` is enforced inside
- * `createMonitorRow` itself (review fix — a count-then-insert check here would race
- * between concurrent requests), which throws the `monitor_limit_reached` `ApiError`
- * that `defineAction` shapes into the `ActionResult` envelope unchanged. A plain
- * constant cap for this milestone (plan-billing gates land in M7).
+ * Auth "required" per plan G.2.10/G.6. Entitlement is resolved HERE, at the action
+ * layer (m7-billing.md H.10.9) — never inside `createMonitorRow`'s advisory-locked
+ * transaction, which would open a second pool checkout and risk pool-exhaustion
+ * deadlock. `entitlement.monitorLimit` is `null` when billing is disabled (unlimited,
+ * modulo `MONITOR_HARD_CEILING`) or a plan-driven number when it's enabled;
+ * `createMonitorRow` itself still owns the race-free enforcement against that limit
+ * (review fix from M3 — a count-then-insert check here would race between concurrent
+ * requests).
  */
 export const createMonitorAction = defineAction({
   auth: "required",
   input: createMonitorInput,
   rateLimit: { name: "create-monitor", windowSeconds: 60, max: 10 },
   action: async ({ session, input }) => {
-    return createMonitorRow({ userId: session.user.id, name: input.name, url: input.url });
+    const entitlement = await getEntitlement(session.user.id);
+    return createMonitorRow({
+      userId: session.user.id,
+      name: input.name,
+      url: input.url,
+      monitorLimit: entitlement.monitorLimit,
+    });
+  },
+});
+
+// Zod enum derived from the plan catalog's own keys — but PAID plans only (H.10 review
+// fix): "free" was previously accepted here and would 502 deep inside
+// `provider.createCheckout` (it throws "plan has no stripe price configured"), a purely
+// client-shaped mistake mis-surfaced as a provider failure. Never a hand-typed literal
+// list either way — a plan added to/removed from `PLANS` changes this validator for free.
+const paidPlanIds = Object.values(PLANS)
+  .filter((plan) => plan.priceUsdMonthly !== null)
+  .map((plan) => plan.id) as [PlanId, ...PlanId[]];
+const createCheckoutInput = z.object({ plan: z.enum(paidPlanIds) });
+
+/**
+ * Starts a Stripe Checkout session for `input.plan` and returns its redirect URL — the
+ * client does `window.location.assign(url)` (m7-billing.md H.2.13: `defineAction`'s
+ * never-throws envelope contract can't carry a Next `redirect()`, so returning the URL
+ * is the honest, testable shape). Error mapping happens HERE (H.10.8 option b) via
+ * `describeBillingError`, so `packages/billing` never gains a `@factory/core` dependency.
+ *
+ * Guards against double-subscribing (H.10 review fix): fetches entitlement exactly ONCE
+ * per invocation — never a second `getEntitlement` call layered on top — and 409s an
+ * already-subscribed user toward the portal instead of letting them start a second
+ * Checkout session against Stripe.
+ */
+export const createCheckoutAction = defineAction({
+  auth: "required",
+  input: createCheckoutInput,
+  rateLimit: { name: "billing-checkout", windowSeconds: 60, max: 5 },
+  action: async ({ session, input }) => {
+    const entitlement = await getEntitlement(session.user.id);
+    if (entitlement.source === "subscription") {
+      throw new ApiError(
+        409,
+        "already_subscribed",
+        "Manage your plan from the billing portal instead.",
+      );
+    }
+
+    const provider = await getBillingProvider();
+    try {
+      return await provider.createCheckout({
+        userId: session.user.id,
+        plan: input.plan,
+        successUrl: `${getAppUrl()}/billing/success`,
+      });
+    } catch (err) {
+      console.error("[dashboard] createCheckoutAction failed", err);
+      const d = describeBillingError(err);
+      throw new ApiError(d.status, d.code, d.message);
+    }
+  },
+});
+
+/**
+ * Opens the Stripe customer portal for the signed-in user. Returns `{ url: string |
+ * null }` rather than the provider's own `{ url } | null` shape (H.10.15) — `null` means
+ * the user has no billing customer on file yet (never a subscriber, or a subscription
+ * that predates a customer record), which the UI renders as an inline notice instead of
+ * a redirect. Same error mapping as `createCheckoutAction` (H.10.8).
+ */
+export const openPortalAction = defineAction({
+  auth: "required",
+  input: "none",
+  rateLimit: { name: "billing-portal", windowSeconds: 60, max: 5 },
+  action: async ({ session }) => {
+    const provider = await getBillingProvider();
+    try {
+      const portal = await provider.getPortalUrl(session.user.id);
+      return { url: portal?.url ?? null };
+    } catch (err) {
+      console.error("[dashboard] openPortalAction failed", err);
+      const d = describeBillingError(err);
+      throw new ApiError(d.status, d.code, d.message);
+    }
   },
 });
 
