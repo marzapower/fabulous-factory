@@ -35,6 +35,9 @@ export function renderFactoryStatus(
     lines.push(
       "Adopter skills (define-product, add-a-feature, enable-billing, swap-llm-provider, brand-it, make-it-yours, pre-ship-check) install into .claude/skills/ when you run `pnpm factory:init`.",
     );
+    lines.push(
+      "Adopter agents (fab-scribe, fab-smith, fab-muse, fab-preflight) install into .claude/agents/ at the same time; the shared agents (fab-warden, fab-bastion, fab-medic) are already there.",
+    );
   }
 
   return lines;

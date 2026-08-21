@@ -173,6 +173,7 @@ Things we deliberately **don't** promise:
   [`launch-checklist.md`](docs/guides/launch-checklist.md)
 - `docs/templates/` — SPEC / PRODUCT / ADR templates your agents fill in
 - `.claude/skills/` — the guided workflows your agent team runs
+- `.claude/agents/` — the `fab-*` subagent roster that runs them
 
 ---
 
