@@ -28,6 +28,22 @@ export interface ActionError {
  */
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: ActionError };
 
+// Once-per-process emission (I.3.b/opt-6), mirroring `define-handler.ts`'s identical
+// tolerance: a module-level flag rather than per-request logging, so a broken auth stack
+// under sustained public traffic logs one line, not a stream of stack traces. A separate
+// flag from `define-handler.ts`'s own (each module owns its process-lifetime state) —
+// the two wrappers are independent call sites that can each fail on their own schedule.
+let sessionFailureWarned = false;
+
+function warnSessionFailureOnce(err: unknown): void {
+  if (sessionFailureWarned) return;
+  sessionFailureWarned = true;
+  console.error(
+    "[@factory/core] getSession() failed on a public action — degrading to session: null (this warning is emitted once per process)",
+    err,
+  );
+}
+
 /**
  * Same auth-mode union as `HandlerOptions` (plan D.4): public actions must state a
  * rate-limit decision, required-auth actions may omit it.
@@ -52,7 +68,11 @@ export type ActionOptions<S extends z.ZodTypeAny | "none", T> =
  * check: Next 15.5 Server Actions ship built-in Origin↔Host verification for their POST
  * transport, so duplicating it here would be redundant (plan D.1/D.9.11).
  *
- *   1. session    — resolved once via `getSession()`.
+ *   1. session    — resolved once via `getSession()`, tolerant of a failing auth stack
+ *                   (I.3.b, unconditional here — `defineAction` HAS a public arm and
+ *                   calls `getSession()` unconditionally): `auth: "required"` rethrows,
+ *                   caught below and shaped to `internal_error` (no HTTP status exists
+ *                   for a Server Action); `public` degrades to `session: null`.
  *   2. rate limit — subject `user:{id}` when a session exists, else `ip:{clientIp}`
  *                   (via `next/headers`, since actions receive no `Request` object).
  *   3. auth       — `'required'` + no session → `{ ok: false, error: { code: "unauthorized" } }`.
@@ -66,7 +86,18 @@ export function defineAction<S extends z.ZodTypeAny | "none", T>(
 ): (rawInput: unknown) => Promise<ActionResult<T>> {
   return async function runAction(rawInput) {
     try {
-      const session = await getSession();
+      // Same tolerance as `defineHandler`'s identical try/catch (I.3.b — see its CONTRACT
+      // note for the full rationale): `auth: "required"` rethrows, `public` degrades to
+      // `session: null`. The rethrow lands in THIS function's own outer catch below,
+      // which has no HTTP status to shape — it becomes `{ ok: false, error: { code:
+      // "internal_error" } }`, the same envelope any other unexpected action failure gets.
+      let session: Awaited<ReturnType<typeof getSession>> = null;
+      try {
+        session = await getSession();
+      } catch (err) {
+        if (opts.auth === "required") throw err;
+        warnSessionFailureOnce(err);
+      }
 
       if (opts.rateLimit && opts.rateLimit !== "none") {
         const subject = session ? `user:${session.user.id}` : `ip:${getClientIp(await headers())}`;

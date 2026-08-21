@@ -74,6 +74,55 @@ describe("defineAction — never throws", () => {
   });
 });
 
+describe("defineAction — public-arm session tolerance (I.3.b/I.10.11)", () => {
+  it("public + getSession() throws: action still runs, OBSERVES session: null, and the warning logs only once across repeated failures", async () => {
+    mockGetSession.mockRejectedValue(new Error("auth stack is down"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const run = defineAction({
+        auth: "public",
+        input: "none",
+        rateLimit: "none",
+        action: async (ctx) => {
+          // CONTRACT (I.10.10, applies identically to defineAction): null here means
+          // getSession() failed, not that the caller was unauthenticated.
+          expect(ctx.session).toBeNull();
+          return "done";
+        },
+      });
+
+      expect(await run(undefined)).toEqual({ ok: true, data: "done" });
+      // `sessionFailureWarned` is module-level with no reset between tests, so this
+      // assertion depends on this being the FIRST public-arm getSession() failure in this
+      // file's execution order — a new, earlier failing test would break it.
+      expect(consoleError).toHaveBeenCalledTimes(1);
+
+      // A second failure on the same process must NOT log again.
+      expect(await run(undefined)).toEqual({ ok: true, data: "done" });
+      expect(consoleError).toHaveBeenCalledTimes(1);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("required + getSession() throws: { ok: false, internal_error } (I.10.11 — no HTTP status), action never runs", async () => {
+    mockGetSession.mockRejectedValue(new Error("auth stack is down"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const action = vi.fn();
+      const run = defineAction({ auth: "required", input: "none", action });
+      const result = await run(undefined);
+      expect(result).toEqual({
+        ok: false,
+        error: { code: "internal_error", message: "Internal server error" },
+      });
+      expect(action).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+});
+
 describe("defineAction — auth modes", () => {
   it("public + no session: action runs with session: null", async () => {
     const run = defineAction({

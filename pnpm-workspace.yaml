@@ -13,7 +13,12 @@ allowBuilds:
 # Supply-chain hardening (spec §8.5; flagged by the semgrep OWASP ruleset):
 # wait a day before adopting fresh releases, keep the dep tree registry-only,
 # and require explicit approval for build scripts of newly added packages.
-minimumReleaseAge: 1440
+# The semgrep p/owasp-top-ten rule wants a >=7 day floor, but we deliberately
+# stay at 1 day: a 7-day floor makes pnpm's dep-status check reject
+# already-locked packages published within the last week and blocks every
+# local `pnpm run` script (a template must install cleanly on day one), so
+# we suppress the rule here instead of adopting a floor that breaks installs.
+minimumReleaseAge: 1440 # nosemgrep: package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
 # undici-types 6.x is the exact pin of @types/node 22.x (our Node floor); its old

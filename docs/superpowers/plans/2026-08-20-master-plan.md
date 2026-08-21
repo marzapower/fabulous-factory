@@ -28,6 +28,12 @@ implementation → review → gates → approval-gated Conventional Commit.
 
 Cross-milestone invariants (enforced from M1, never regressed):
 
+- **Baseline contract (amended in M8, user decision 2026-08-21): the required minimum
+  is Postgres + auth — `DATABASE_URL` AND `BETTER_AUTH_SECRET`.** Every other service
+  stays optional with graceful degradation. Milestone rows above that say "only
+  `DATABASE_URL`" describe the pre-M8 contract; Part I (`milestones/m8-docker-deploy.md`)
+  §I.3.a is the change record.
+
 - English-only repo content; Conventional Commits.
 - No `NEXT_PUBLIC_*` capability signals; capability map is server-only, request-time.
 - `pnpm check` is the machine-checkable definition of done; it must stay green on a
@@ -55,5 +61,6 @@ read Part A plus ONLY the active milestone's file.
 | F    | M5 LLM gateway                 | `milestones/m5-llm-gateway.md`        |
 | G    | M6 jobs + demo loop            | `milestones/m6-jobs-demo.md`          |
 | H    | M7 billing                     | `milestones/m7-billing.md`            |
+| I    | M8 Docker + deploy             | `milestones/m8-docker-deploy.md`      |
 
 New milestones append a row here and a new file there (G=M6 → `m6-jobs-demo.md`, …).

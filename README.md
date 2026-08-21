@@ -53,12 +53,13 @@ That's the whole philosophy: **what is mechanical must never be probabilistic.**
 
 ## ⚡ Quickstart
 
-**Zero service signups.** Next.js + Postgres are the only hard requirements — everything else lights up later via env vars.
+**Zero service signups.** Postgres and a Better Auth secret are the only hard requirements — everything else lights up later via env vars.
 
 ```bash
 # 1. Click "Use this template" on GitHub, then:
 git clone <your-new-repo> && cd <your-new-repo>
-cp .env.example .env       # set DATABASE_URL (or just: docker compose up)
+cp .env.example .env       # set DATABASE_URL + BETTER_AUTH_SECRET (or just: docker compose up)
+openssl rand -hex 32       # → paste as BETTER_AUTH_SECRET in .env
 pnpm install
 pnpm dev                   # migrations self-apply; you're running.
 ```
@@ -101,7 +102,7 @@ Every service is optional and resolved **at request time, on the server** — so
 | ⏰ jobs                  | a manual “check now” button replaces the cron                                  |
 | 📊 analytics / 🚨 errors | silent no-op                                                                   |
 
-`pnpm factory:doctor` prints your capability map and the exact env vars that would enable each disabled service. CI runs the whole suite twice — **minimal profile (only `DATABASE_URL`) and full profile** — on every PR, so the “boots with nothing” promise stays honest by machine, not by memory.
+`pnpm factory:doctor` prints your capability map and the exact env vars that would enable each disabled service. CI runs the whole suite twice — **minimal profile (`DATABASE_URL` + `BETTER_AUTH_SECRET`) and full profile** — on every PR, so the “boots with nothing” promise stays honest by machine, not by memory.
 
 ## 🛡️ Guardrails your agents can't talk their way past
 
@@ -126,6 +127,33 @@ When you adopt, `docs/guides/make-it-yours.md` tells you exactly what to delete 
 - **Docker** — multi-stage build (slim non-root runtime + separate migrate image), `docker compose up` with profiles for jobs (self-hosted Inngest) and local LLM (Ollama). Runs on any VPS, Fly.io, Railway, Coolify…
 
 Nothing in app code is Vercel-proprietary. The paths are identical code, different config.
+
+### Run with Docker
+
+`docker-compose.yml` is the source of truth for exact service wiring — this is just the quickstart.
+
+```bash
+cp .env.example .env
+openssl rand -hex 32       # → paste as BETTER_AUTH_SECRET in .env
+docker compose up --build
+```
+
+`db` → `migrate` → `app` boot in order; `curl localhost:3000/api/health` → `{"status":"ok"}`. Compose
+supplies its own `DATABASE_URL`; a missing `BETTER_AUTH_SECRET` fails fast at compose interpolation
+time with an actionable message, before anything half-boots. `docker build` itself needs zero real
+env — the two baseline vars ship as placeholder build args.
+
+- **Port** — override with `APP_PORT=8080 docker compose up`.
+- **Jobs profile** (self-hosted Inngest) — put `INNGEST_EVENT_KEY` and an even-length-hex
+  `INNGEST_SIGNING_KEY` in `.env`, then `docker compose --profile jobs up`.
+- **LLM profile** (local Ollama) — set `LLM_PROFILE=local` and
+  `LLM_LOCAL_BASE_URL=http://ollama:11434/v1` in `.env`, then `docker compose --profile llm up`. That
+  `ollama` hostname is for the compose stack only — with host-side `pnpm dev`/`doctor` it's
+  unresolvable and would make `llm: local` a lie, so host users should set it only if they run Ollama
+  locally (e.g. `http://127.0.0.1:11434/v1`). The image is **2.78 GB**; pull a model manually once it's
+  up: `docker compose --profile llm exec ollama ollama pull <model>`. Healthy ≠ a model is pulled.
+- **Migrating an external Postgres** — the `migrate` service has no `env_file` by design; run the
+  migrate image directly with your own `DATABASE_URL` instead of going through compose.
 
 ## 🤝 Honesty section
 

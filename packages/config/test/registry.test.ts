@@ -13,10 +13,9 @@ describe("ENV_REGISTRY invariants", () => {
     expect(databaseUrl).toBeDefined();
   });
 
-  it("marks DATABASE_URL as the only required var", () => {
+  it("marks DATABASE_URL and BETTER_AUTH_SECRET as the required vars (M8: pg + auth is the minimum)", () => {
     const required = ENV_REGISTRY.filter((spec) => spec.required);
-    expect(required).toHaveLength(1);
-    expect(required[0]?.name).toBe("DATABASE_URL");
+    expect(required.map((spec) => spec.name)).toEqual(["DATABASE_URL", "BETTER_AUTH_SECRET"]);
   });
 
   it("gives every var a non-empty description", () => {
@@ -49,7 +48,14 @@ describe("ENV_REGISTRY invariants", () => {
     // "sk_test_": a real Stripe test-mode secret key also starts with that prefix, so it
     // doesn't prove an example is a placeholder.
     const placeholderMarkers = ["your", "changeme", "example", "signkey-"];
-    for (const spec of ENV_REGISTRY.filter((s) => s.secret)) {
+    // BETTER_AUTH_SECRET is the one deliberate exception (I.10.7): its example is the
+    // EMPTY string, not a placeholder-looking one — required vars ship uncommented with
+    // their example in `.env.example`, so any non-empty example here would be a working
+    // default secret. Empty is strictly safer than a placeholder, so it's excluded from
+    // this "looks like a placeholder" check rather than forced to satisfy it. Excluded by
+    // name, not by `example === ""`, so a future secret var can't silently opt out of this
+    // check just by shipping an empty example (I.10.7).
+    for (const spec of ENV_REGISTRY.filter((s) => s.secret && s.name !== "BETTER_AUTH_SECRET")) {
       expect(spec.example, `${spec.name} secret must have an example`).toBeDefined();
       const looksLikePlaceholder = placeholderMarkers.some((marker) =>
         spec.example!.toLowerCase().includes(marker),
@@ -90,16 +96,16 @@ describe("ENV_REGISTRY invariants", () => {
   });
 });
 
-describe("ENV_REGISTRY — auth vars (M2)", () => {
+describe("ENV_REGISTRY — auth vars (M2, required tier updated M8)", () => {
   const secretVars = ["BETTER_AUTH_SECRET", "GOOGLE_CLIENT_SECRET", "GITHUB_CLIENT_SECRET"];
   const nonSecretVars = ["GOOGLE_CLIENT_ID", "GITHUB_CLIENT_ID"];
 
-  it("registers all five auth vars in the 'auth' group, none required", () => {
+  it("registers all five auth vars in the 'auth' group; only BETTER_AUTH_SECRET is required", () => {
     for (const name of [...secretVars, ...nonSecretVars]) {
       const spec = ENV_REGISTRY.find((s) => s.name === name);
       expect(spec, `${name} missing from ENV_REGISTRY`).toBeDefined();
       expect(spec?.group).toBe("auth");
-      expect(spec?.required).toBe(false);
+      expect(spec?.required).toBe(name === "BETTER_AUTH_SECRET");
     }
   });
 
@@ -113,5 +119,17 @@ describe("ENV_REGISTRY — auth vars (M2)", () => {
     for (const name of nonSecretVars) {
       expect(ENV_REGISTRY.find((s) => s.name === name)?.secret).toBe(false);
     }
+  });
+
+  // Positive coverage for the M8 contract change (I.3.a, I.10.8): BETTER_AUTH_SECRET is
+  // now required, exactly like DATABASE_URL — "pg + auth is the minimum".
+  it("requires BETTER_AUTH_SECRET (M8 contract change)", () => {
+    const spec = ENV_REGISTRY.find((s) => s.name === "BETTER_AUTH_SECRET");
+    expect(spec?.required).toBe(true);
+  });
+
+  it("ships BETTER_AUTH_SECRET with an empty example, never a working default secret (I.10.7)", () => {
+    const spec = ENV_REGISTRY.find((s) => s.name === "BETTER_AUTH_SECRET");
+    expect(spec?.example).toBe("");
   });
 });

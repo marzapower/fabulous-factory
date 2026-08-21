@@ -5,23 +5,38 @@ import { ENV_REGISTRY, type EnvVarName, type RawEnv } from "./registry";
 
 // Vars whose value must be a well-formed URL when present. Not every var needs this —
 // keep validation minimal and honest to what the app actually depends on.
-const URL_FIELDS = new Set<EnvVarName>(["APP_URL", "LLM_LOCAL_BASE_URL", "POSTHOG_HOST"]);
+const URL_FIELDS = new Set<EnvVarName>([
+  "APP_URL",
+  "LLM_LOCAL_BASE_URL",
+  "POSTHOG_HOST",
+  "INNGEST_BASE_URL",
+]);
 
 // A typo here (e.g. "Local", "openai") must surface as a validation error, not silently
 // fall through — capabilities.ts's `deriveCapabilities` stays tolerant of unrecognized
 // values (auto-detects instead), but this layer is where the operator gets told.
 const LLM_PROFILE_VALUES = ["local", "openrouter", "direct", "disabled"] as const;
 
+// Vars whose value must clear a minimum length (I.3.a) — rejects an obviously-too-short
+// placeholder rather than letting it silently pass the bare "not empty" check every other
+// var gets. `BETTER_AUTH_SECRET` is the only one today: 16 is a conservative floor under
+// Better Auth's own expectations, well below the `openssl rand -hex 32` idiom the docs
+// recommend (64 hex chars).
+const MIN_LENGTH_FIELDS = new Map<EnvVarName, number>([["BETTER_AUTH_SECRET", 16]]);
+
 const specByName = new Map(ENV_REGISTRY.map((spec) => [spec.name, spec] as const));
 
 function fieldSchema(name: EnvVarName): z.ZodTypeAny {
   const spec = specByName.get(name)!;
+  const minLength = MIN_LENGTH_FIELDS.get(name);
   const base =
     name === "LLM_PROFILE"
       ? z.enum(LLM_PROFILE_VALUES)
       : URL_FIELDS.has(name)
         ? z.url()
-        : z.string().min(1, "must not be empty");
+        : minLength !== undefined
+          ? z.string().min(minLength, `must be at least ${minLength} characters`)
+          : z.string().min(1, "must not be empty");
   return spec.required ? base : base.optional();
 }
 

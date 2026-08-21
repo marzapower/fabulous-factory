@@ -84,14 +84,23 @@ const AUTH_SOCIAL_PROVIDERS: ReadonlyArray<{
   { name: "github", idVar: "GITHUB_CLIENT_ID", secretVar: "GITHUB_CLIENT_SECRET" },
 ];
 
+// Mirrors the Stripe placeholder check below (`printBillingSection`'s `/REPLACE/.test(ref)`,
+// I.10.7): a literal leftover placeholder is a distinct failure mode from "unset" — the var
+// passes required-string validation (so `getEnv()` never catches it) yet still isn't a real
+// secret. Case-insensitive: catches both the pre-M8 example value's "replace-with-..." and
+// an all-caps "REPLACE_ME"-style edit.
+const PLACEHOLDER_SECRET_PATTERN =
+  /replace|placeholder|changeme|dummy|not-for-production|not-real/i;
+
 /**
  * Auth is always-on (email/password), unlike the optional services above — so it gets its
  * own section rather than a `ServiceName` entry. OAuth providers light up per-provider by
- * key presence; `BETTER_AUTH_SECRET` gets a warning in production (auth endpoints fail
- * without it) and an advisory in development (Better Auth's built-in dev fallback covers
- * it, but it must be set before deploying).
+ * key presence. `BETTER_AUTH_SECRET` is now REQUIRED (M8, I.3.a) — same tier as
+ * `DATABASE_URL` — so a genuinely missing value is already reported by
+ * `printValidationIssues` above; this section instead flags a value that IS set but still
+ * looks like an unedited placeholder (I.10.7).
  */
-function printAuthSection(env: RawEnv, mode: AppMode): void {
+function printAuthSection(env: RawEnv): void {
   console.log("✓ auth: email/password (always on)");
 
   for (const provider of AUTH_SOCIAL_PROVIDERS) {
@@ -102,12 +111,16 @@ function printAuthSection(env: RawEnv, mode: AppMode): void {
     }
   }
 
-  if (env.BETTER_AUTH_SECRET) {
+  if (env.BETTER_AUTH_SECRET && PLACEHOLDER_SECRET_PATTERN.test(env.BETTER_AUTH_SECRET)) {
+    console.log(
+      "    ⚠ BETTER_AUTH_SECRET looks like a placeholder value — replace it with a real secret (openssl rand -hex 32)",
+    );
+  } else if (env.BETTER_AUTH_SECRET) {
     console.log(`    ✓ BETTER_AUTH_SECRET=${maskSecret(env.BETTER_AUTH_SECRET)}`);
-  } else if (mode === "production") {
-    console.log("    ⚠ BETTER_AUTH_SECRET is not set — auth endpoints will fail until set");
   } else {
-    console.log("    ⚠ BETTER_AUTH_SECRET is not set — set it before deploying to production");
+    console.log(
+      "    ⚠ BETTER_AUTH_SECRET is not set — required (see ENVIRONMENT ISSUES above); generate one with `openssl rand -hex 32`",
+    );
   }
 
   console.log("");
@@ -346,7 +359,7 @@ function main(): void {
 
   printHeader(mode);
   printValidationIssues(env);
-  printAuthSection(env, mode);
+  printAuthSection(env);
 
   for (const service of Object.keys(SERVICE_TITLES) as ServiceName[]) {
     printServiceLine(service, capabilities, env, mode);

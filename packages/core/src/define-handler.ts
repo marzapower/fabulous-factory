@@ -93,6 +93,22 @@ export interface NextRouteContext {
 
 const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+// Once-per-process emission (I.3.b/opt-6): `/api/health` is `rateLimit: "none"` and the
+// Docker HEALTHCHECK polls it every 30s — an unthrottled `console.error` on every request
+// would stream a stack trace on exactly the failure mode this tolerance exists to survive
+// (a broken auth stack under a live healthcheck). One line per process is enough to alert
+// an operator without flooding the logs.
+let sessionFailureWarned = false;
+
+function warnSessionFailureOnce(err: unknown): void {
+  if (sessionFailureWarned) return;
+  sessionFailureWarned = true;
+  console.error(
+    "[@factory/core] getSession() failed on a public route — degrading to session: null (this warning is emitted once per process)",
+    err,
+  );
+}
+
 /**
  * The only legal way to declare a route handler (spec §8.4 — enforced structurally, and
  * backstopped by the raw-handler lint ban, plan D.5). Auth, rate limiting, origin
@@ -104,7 +120,10 @@ const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
  *                  content-length guard (411 when missing/non-finite — refuses chunked
  *                  transfer on this unauthenticated arm by design; 413 over 1 MiB), then
  *                  straight to `opts.webhook`.
- *   1. session   — resolved once via `getSession()`.
+ *   1. session   — resolved once via `getSession()`, tolerant of a failing auth stack
+ *                  (I.3.b): `auth: "required"` rethrows (shaped 500 below); `public`
+ *                  degrades to `session: null` instead of 500ing (see the CONTRACT note
+ *                  on the try/catch itself).
  *   2. rate limit — subject `user:{id}` when a session exists, else `ip:{clientIp}`.
  *   3. auth      — `'required'` + no session → 401.
  *   4. origin    — state-changing methods only; reject a mismatched/cross-site Origin.
@@ -136,7 +155,18 @@ export function defineHandler<S extends z.ZodTypeAny | "none">(
       // the session cookie from headers before touching the database, so cookie-less
       // requests — the common case for public traffic — never reach Postgres; no extra
       // fast-path logic is needed on top of the single `getSession()` call.
-      const session = await getSession();
+      let session: Awaited<ReturnType<typeof getSession>> = null;
+      try {
+        session = await getSession();
+      } catch (err) {
+        // auth: "required" routes fail loudly (500 via shapeError below) — a broken auth
+        // stack must not silently 401 users who hold valid cookies. Public routes degrade
+        // to anonymous. CONTRACT (I.10.10): a public handler may observe `session: null`
+        // for a request that carries a VALID cookie whenever the auth stack is failing —
+        // `null` is never an authorization decision, only "no usable session here".
+        if (opts.auth === "required") throw err;
+        warnSessionFailureOnce(err);
+      }
 
       // Params are awaited here (moved up from step (6), B2 fix) so the rate-limit
       // bucket name can be derived from the route PATTERN rather than the concrete

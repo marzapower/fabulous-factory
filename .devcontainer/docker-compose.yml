@@ -10,6 +10,10 @@ services:
       # integration tests (packages/db/test/integration) have a real, isolated target
       # without any manual setup step.
       TEST_DATABASE_URL: postgres://postgres:postgres@db:5432/factory_test
+      # Fixed dev-only value: BETTER_AUTH_SECRET is now required (M8), and without it
+      # `pnpm dev` inside the devcontainer would throw EnvValidationError. Never used
+      # outside this container.
+      BETTER_AUTH_SECRET: devcontainer-dev-secret-not-for-production
     depends_on:
       db:
         condition: service_healthy

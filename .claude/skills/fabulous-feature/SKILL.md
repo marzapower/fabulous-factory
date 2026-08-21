@@ -80,8 +80,9 @@ command — in this repo:
 pnpm check   # lint + boundaries + typecheck + tests
 ```
 
-Integration tests run in both profiles (minimal: only DATABASE_URL; full: all services
-mocked). Without a test database configured, the integration suite must skip cleanly.
+Integration tests run in both profiles (minimal: DATABASE_URL + BETTER_AUTH_SECRET; full:
+all services mocked). Without a test database configured, the integration suite must skip
+cleanly.
 
 ## Phase 7 — Closure
 
