@@ -1,0 +1,177 @@
+{
+  "comment": "Adoption Ledger — factory defaults a real product must own. Hashes are SHA-256 of shipped bytes (raw file content on disk — a CRLF checkout would flip every hash and green the whole ledger on day zero; .gitattributes ships \"* text=auto eol=lf\" repo-wide to prevent that). Status is an AND rule per item, not per file: an item is \"factory-default\" if ANY of its listed files is still present with a matching hash (one untouched shipped file means the item is not yet owned); \"removed\" only when ALL listed files are missing; otherwise \"touched\" — note a trivial edit or a formatter pass is enough to flip an item to touched; that's accepted, since the ledger only guides adopters to the right skill, and the per-item recipes (not the hash check) are what actually gate production readiness. Regenerate with: pnpm factory:manifest (template repo only, gated by .factory/config.json having \"template\": true).",
+  "items": [
+    {
+      "id": "product-def",
+      "title": "Product definition",
+      "why": "PRODUCT.md is still the shipped placeholder — no one has said what this product is.",
+      "skill": "define-product",
+      "blocksProduction": true,
+      "files": [
+        {
+          "path": "PRODUCT.md",
+          "hash": "f4c14059ea533ad3e33ae5a59a33fa237ad6d8e9db8d8eb7b4eb2148329b5d56"
+        }
+      ]
+    },
+    {
+      "id": "app-identity",
+      "title": "App identity",
+      "why": "The landing page still shows the template's own name and copy, not the product's.",
+      "skill": "brand-it",
+      "blocksProduction": true,
+      "files": [
+        {
+          "path": "apps/web/app/page.tsx",
+          "hash": "e38bd7a61d63721603a330c6343dddc8f0261b38be1930fd010e560ae9447f77"
+        }
+      ]
+    },
+    {
+      "id": "design-system",
+      "title": "Design system",
+      "why": "globals.css still ships the template's default theme tokens — no product-specific brand applied yet.",
+      "skill": "brand-it",
+      "blocksProduction": false,
+      "files": [
+        {
+          "path": "apps/web/app/globals.css",
+          "hash": "efb8700463db3c221f57c639770efeb4b65d467798199860a766397f6d1a8320"
+        }
+      ]
+    },
+    {
+      "id": "demo-logic",
+      "title": "Demo logic",
+      "why": "The page-monitor demo feature (jobs, dashboard, schema) is still the shipped example, not the product's real feature.",
+      "skill": "make-it-yours",
+      "blocksProduction": true,
+      "files": [
+        {
+          "path": "packages/jobs/src/demo/check-monitor.ts",
+          "hash": "3e5d6d9ffa82cde55ca16c2dc733ffa6688f919164becec2798b5d873bb644f6"
+        },
+        {
+          "path": "packages/jobs/src/demo/constants.ts",
+          "hash": "6e2f0390b6430957d9af1b00f2462acbc4f8914cfb6338ed293982fae43c8d80"
+        },
+        {
+          "path": "packages/jobs/src/demo/monitor-cron.ts",
+          "hash": "9e0fcc0d4d2507e1272655ca9c36708ba6d83668aafef75b71f4bf97dd648b35"
+        },
+        {
+          "path": "packages/jobs/src/demo/monitor-worker.ts",
+          "hash": "9b9bd5dc8697591ea1b28979eca30e968ff38d69a8b9745c992a030c53a2a59b"
+        },
+        {
+          "path": "packages/jobs/src/demo/queries.ts",
+          "hash": "9ed86a762e1e93dd417b9a7df5eec7ee3e97aff84e0484773f318fdf4e350ca8"
+        },
+        {
+          "path": "packages/jobs/src/demo/record-error.ts",
+          "hash": "5f4bc6d2e1b5df1116e27769cbd62e414bb33eea88dc90110e158d126715fa66"
+        },
+        {
+          "path": "apps/web/components/demo/add-monitor-form.tsx",
+          "hash": "bc8fe466e752d6c5d30b0639c657baf8c3e8a4c9b4472bd2dc0279afe76fe13e"
+        },
+        {
+          "path": "apps/web/components/demo/check-now-button.tsx",
+          "hash": "006324ee68c9a600e97e3243ef388a88cfa535accbc85d9447f1c9a1ca85d739"
+        },
+        {
+          "path": "apps/web/components/demo/feed-card.tsx",
+          "hash": "356ff4d29631dafe3cf79e1c54c8f44192b4800a6e5a3477ed18cf6ef3f76496"
+        },
+        {
+          "path": "apps/web/components/demo/monitor-row.tsx",
+          "hash": "d20dce0cbb421d336beca45110e099eb8a997cdcd4f99c30b0a57c24aacbcd48"
+        },
+        {
+          "path": "apps/web/components/demo/monitors-card.tsx",
+          "hash": "1b6168530c4b3a8365bc124ce616ed2fc7eaf86574d0638735990b1b5cc5ece1"
+        },
+        {
+          "path": "apps/web/components/demo/format-relative-time.ts",
+          "hash": "f287bb48fc1791ea86ee87bd7f94920265572b8dfafbc14d7757ddd26a05b3a3"
+        },
+        {
+          "path": "apps/web/app/dashboard/page.tsx",
+          "hash": "25f46ed8861c53cf35ea41162cf43a319ba4147835b94cc264ea7dac89331489"
+        },
+        {
+          "path": "apps/web/app/dashboard/actions.ts",
+          "hash": "3cc8e9464009fdc5778995d8311dacd9f59915f2df4b7950a06278b85b3b61fb"
+        },
+        {
+          "path": "packages/db/src/schema/monitor.ts",
+          "hash": "cb2059d32fdf63ad8bfff564caaeb547e14ab00166bd06893427353eeafe7c8a"
+        }
+      ]
+    },
+    {
+      "id": "legal-pages",
+      "title": "Legal pages",
+      "why": "Terms and Privacy are still the template's placeholder copy — replace before real users sign up.",
+      "skill": "make-it-yours",
+      "blocksProduction": true,
+      "files": [
+        {
+          "path": "apps/web/app/(legal)/terms/page.tsx",
+          "hash": "db6101aea537de480f9be47aecfc3388e90ea005ffd23b12ac6fdc670d13cbc2"
+        },
+        {
+          "path": "apps/web/app/(legal)/privacy/page.tsx",
+          "hash": "0f2ca3391e0275366d5574d775b6062a42cc7b1f7ba22e1fd428f5d4abeeb891"
+        }
+      ]
+    },
+    {
+      "id": "email-templates",
+      "title": "Email templates",
+      "why": "Verify-email, magic-link, and change-digest emails still use the template's default copy and styling.",
+      "skill": "brand-it",
+      "blocksProduction": false,
+      "files": [
+        {
+          "path": "packages/email/src/templates/verify-email.tsx",
+          "hash": "7be2e81777290aa5fe247a52a89815748f1d33589864ad36aa36742989577bbc"
+        },
+        {
+          "path": "packages/email/src/templates/magic-link.tsx",
+          "hash": "beb5ec7e14dd5195c7c5b465d6502664f4d09e8d8f66da3f8dfc0b8d485a2287"
+        },
+        {
+          "path": "packages/email/src/templates/change-digest.tsx",
+          "hash": "ec277656fca0e247407064e589904044a5cb3ed4b0248ae7d40188a48f5e7142"
+        }
+      ]
+    },
+    {
+      "id": "plans-catalog",
+      "title": "Plans catalog",
+      "why": "packages/config/src/plans.ts still ships the template's example pricing plans.",
+      "skill": "enable-billing",
+      "blocksProduction": false,
+      "files": [
+        {
+          "path": "packages/config/src/plans.ts",
+          "hash": "a82e2dc322bf7b962ba6e3c07d483be682a7b66b0c9340998ca7afbf3030af8a"
+        }
+      ]
+    },
+    {
+      "id": "readme",
+      "title": "README",
+      "why": "README.md still describes the template itself, not the product built from it.",
+      "skill": "make-it-yours",
+      "blocksProduction": false,
+      "files": [
+        {
+          "path": "README.md",
+          "hash": "0be66e371688cd19954829759b69e9cbffdbc6bfce6d7fb29aba562e3a2583fe"
+        }
+      ]
+    }
+  ]
+}

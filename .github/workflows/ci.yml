@@ -72,6 +72,12 @@ jobs:
 
       - run: pnpm test
 
+      - name: Adoption manifest freshness
+        run: pnpm factory:manifest --check
+
+      - name: Adoption preflight
+        run: pnpm preflight
+
   # M1 minimal-profile boot check (design spec §5.1/§9.5): the app must build and serve
   # liveness with nothing but DATABASE_URL set. M2 fulfills the promise that was
   # deferred here in M1: a real Postgres service container now backs DATABASE_URL, the

@@ -43,6 +43,8 @@ const EXACT_ALLOWLIST = new Set([
   "/",
   "/login",
   "/signup",
+  "/terms",
+  "/privacy",
   "/api/health",
   "/api/billing/webhook",
   "/api/inngest",

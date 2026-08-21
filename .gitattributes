@@ -1,0 +1,4 @@
+# Adoption Ledger (.factory/manifest.json) hashes shipped bytes with plain SHA-256; a
+# CRLF checkout on Windows would silently flip every hash and green the whole ledger on
+# day zero. Force LF everywhere and let git auto-detect text vs. binary (M9, opt-14).
+* text=auto eol=lf

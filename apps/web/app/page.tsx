@@ -35,6 +35,15 @@ export default function HomePage() {
         </div>
 
         <CapabilityPanel />
+
+        <footer className="mt-12 flex gap-4 border-t pt-6 text-sm text-muted-foreground">
+          <Link href="/terms" className="underline underline-offset-4">
+            Terms
+          </Link>
+          <Link href="/privacy" className="underline underline-offset-4">
+            Privacy
+          </Link>
+        </footer>
       </main>
     </ClientConfigProvider>
   );
