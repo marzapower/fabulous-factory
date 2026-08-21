@@ -8,8 +8,12 @@
  * (e.g. an interrupted prior run) completes whatever remains and still returns `ok: true`.
  * Step order: copy CLAUDE.md/AGENTS.md → move every handoff skill into `.claude/skills/`
  * (removing any stale destination first — `renameSync` can't overwrite a non-empty dir) →
- * delete the factory-dev-only skills → delete `.factory/handoff/` → drop the `template` flag
+ * delete the factory-dev-only skills → copy every handoff agent into `.claude/agents/` →
+ * delete the factory-dev-only agents → delete `.factory/handoff/` → drop the `template` flag
  * from `.factory/config.json`.
+ *
+ * The skills loop and the agents loop are deliberately not factored into one helper — see
+ * docs/adr/0002-stage-adopter-agents-in-handoff.md for why.
  */
 import {
   cpSync,
@@ -30,6 +34,13 @@ export const FACTORY_DEV_ONLY_SKILLS = [
   "write-adr",
   "release-template",
 ];
+
+/**
+ * Same idea for subagents: these two build and maintain the template itself, so an adopter
+ * would only ever be confused by them. The shared agents (fab-warden, fab-bastion, fab-medic)
+ * are absent from this list on purpose — they ship at root and survive the handoff.
+ */
+export const FACTORY_DEV_ONLY_AGENTS = ["fab-forge", "fab-steward"];
 
 export function runFactoryInit(rootDir: string): { ok: boolean; messages: string[] } {
   const messages: string[] = [];
@@ -72,6 +83,34 @@ export function runFactoryInit(rootDir: string): { ok: boolean; messages: string
     rmSync(path.join(skillsDestDir, name), { recursive: true, force: true });
   }
   messages.push("Removed factory-dev-only skills.");
+
+  // Agents are single files, not directories, so this is a plain overwriting copy — none of
+  // the skills loop's `renameSync` ENOTEMPTY dance applies. `.claude/agents/` is created only
+  // when there is something to put in it: an adopter with no staged agents must not inherit an
+  // empty directory. Anything that isn't a top-level `.md` file is skipped, not copied.
+  const agentsDestDir = path.join(rootDir, ".claude", "agents");
+  const agentsSrcDir = path.join(handoffDir, "agents");
+  if (existsSync(agentsSrcDir)) {
+    mkdirSync(agentsDestDir, { recursive: true });
+    for (const entry of readdirSync(agentsSrcDir, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+      const dest = path.join(agentsDestDir, entry.name);
+      // A stale destination that is somehow a DIRECTORY would make cpSync throw
+      // ERR_FS_CP_NON_DIR_TO_DIR — clear it first, mirroring the skills loop's guard.
+      rmSync(dest, { recursive: true, force: true });
+      cpSync(path.join(agentsSrcDir, entry.name), dest, { force: true });
+      messages.push(`Installed agent '${entry.name.replace(/\.md$/, "")}'.`);
+    }
+  }
+
+  // Unconditional, like the skills sweep: a re-run after a partial init still clears these,
+  // and `force: true` swallows ENOENT when `.claude/agents/` was never created. Running AFTER
+  // the copy loop also means a handoff agent that shadowed a factory-dev name would be
+  // installed and then removed — the disjointness test in factory-agents.test.ts prevents it.
+  for (const name of FACTORY_DEV_ONLY_AGENTS) {
+    rmSync(path.join(agentsDestDir, `${name}.md`), { force: true });
+  }
+  messages.push("Removed factory-dev-only agents.");
 
   rmSync(handoffDir, { recursive: true, force: true });
 

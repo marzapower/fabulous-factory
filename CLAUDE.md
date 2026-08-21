@@ -39,3 +39,14 @@ Any non-trivial change (new feature, structural refactor, multi-file touch): inv
 Factory-dev skills (this repo only — not shipped to adopters): `add-integration-package`,
 `update-ledger-hashes`, `write-adr`, `release-template`. `add-a-job` is shared and
 available here too.
+
+## Agents
+
+`.claude/agents/` — delegate rather than doing everything in one context. Factory-dev:
+`fab-forge` (template packages, kernel, adapters, registry), `fab-steward` (adoption
+surface — ledger hashes, handoff mirrors, tiering, ADRs). Shared with adopters:
+`fab-warden` (conventions and quality review), `fab-bastion` (security review),
+`fab-medic` (systematic debugging). The adopter agents are staged in
+`.factory/handoff/agents/` and install on `pnpm factory:init` — they are not loaded here.
+`AGENTS.md` deliberately says nothing about them: `.claude/agents/` is Claude-specific,
+and that file is the pointer for every other agent runtime.

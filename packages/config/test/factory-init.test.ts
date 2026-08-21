@@ -33,6 +33,10 @@ function buildFixture(): void {
   writeFile(".factory/handoff/AGENTS.md", "# adopter AGENTS.md\n");
   writeFile(".factory/handoff/skills/define-product/SKILL.md", "# define-product\n");
   writeFile(".factory/handoff/skills/brand-it/SKILL.md", "# brand-it\n");
+  writeFile(".factory/handoff/agents/fab-smith.md", "# fab-smith\n");
+  writeFile(".factory/handoff/agents/fab-muse.md", "# fab-muse\n");
+  writeFile(".claude/agents/fab-forge.md", "# factory-dev only\n");
+  writeFile(".claude/agents/fab-warden.md", "# fab-warden (shared)\n");
   writeFile(".claude/skills/fabulous-feature/SKILL.md", "# fabulous-feature (shared)\n");
   writeFile(".claude/skills/add-a-job/SKILL.md", "# add-a-job (shared)\n");
   writeFile(".claude/skills/add-integration-package/SKILL.md", "# factory-dev only\n");
@@ -64,6 +68,18 @@ describe("runFactoryInit — full run", () => {
     // Shared skills survive untouched.
     expect(existsSync(path.join(rootDir, ".claude/skills/fabulous-feature/SKILL.md"))).toBe(true);
     expect(existsSync(path.join(rootDir, ".claude/skills/add-a-job/SKILL.md"))).toBe(true);
+
+    // Adopter agents installed.
+    expect(readFileSync(path.join(rootDir, ".claude/agents/fab-smith.md"), "utf8")).toBe(
+      "# fab-smith\n",
+    );
+    expect(existsSync(path.join(rootDir, ".claude/agents/fab-muse.md"))).toBe(true);
+
+    // Factory-dev-only agents removed; shared agents survive with content untouched.
+    expect(existsSync(path.join(rootDir, ".claude/agents/fab-forge.md"))).toBe(false);
+    expect(readFileSync(path.join(rootDir, ".claude/agents/fab-warden.md"), "utf8")).toBe(
+      "# fab-warden (shared)\n",
+    );
 
     // Handoff dir gone.
     expect(existsSync(path.join(rootDir, ".factory/handoff"))).toBe(false);
@@ -114,6 +130,17 @@ describe("runFactoryInit — partial-state re-run completes what remains", () =>
     expect(existsSync(path.join(rootDir, ".factory/handoff"))).toBe(false);
   });
 
+  it("overwrites a stale destination agent with the handoff version", () => {
+    buildFixture();
+    writeFile(".claude/agents/fab-smith.md", "# stale fab-smith\n");
+
+    const { ok } = runFactoryInit(rootDir);
+    expect(ok).toBe(true);
+    expect(readFileSync(path.join(rootDir, ".claude/agents/fab-smith.md"), "utf8")).toBe(
+      "# fab-smith\n",
+    );
+  });
+
   it("tolerates a missing handoff/CLAUDE.md or AGENTS.md source", () => {
     buildFixture();
     rmSync(path.join(rootDir, ".factory/handoff/AGENTS.md"), { force: true });
@@ -123,5 +150,39 @@ describe("runFactoryInit — partial-state re-run completes what remains", () =>
     expect(messages.some((m) => m.includes("AGENTS.md") && m.includes("not found"))).toBe(true);
     // Root AGENTS.md is left as whatever it was before (factory-dev version), untouched.
     expect(readFileSync(path.join(rootDir, "AGENTS.md"), "utf8")).toBe("# factory-dev AGENTS.md\n");
+  });
+});
+
+describe("runFactoryInit — agents promotion edge cases", () => {
+  /**
+   * Deliberately NOT `buildFixture()`: that fixture ships `.claude/agents/` already populated,
+   * so it could never falsify "an adopter with no staged agents gets no empty directory".
+   */
+  function buildAgentlessFixture(): void {
+    writeFile(".factory/config.json", JSON.stringify({ stage: "prototype", template: true }));
+    writeFile(".factory/handoff/CLAUDE.md", "# adopter CLAUDE.md\n");
+    writeFile(".factory/handoff/skills/define-product/SKILL.md", "# define-product\n");
+  }
+
+  it("creates no .claude/agents/ when nothing is staged", () => {
+    buildAgentlessFixture();
+
+    const { ok } = runFactoryInit(rootDir);
+    expect(ok).toBe(true);
+    expect(existsSync(path.join(rootDir, ".claude/agents"))).toBe(false);
+  });
+
+  it("copies only top-level .md files — other entries are skipped", () => {
+    buildFixture();
+    writeFile(".factory/handoff/agents/README.txt", "not an agent\n");
+    writeFile(".factory/handoff/agents/nested/fab-nope.md", "# nested\n");
+
+    const { ok } = runFactoryInit(rootDir);
+    expect(ok).toBe(true);
+    expect(existsSync(path.join(rootDir, ".claude/agents/README.txt"))).toBe(false);
+    expect(existsSync(path.join(rootDir, ".claude/agents/nested"))).toBe(false);
+    expect(existsSync(path.join(rootDir, ".claude/agents/fab-nope.md"))).toBe(false);
+    // The real agents alongside them still landed.
+    expect(existsSync(path.join(rootDir, ".claude/agents/fab-smith.md"))).toBe(true);
   });
 });

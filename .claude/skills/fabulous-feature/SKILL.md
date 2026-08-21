@@ -49,8 +49,11 @@ redesign and re-critique. Only an approved plan proceeds to phase 4.
   prompts and tell A that a red typecheck on B's imports alone is expected, not
   something to "fix".
 - Track tasks with the harness's task tools (dependencies included), one owner per agent.
-- Use the project's specialized agents where defined (e.g. a UI implementer for UI work);
-  otherwise general-purpose agents on a fast implementation model.
+- Use the project's `fab-*` agents where one fits. Which exist depends on the mode: a
+  product repo has `fab-smith` (server and domain) and `fab-muse` (UI); the template repo
+  has `fab-forge` instead. `fab-medic` is in both, for diagnosing a failure rather than
+  building. Check `.claude/agents/` rather than assuming — otherwise use general-purpose
+  agents on a fast implementation model.
 - Every implementation prompt must contain: reference to CLAUDE.md, the list of ITS
   files, an explicit prohibition on other agents' files, exact contracts, tests to write
   following the patterns of existing test files, local verification (lint + format ONLY
@@ -60,10 +63,11 @@ redesign and re-critique. Only an approved plan proceeds to phase 4.
 
 ## Phase 5 — Independent review
 
-- Run the project's code reviewer on the uncommitted diff, read-only (no test suites in
-  its mandate: the orchestrator runs the gates). **Known fallback**: if the reviewer
-  idles without a report even after one nudge, spawn a fresh read-only general-purpose
-  agent with the same mandate.
+- Run `fab-warden` on the uncommitted diff for conventions and quality, and `fab-bastion`
+  for security whenever the diff touches a guarded zone, user-supplied input, or money.
+  Neither runs test suites — the orchestrator owns the gates. **Known fallback**: if a
+  reviewer idles without a report even after one nudge, spawn a fresh general-purpose agent
+  with the same mandate and no write tools.
 - Visual/design review if there are visible UI changes.
 - Blocking and minor findings: fix immediately — by the orchestrator when trivial,
   otherwise by a dedicated agent. Nits: at your discretion, but declare them in the

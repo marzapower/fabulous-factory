@@ -38,3 +38,12 @@ Canonical conventions: docs/agents/conventions.md
 `make-it-yours`, `pre-ship-check` — the adopter set, one per Adoption Ledger item.
 `fabulous-feature` and `add-a-job` are shared with the template and always available.
 Ask "what's left to make this mine?" and run `pnpm factory:status` to find the next one.
+
+## Agents
+
+`.claude/agents/` — delegate rather than doing everything in one context. `fab-scribe`
+(SPECs and product docs), `fab-smith` (server and domain features), `fab-muse` (UI, theme,
+email copy), `fab-preflight` (ledger, doctor, preflight, gates — reports, never fixes),
+plus `fab-warden` (conventions and quality review), `fab-bastion` (security review), and
+`fab-medic` (systematic debugging). They are yours now — edit them as your product's needs
+diverge from the factory's defaults.

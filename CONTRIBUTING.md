@@ -70,6 +70,21 @@ legal pages, demo, email templates, plans catalog, README, `PRODUCT.md`), run th
 `update-ledger-hashes` skill (or `pnpm factory:manifest`) before you commit — otherwise
 `pnpm factory:manifest --check` goes red in CI.
 
+## Delegating to agents
+
+`.claude/agents/` holds the `fab-*` subagent roster. In this repo you have `fab-forge`
+(template packages, kernel, adapters, registry) and `fab-steward` (the adoption surface —
+ledger hashes, handoff mirrors, skill and agent tiering, ADRs), plus the three agents shared
+with adopters: `fab-warden` (conventions and quality review), `fab-bastion` (security
+review), and `fab-medic` (systematic debugging). Reviewers have no write tools and never run
+the gates — you do.
+
+The adopter-facing agents (`fab-scribe`, `fab-smith`, `fab-muse`, `fab-preflight`) are staged
+in `.factory/handoff/agents/` and are NOT loaded here; `pnpm factory:init` installs them and
+deletes the factory-dev-only pair. When you add an agent, put it in the tier it belongs to and
+add a test expectation in `packages/config/test/factory-agents.test.ts` — the per-directory
+counts there are deliberate, so a new agent in the wrong tier fails the suite.
+
 ## Adding an integration
 
 A new optional service (a second email provider, another billing adapter, …) follows the
