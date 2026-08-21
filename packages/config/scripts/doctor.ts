@@ -13,6 +13,8 @@
  * always win over the file. Always exits 0 — this is a report, not a gate.
  */
 import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { deriveCapabilities, type Capabilities, type ServiceName } from "../src/capabilities";
 import { readMergedEnv } from "../src/env-file";
@@ -33,6 +35,9 @@ import {
   type RawEnv,
   type ServiceGroup,
 } from "../src/registry";
+import { HANDOFF_NAG, LEDGER_UNAVAILABLE, ledgerReport } from "./factory-ledger";
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
 function resolveMode(): AppMode {
   const nodeEnv = process.env.NODE_ENV;
@@ -352,6 +357,32 @@ function printServiceLine(
   console.log("");
 }
 
+/**
+ * M9's factory section (plan §J.3.e / §J.12.3): stage, defaults-remaining count, and the
+ * advisory nag. Deliberately does NOT reuse `renderStatusLines` (opt-24) — this is a terser
+ * summary than `factory:status`'s full per-item report. The whole body is wrapped in
+ * try/catch: `doctor.ts` calls `main()` at module scope, so an uncaught throw here would
+ * escape before `process.exitCode = 0` runs and could take down `full-profile` CI — doctor
+ * must degrade to a single warning line instead, never crash.
+ */
+function printFactorySection(): void {
+  console.log("factory:");
+  try {
+    const report = ledgerReport(REPO_ROOT);
+    console.log(`    stage: ${report.stage}`);
+    const defaultCount = report.items.filter((item) => item.status === "factory-default").length;
+    console.log(
+      `    ${defaultCount} of ${report.items.length} factory defaults still in place — run pnpm factory:status`,
+    );
+    if (report.handoffPresent && !process.env.FACTORY_DEV) {
+      console.log(`    ${HANDOFF_NAG}`);
+    }
+  } catch {
+    console.log(`    ⚠ ${LEDGER_UNAVAILABLE}`);
+  }
+  console.log("");
+}
+
 function main(): void {
   const env = readMergedEnv();
   const mode = resolveMode();
@@ -364,6 +395,8 @@ function main(): void {
   for (const service of Object.keys(SERVICE_TITLES) as ServiceName[]) {
     printServiceLine(service, capabilities, env, mode);
   }
+
+  printFactorySection();
 }
 
 main();

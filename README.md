@@ -42,7 +42,7 @@ export async function POST(req: Request) { ... }
 export const POST = defineHandler({
   auth: 'required',            // ← mandatory. No default. No forgetting.
   input: createMonitorSchema,  // ← zod-validated before your code runs
-  rateLimit: { window: '1m', max: 20 },
+  rateLimit: { windowSeconds: 60, max: 20 },
   handler: async ({ session, input }) => { ... },
 });
 ```
@@ -72,7 +72,7 @@ Then make it yours:
 pnpm factory:init          # one-shot: converts the template into YOUR product repo
 ```
 
-…and ask your agent: _“what's left to make this mine?”_ It runs `pnpm factory:status`, sees every remaining factory default (theme, legal pages, demo logic…), and walks you through replacing each one via a guided skill.
+…and ask your agent: _“what's left to make this mine?”_ It runs `pnpm factory:status`, sees every remaining factory default (theme, legal pages, demo logic…), and walks you through replacing each one via a guided skill. When you're ready to ship, flip `stage` to `"production"` in `.factory/config.json` and run `pnpm preflight` — it blocks on anything still a factory default.
 
 ## 🧩 What's in the box
 
@@ -119,7 +119,7 @@ Every service is optional and resolved **at request time, on the server** — so
 
 The template ships as a working **page monitor**: sign up → watch a URL → cron fetches and hash-diffs it → the LLM (cheap tier) summarizes real changes → digest email + in-app feed. It exercises every package, shows cost discipline as example code (_no LLM call when the hash didn't change_), and degrades live — the [demo deployment](https://demo.example.com) includes a “what's disabled here and why” panel.
 
-When you adopt, `docs/guides/make-it-yours.md` tells you exactly what to delete and what to keep.
+When you adopt, the `make-it-yours` skill (installed to `.claude/skills/` by `pnpm factory:init`) tells you exactly what to delete and what to keep.
 
 ## 🚀 Deploy anywhere that runs Node or containers
 

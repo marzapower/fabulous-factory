@@ -62,5 +62,6 @@ read Part A plus ONLY the active milestone's file.
 | G    | M6 jobs + demo loop            | `milestones/m6-jobs-demo.md`          |
 | H    | M7 billing                     | `milestones/m7-billing.md`            |
 | I    | M8 Docker + deploy             | `milestones/m8-docker-deploy.md`      |
+| J    | M9 factory layer               | `milestones/m9-factory-layer.md`      |
 
 New milestones append a row here and a new file there (G=M6 → `m6-jobs-demo.md`, …).
