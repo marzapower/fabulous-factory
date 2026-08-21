@@ -15,10 +15,11 @@ ground truth for what promotion actually does, not a description of it.
 
 ## Scope
 
-- **Adoption Ledger.** `.factory/manifest.json` records SHA-256 hashes of 8 shipped
+- **Adoption Ledger.** `.factory/manifest.json` records SHA-256 hashes of 9 shipped
   defaults (theme, landing page, legal pages, demo, email templates, plans catalog,
-  README, `PRODUCT.md`). Editing one of those files in this repo goes stale until the
-  hashes are regenerated.
+  README, `PRODUCT.md`, template showcase — the public `/features/*` pages + marketing
+  components). Editing one of those files in this repo goes stale until the hashes are
+  regenerated.
 - **Handoff mirrors.** `.factory/handoff/CLAUDE.md` and `AGENTS.md` must each keep the
   literal pointer `docs/agents/conventions.md` and stay within the caps
   `packages/config/test/factory-docs.test.ts` enforces: `CLAUDE.md` under 60 lines,

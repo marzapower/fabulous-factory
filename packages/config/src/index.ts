@@ -2,6 +2,7 @@ import "server-only";
 
 import { getAppUrl } from "./app-url";
 import { deriveCapabilities, type Capabilities, type ServiceName } from "./capabilities";
+import { getEnvDocsForGroup, serviceHints, SERVICE_GROUPS } from "./env-docs";
 import { getEnv as readEnv, EnvValidationError, type Env } from "./env";
 import { resolveDirectRoutingKey, resolveModel, TIER_ENV_KEY } from "./llm-routing";
 import { FREE_PLAN_ID, PLANS, type Plan, type PlanId } from "./plans";
@@ -11,6 +12,7 @@ import { ENV_REGISTRY, type AppMode } from "./registry";
 export { ENV_REGISTRY, EnvValidationError };
 export type { AppMode, EnvVarName, EnvVarSpec, RawEnv, ServiceGroup } from "./registry";
 export type { Capabilities, ServiceName } from "./capabilities";
+export { getEnvDocsForGroup, serviceHints, SERVICE_GROUPS };
 export type { ClientConfig } from "./public-config";
 export type { Env, EnvIssue } from "./env";
 export { resolveDirectRoutingKey, resolveModel, TIER_ENV_KEY };

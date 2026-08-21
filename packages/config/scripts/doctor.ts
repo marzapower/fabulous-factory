@@ -2,11 +2,12 @@
 /**
  * `pnpm factory:doctor` — human-readable capability report.
  *
- * Consumes `ENV_REGISTRY` + `deriveCapabilities` directly, NEVER `getEnv()`: `getEnv()`
- * throws on invalid env, which is exactly the state doctor exists to report on without
- * crashing. It does call the pure `parseEnv` — inside a try/catch, purely to collect and
- * print the same `EnvValidationError` issues `getEnv()` would throw, never to bail out.
- * This script never installs `server-only` and never imports `src/index.ts`.
+ * Consumes `ENV_REGISTRY` (via `../src/env-docs.ts`'s `serviceHints`) + `deriveCapabilities`
+ * directly, NEVER `getEnv()`: `getEnv()` throws on invalid env, which is exactly the state
+ * doctor exists to report on without crashing. It does call the pure `parseEnv` — inside a
+ * try/catch, purely to collect and print the same `EnvValidationError` issues `getEnv()`
+ * would throw, never to bail out. This script never installs `server-only` and never
+ * imports `src/index.ts` (`../src/env-docs.ts` is a plain module with neither).
  *
  * Loads `.env` via `readMergedEnv()` (see `../src/env-file.ts`) — a tiny hand-rolled
  * parser (no dotenv dependency) merged under real `process.env`, so shell-exported vars
@@ -17,6 +18,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { deriveCapabilities, type Capabilities, type ServiceName } from "../src/capabilities";
+import { serviceHints } from "../src/env-docs";
 import { readMergedEnv } from "../src/env-file";
 import { EnvValidationError, parseEnv } from "../src/env";
 import {
@@ -27,14 +29,7 @@ import {
   type Quality,
 } from "../src/llm-routing";
 import { PLANS, type Plan } from "../src/plans";
-import {
-  ENV_REGISTRY,
-  type AppMode,
-  type EnvVarName,
-  type EnvVarSpec,
-  type RawEnv,
-  type ServiceGroup,
-} from "../src/registry";
+import { type AppMode, type EnvVarName, type RawEnv } from "../src/registry";
 import { HANDOFF_NAG, LEDGER_UNAVAILABLE, ledgerReport } from "./factory-ledger";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -57,28 +52,6 @@ const SERVICE_TITLES: Record<ServiceName, string> = {
   analytics: "analytics",
   errors: "errors",
 };
-
-// `ServiceName` (capabilities.ts) and `ServiceGroup` (registry.ts) are two different
-// vocabularies for the same six optional services — this is the one place that maps
-// between them. `errors` (the capability name) corresponds to the `observability`
-// registry group; every other pair shares its name.
-const SERVICE_GROUPS: Record<ServiceName, ServiceGroup> = {
-  billing: "billing",
-  llm: "llm",
-  email: "email",
-  jobs: "jobs",
-  analytics: "analytics",
-  errors: "observability",
-};
-
-/**
- * Registry-derived enablement hints for a service (plan G.3.3/G.10.10) — replaces a
- * hand-maintained shadow map that could (and did) drift from the registry.
- */
-function serviceHints(service: ServiceName): EnvVarSpec[] {
-  const group = SERVICE_GROUPS[service];
-  return ENV_REGISTRY.filter((spec) => spec.group === group && spec.enables);
-}
 
 const AUTH_SOCIAL_PROVIDERS: ReadonlyArray<{
   name: string;

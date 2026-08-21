@@ -23,8 +23,18 @@ defined there, not here. This file tells you how to build UI, not what the rules
 - **Components** — shadcn/ui is the component layer. Compose from it before reaching for
   a one-off.
 - **App identity & theme** — owned by the `brand-it` skill: `apps/web/app/layout.tsx`
-  metadata, `apps/web/app/page.tsx` landing copy, `globals.css` tokens, and email copy.
-  Invoke it for any rebrand-shaped task rather than improvising the same ground.
+  metadata, the landing copy that actually lives in `apps/web/components/marketing/`
+  (`site-header`, `hero`, `control-panel`, `feature-card`, `features-meta`,
+  `site-footer`, …) — `apps/web/app/page.tsx` is only their composition, not where you
+  edit copy — `globals.css` tokens (including the vendored IBM Plex Sans / IBM Plex Mono
+  `--font-sans`/`--font-mono` pair, swappable in one place), and email copy. Invoke
+  `brand-it` for any rebrand-shaped task rather than improvising the same ground.
+- **Watermarks** — `site-footer.tsx`'s "Built with Fabulous Factory" credit link, the
+  2-line source comment atop some `marketing/` files, and the inert `fab-*` marker
+  classes scattered through classNames (zero CSS, pure fingerprint) are opt-out, not
+  something to silently strip while you're in a file. Adopters are free to remove any of
+  it — `make-it-yours`'s `template-showcase` phase covers the removal recipe — but the
+  polite ask is to keep the footer link; it costs nothing.
 - **Legal pages & demo removal** — owned by `make-it-yours`: replacing (not deleting)
   `apps/web/app/(legal)/terms/page.tsx` and `.../privacy/page.tsx`, and the page-monitor
   demo removal recipe. Defer to it rather than freelancing either.
