@@ -79,6 +79,14 @@ export function BillingCard({ entitlement, monitorCount }: BillingCardProps) {
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        {entitlement.pastDue && (
+          <p className="flex items-start gap-2 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+            <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            Your payment is past due. You&apos;ll keep access during the grace period — update your
+            payment method to avoid losing it.
+          </p>
+        )}
+
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl font-semibold tracking-tight">
             {plan.priceUsdMonthly === null ? "Free" : `$${plan.priceUsdMonthly}`}

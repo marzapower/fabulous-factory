@@ -123,7 +123,7 @@ When you adopt, the `make-it-yours` skill (installed to `.claude/skills/` by `pn
 
 ## 🚀 Deploy anywhere that runs Node or containers
 
-- **Vercel** — connect repo, set env vars, done. Preview deploys on PRs (auto-skipped until you add secrets — CI degrades gracefully too).
+- **Vercel** — connect repo (root directory `apps/web`), set `DATABASE_URL` + `BETTER_AUTH_SECRET` for Production and Preview, run migrations yourself before each deploy that needs them (no release-phase job — see `docs/guides/deploy-vercel.md`), done.
 - **Docker** — multi-stage build (slim non-root runtime + separate migrate image), `docker compose up` with profiles for jobs (self-hosted Inngest) and local LLM (Ollama). Runs on any VPS, Fly.io, Railway, Coolify…
 
 Nothing in app code is Vercel-proprietary. The paths are identical code, different config.
@@ -166,7 +166,11 @@ Things we deliberately **don't** promise:
 ## 📚 Learn more
 
 - [Design specification](docs/superpowers/specs/2026-08-20-fabulous-factory-design.md) — the full architecture, reviewed adversarially twice before a line was written
-- `docs/guides/` — per-service enablement, both deploy paths, LLM evals
+- `docs/guides/` — [`deploy-vercel.md`](docs/guides/deploy-vercel.md),
+  [`deploy-docker.md`](docs/guides/deploy-docker.md),
+  [`graceful-degradation.md`](docs/guides/graceful-degradation.md),
+  [`llm-evals.md`](docs/guides/llm-evals.md),
+  [`launch-checklist.md`](docs/guides/launch-checklist.md)
 - `docs/templates/` — SPEC / PRODUCT / ADR templates your agents fill in
 - `.claude/skills/` — the guided workflows your agent team runs
 
