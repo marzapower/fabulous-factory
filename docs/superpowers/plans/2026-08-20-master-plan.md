@@ -52,16 +52,17 @@ read per resume was the dominant process cost). Each finished Part is a frozen r
 contracts, binding "critique corrections", and "accepted deviations". During a cycle,
 read Part A plus ONLY the active milestone's file.
 
-| Part | Milestone                      | File                                  |
-| ---- | ------------------------------ | ------------------------------------- |
-| B    | M1 workspace + config keystone | `milestones/m1-workspace.md`          |
-| C    | M2 data + auth + app shell     | `milestones/m2-data-auth-shell.md`    |
-| D    | M3 enforcement kernel          | `milestones/m3-enforcement-kernel.md` |
-| E    | M4 thin services               | `milestones/m4-thin-services.md`      |
-| F    | M5 LLM gateway                 | `milestones/m5-llm-gateway.md`        |
-| G    | M6 jobs + demo loop            | `milestones/m6-jobs-demo.md`          |
-| H    | M7 billing                     | `milestones/m7-billing.md`            |
-| I    | M8 Docker + deploy             | `milestones/m8-docker-deploy.md`      |
-| J    | M9 factory layer               | `milestones/m9-factory-layer.md`      |
+| Part | Milestone                      | File                                    |
+| ---- | ------------------------------ | --------------------------------------- |
+| B    | M1 workspace + config keystone | `milestones/m1-workspace.md`            |
+| C    | M2 data + auth + app shell     | `milestones/m2-data-auth-shell.md`      |
+| D    | M3 enforcement kernel          | `milestones/m3-enforcement-kernel.md`   |
+| E    | M4 thin services               | `milestones/m4-thin-services.md`        |
+| F    | M5 LLM gateway                 | `milestones/m5-llm-gateway.md`          |
+| G    | M6 jobs + demo loop            | `milestones/m6-jobs-demo.md`            |
+| H    | M7 billing                     | `milestones/m7-billing.md`              |
+| I    | M8 Docker + deploy             | `milestones/m8-docker-deploy.md`        |
+| J    | M9 factory layer               | `milestones/m9-factory-layer.md`        |
+| K    | M10 polish + distribution      | `milestones/m10-polish-distribution.md` |
 
 New milestones append a row here and a new file there (G=M6 → `m6-jobs-demo.md`, …).

@@ -10,7 +10,8 @@
  * matches the catalog (config/Stripe drift, or a stale "unknown" sentinel written by the
  * webhook) resolves to `planId: "unknown"` with the FREE plan's limit — never MORE than
  * free (H.2.3) — but is still reported `source: "subscription"` since a real entitled
- * subscription row exists.
+ * subscription row exists. `pastDue` surfaces the winning row's dunning stance (M10 debt
+ * from M7) so the UI can nudge the user without ever revoking access mid-grace-period.
  */
 import { and, eq, inArray, sql } from "drizzle-orm";
 
@@ -26,6 +27,7 @@ export interface Entitlement {
   planId: PlanId | "unknown";
   monitorLimit: number | null;
   source: "disabled" | "free" | "subscription";
+  pastDue: boolean;
 }
 
 function freeEntitlement(source: "disabled" | "free"): Entitlement {
@@ -34,6 +36,7 @@ function freeEntitlement(source: "disabled" | "free"): Entitlement {
     planId: FREE_PLAN_ID,
     monitorLimit: source === "disabled" ? null : freePlan.monitorLimit,
     source,
+    pastDue: false,
   };
 }
 
@@ -44,7 +47,7 @@ export async function getEntitlement(userId: string): Promise<Entitlement> {
 
   const db = getDb();
   const rows = await db
-    .select({ planId: schema.subscriptions.planId })
+    .select({ planId: schema.subscriptions.planId, status: schema.subscriptions.status })
     .from(schema.subscriptions)
     .where(
       and(
@@ -67,17 +70,21 @@ export async function getEntitlement(userId: string): Promise<Entitlement> {
   // it up defensively; `Plan.id` is intentionally `string` (see plans.ts), so the cast
   // back to `PlanId` here just reflects the id-equals-key invariant plans.ts's own test
   // asserts, rather than trusting the catalog blindly.
+  const pastDue = winner.status === "past_due";
+
   const plan = (PLANS as Record<string, Plan>)[winner.planId];
   if (plan) {
     return {
       planId: winner.planId as PlanId,
       monitorLimit: plan.monitorLimit,
       source: "subscription",
+      pastDue,
     };
   }
   return {
     planId: "unknown",
     monitorLimit: PLANS[FREE_PLAN_ID].monitorLimit,
     source: "subscription",
+    pastDue,
   };
 }

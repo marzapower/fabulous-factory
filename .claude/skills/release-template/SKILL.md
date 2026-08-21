@@ -52,3 +52,7 @@ docker compose up --build
 Tag the release (`git tag vX.Y.Z`), push it, and confirm the GitHub template repository
 setting is still enabled on the repo (Settings → Template repository) so "Use this
 template" keeps working for new adopters.
+
+For the first public release specifically, work through `docs/guides/launch-checklist.md`
+too — it covers what this phase assumes is already done (LICENSE/CONTRIBUTING, live demo,
+repo settings).

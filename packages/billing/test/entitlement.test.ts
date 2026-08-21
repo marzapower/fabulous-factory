@@ -75,12 +75,17 @@ describe("getEntitlement — degradation matrix", () => {
   it("billing disabled → free plan, unlimited (monitorLimit null)", async () => {
     capabilitiesHolder.billing = "disabled";
     const result = await getEntitlement("user_1");
-    expect(result).toEqual({ planId: "free", monitorLimit: null, source: "disabled" });
+    expect(result).toEqual({
+      planId: "free",
+      monitorLimit: null,
+      source: "disabled",
+      pastDue: false,
+    });
   });
 
   it("billing enabled, no rows → free plan with its catalog limit", async () => {
     const result = await getEntitlement("user_1");
-    expect(result).toEqual({ planId: "free", monitorLimit: 3, source: "free" });
+    expect(result).toEqual({ planId: "free", monitorLimit: 3, source: "free", pastDue: false });
   });
 
   it.each(["active", "trialing", "past_due"])(
@@ -88,7 +93,12 @@ describe("getEntitlement — degradation matrix", () => {
     async (status) => {
       seedSubscription({ providerSubscriptionId: "sub_1", status });
       const result = await getEntitlement("user_1");
-      expect(result).toEqual({ planId: "pro", monitorLimit: 25, source: "subscription" });
+      expect(result).toEqual({
+        planId: "pro",
+        monitorLimit: 25,
+        source: "subscription",
+        pastDue: status === "past_due",
+      });
     },
   );
 
@@ -97,14 +107,42 @@ describe("getEntitlement — degradation matrix", () => {
     async (status) => {
       seedSubscription({ providerSubscriptionId: "sub_1", status });
       const result = await getEntitlement("user_1");
-      expect(result).toEqual({ planId: "free", monitorLimit: 3, source: "free" });
+      expect(result).toEqual({ planId: "free", monitorLimit: 3, source: "free", pastDue: false });
     },
   );
 
   it("winning row's plan_id unknown to the catalog → planId \"unknown\", free's limit, source subscription", async () => {
     seedSubscription({ providerSubscriptionId: "sub_1", planId: "unknown", status: "active" });
     const result = await getEntitlement("user_1");
-    expect(result).toEqual({ planId: "unknown", monitorLimit: 3, source: "subscription" });
+    expect(result).toEqual({
+      planId: "unknown",
+      monitorLimit: 3,
+      source: "subscription",
+      pastDue: false,
+    });
+  });
+
+  it("past_due status surfaces pastDue: true while still entitled to the plan", async () => {
+    seedSubscription({ providerSubscriptionId: "sub_1", status: "past_due" });
+    const result = await getEntitlement("user_1");
+    expect(result).toEqual({
+      planId: "pro",
+      monitorLimit: 25,
+      source: "subscription",
+      pastDue: true,
+    });
+  });
+
+  it("active status → pastDue: false", async () => {
+    seedSubscription({ providerSubscriptionId: "sub_1", status: "active" });
+    const result = await getEntitlement("user_1");
+    expect(result.pastDue).toBe(false);
+  });
+
+  it("billing disabled → pastDue: false", async () => {
+    capabilitiesHolder.billing = "disabled";
+    const result = await getEntitlement("user_1");
+    expect(result.pastDue).toBe(false);
   });
 
   it("tie-break: current_period_end desc NULLS LAST — a dated entitled row beats a null one", async () => {
@@ -141,7 +179,12 @@ describe("getEntitlement — degradation matrix", () => {
     });
 
     const result = await getEntitlement("user_1");
-    expect(result).toEqual({ planId: "pro", monitorLimit: 25, source: "subscription" });
+    expect(result).toEqual({
+      planId: "pro",
+      monitorLimit: 25,
+      source: "subscription",
+      pastDue: false,
+    });
   });
 
   it("never reads the provider API — only ever touches the DB double", async () => {

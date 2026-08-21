@@ -57,7 +57,7 @@
         },
         {
           "path": "packages/jobs/src/demo/monitor-cron.ts",
-          "hash": "9e0fcc0d4d2507e1272655ca9c36708ba6d83668aafef75b71f4bf97dd648b35"
+          "hash": "6022d7e1b46a07abc15e00319f802c26013233f762c185cb4951cb66bc2f083c"
         },
         {
           "path": "packages/jobs/src/demo/monitor-worker.ts",
@@ -169,7 +169,7 @@
       "files": [
         {
           "path": "README.md",
-          "hash": "0be66e371688cd19954829759b69e9cbffdbc6bfce6d7fb29aba562e3a2583fe"
+          "hash": "0f8b808ced4d0e50ed43b68a1b8a6c482b58a685ca83f97bcc9005fdf59e016f"
         }
       ]
     }

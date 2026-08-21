@@ -48,7 +48,7 @@ vi.mock("@factory/analytics", () => ({ track: vi.fn() }));
 vi.mock("@factory/observability", () => ({ captureException: vi.fn() }));
 
 import { checkMonitor } from "../src/demo/check-monitor";
-import { monitorCron } from "../src/demo/monitor-cron";
+import { chunk, monitorCron } from "../src/demo/monitor-cron";
 import { monitorWorker } from "../src/demo/monitor-worker";
 import { MONITOR_CHECK_EVENT } from "../src/events";
 
@@ -62,6 +62,33 @@ const mockedCheckMonitor = vi.mocked(checkMonitor);
 beforeEach(() => {
   fakeMonitorRows.length = 0;
   mockedCheckMonitor.mockReset();
+});
+
+describe("chunk", () => {
+  it("returns an empty array for an empty input", () => {
+    expect(chunk([], 500)).toEqual([]);
+  });
+
+  it("splits an exact multiple into equally sized chunks", () => {
+    const items = Array.from({ length: 1000 }, (_, i) => i);
+    const chunks = chunk(items, 500);
+    expect(chunks).toHaveLength(2);
+    expect(chunks[0]).toHaveLength(500);
+    expect(chunks[1]).toHaveLength(500);
+    expect(chunks[0][0]).toBe(0);
+    expect(chunks[1][0]).toBe(500);
+  });
+
+  it("carries the remainder in a shorter final chunk", () => {
+    const items = Array.from({ length: 1200 }, (_, i) => i);
+    const chunks = chunk(items, 500);
+    expect(chunks.map((c) => c.length)).toEqual([500, 500, 200]);
+  });
+
+  it("with size 1, returns one single-element chunk per item", () => {
+    const chunks = chunk(["a", "b", "c"], 1);
+    expect(chunks).toEqual([["a"], ["b"], ["c"]]);
+  });
 });
 
 describe("monitorCron", () => {
@@ -79,7 +106,7 @@ describe("monitorCron", () => {
     const { ctx } = await t.execute();
 
     expect(ctx.step.sendEvent).toHaveBeenCalledTimes(1);
-    expect(ctx.step.sendEvent).toHaveBeenCalledWith("fan-out-checks", [
+    expect(ctx.step.sendEvent).toHaveBeenCalledWith("fan-out-checks-0", [
       { name: MONITOR_CHECK_EVENT, data: { monitorId: "monitor-1" } },
       { name: MONITOR_CHECK_EVENT, data: { monitorId: "monitor-2" } },
     ]);
@@ -94,6 +121,34 @@ describe("monitorCron", () => {
     const { ctx } = await t.execute();
 
     expect(ctx.step.sendEvent).not.toHaveBeenCalled();
+  });
+
+  it("splits large monitor counts across chunked sendEvent calls (500/500/200)", async () => {
+    const monitorIds = Array.from({ length: 1200 }, (_, i) => `monitor-${i}`);
+    const t = new InngestTestEngine({
+      function: monitorCron,
+      steps: [
+        { id: "list-monitors", handler: () => monitorIds },
+        // Explicit mocks for every fan-out chunk (mirroring "list-monitors" above) — the
+        // engine's default step-tool spy calls through to the REAL `step.sendEvent`,
+        // which would otherwise attempt a real network send per chunk. Memoizing each
+        // chunk's step id here keeps every replay resolved locally, so all 3 sends run.
+        { id: "fan-out-checks-0", handler: () => ({ ids: [] }) },
+        { id: "fan-out-checks-1", handler: () => ({ ids: [] }) },
+        { id: "fan-out-checks-2", handler: () => ({ ids: [] }) },
+      ],
+    });
+
+    const { ctx } = await t.execute();
+
+    expect(ctx.step.sendEvent).toHaveBeenCalledTimes(3);
+    const calls = vi.mocked(ctx.step.sendEvent).mock.calls;
+    expect(calls[0][0]).toBe("fan-out-checks-0");
+    expect(calls[1][0]).toBe("fan-out-checks-1");
+    expect(calls[2][0]).toBe("fan-out-checks-2");
+    expect(calls[0][1]).toHaveLength(500);
+    expect(calls[1][1]).toHaveLength(500);
+    expect(calls[2][1]).toHaveLength(200);
   });
 });
 
