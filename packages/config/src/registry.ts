@@ -21,7 +21,7 @@ export interface EnvVarSpec {
   description: string;
   /** Placeholder value for `.env.example` — never a real secret. */
   example?: string;
-  /** Only `DATABASE_URL` is true. */
+  /** `DATABASE_URL` and `BETTER_AUTH_SECRET` are true (M8: pg + auth is the minimum). */
   required?: boolean;
   /** `doctor` masks the value when printing it. */
   secret?: boolean;
@@ -47,7 +47,7 @@ export const ENV_REGISTRY = [
     name: "DATABASE_URL",
     group: "core",
     description:
-      "Postgres connection string. The only required variable — every other service is optional.",
+      "Postgres connection string. Required — pg + auth is the minimum (see BETTER_AUTH_SECRET below); every other service is optional.",
     example: "postgres://postgres:changeme@localhost:5432/fabulous_factory_dev",
     required: true,
     // A Postgres connection string embeds credentials — doctor must mask it too.
@@ -78,9 +78,14 @@ export const ENV_REGISTRY = [
     name: "BETTER_AUTH_SECRET",
     group: "auth",
     description:
-      "Secret used to sign and encrypt session tokens. Optional in development (built-in dev fallback), REQUIRED in production — auth endpoints fail without it.",
-    example: "replace-with-your-own-random-32-char-secret",
-    required: false,
+      "Secret used to sign and encrypt session tokens, min 16 characters. Required — pg + auth is the minimum (M8). Generate with `openssl rand -hex 32`.",
+    // Deliberately no placeholder here (I.10.7): a required var's example ships
+    // UNCOMMENTED in .env.example (see gen-env-example.ts's `formatVar`), so unlike every
+    // other secret below, a real-looking example would ship a WORKING default secret in
+    // a file gitleaks allowlists. Empty forces the operator to generate their own; the
+    // `openssl` idiom above is what ends up next to it as a comment.
+    example: "",
+    required: true,
     secret: true,
     enables: false,
   },
@@ -276,6 +281,16 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: true,
+  },
+  {
+    name: "INNGEST_BASE_URL",
+    group: "jobs",
+    description:
+      "Base URL of a self-hosted Inngest server (e.g. Docker Compose's 'http://inngest:8288'). The Inngest SDK reads this straight from process.env in cloud mode — it does NOT gate the 'jobs' capability (that's still the two cloud keys or INNGEST_DEV, above); registered here purely so doctor/.env.example don't stay blind to it.",
+    example: "http://inngest:8288",
+    required: false,
+    secret: false,
+    enables: false,
   },
   {
     name: "POSTHOG_KEY",

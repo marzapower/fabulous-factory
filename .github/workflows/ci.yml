@@ -10,11 +10,11 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: pnpm
@@ -45,11 +45,11 @@ jobs:
       # and creates the auth tables via the migrator; see packages/db/test/integration.
       TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: pnpm
@@ -93,12 +93,17 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+      # Required alongside DATABASE_URL as of M8 (plan I.3.a): Better Auth hard-throws on
+      # the default secret under NODE_ENV=production, which the standalone server.js
+      # always sets. Job-level (not step-level): `pnpm build` below runs page-data
+      # collection that reads this at module scope, before any boot step (plan I.10.2).
+      BETTER_AUTH_SECRET: ci-dummy-better-auth-secret-do-not-use-in-prod
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: pnpm
@@ -130,6 +135,220 @@ jobs:
           kill "$SERVER_PID" 2>/dev/null || true
           exit $status
 
+  # M8 docker-build check (plan I.7.1): builds both the runtime and migrate images from
+  # the repo-root Dockerfile and boots each against a real Postgres service container —
+  # build-only was explicitly rejected in the plan critique because the boot is what
+  # would have caught the I.3 BETTER_AUTH_SECRET blocker. needs: quality per plan I.7.1.
+  docker:
+    runs-on: ubuntu-latest
+    needs: quality
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      # ONE shared GHA cache scope for both targets (plan I.10 opt-3): the runner and
+      # migrate targets share the base/deps layers and neither imports the other, so
+      # per-target scopes would just duplicate the cached layers for no benefit.
+      - name: Build runner image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          target: runner
+          tags: fabulous-factory:runner-ci
+          load: true
+          platforms: linux/amd64
+          cache-from: type=gha,scope=docker
+          cache-to: type=gha,mode=max,scope=docker
+
+      - name: Build migrate image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          target: migrate
+          tags: fabulous-factory:migrate-ci
+          load: true
+          platforms: linux/amd64
+          cache-from: type=gha,scope=docker
+          cache-to: type=gha,mode=max,scope=docker
+
+      - name: Assert placeholders not shipped
+        run: |
+          set -e
+          for tag in fabulous-factory:runner-ci fabulous-factory:migrate-ci; do
+            env_json=$(docker inspect -f '{{json .Config.Env}}' "$tag")
+            echo "$tag: $env_json"
+            if echo "$env_json" | grep -qE 'BETTER_AUTH_SECRET|DATABASE_URL'; then
+              echo "::error::$tag bakes BETTER_AUTH_SECRET or DATABASE_URL into its image config"
+              exit 1
+            fi
+          done
+
+      - name: Run migrate image and assert pending migrations ran
+        run: |
+          set -e
+          OUTPUT=$(docker run --rm --network host \
+            -e DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/postgres \
+            fabulous-factory:migrate-ci)
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -qF 'Running pending migrations'
+          echo "$OUTPUT" | grep -qF 'Done.'
+
+      - name: Boot runner image and poll /api/health
+        run: |
+          set -e
+          docker run -d --network host \
+            --name ff-runner-ci \
+            -e DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/postgres \
+            -e BETTER_AUTH_SECRET=ci-dummy-better-auth-secret-do-not-use-in-prod \
+            fabulous-factory:runner-ci
+
+          status=1
+          for _ in $(seq 1 30); do
+            if body=$(curl -fsS http://127.0.0.1:3000/api/health 2>/dev/null); then
+              if echo "$body" | grep -q '"status":"ok"'; then
+                echo "Health check passed: $body"
+                status=0
+                break
+              fi
+            fi
+            sleep 1
+          done
+
+          if [ "$status" -ne 0 ]; then
+            echo "::group::runner container logs (health check failed)"
+            docker logs ff-runner-ci || true
+            echo "::endgroup::"
+          fi
+
+          docker rm -f ff-runner-ci >/dev/null 2>&1 || true
+          exit $status
+
+  # M8 full-profile CI job (plan I.7.2) — the M4 E.9.7/F.10.1 debt: every optional
+  # service enabled via dummy credentials, split into two assertions since "dev-mode
+  # boot" is impossible for the standalone server (server.js always forces production).
+  full-profile:
+    runs-on: ubuntu-latest
+    needs: quality
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+      BETTER_AUTH_SECRET: ci-dummy-better-auth-secret-do-not-use-in-prod
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Doctor matrix, part 1 (plain tsx, no build): dummy credentials for every
+      # optional service EXCEPT RESEND_API_KEY — email must report the 'console'
+      # dev-transport fallback. NODE_ENV is explicitly unset. Dummy values here are
+      # deliberately simplified (plan I.10 opt-5): SENTRY_DSN isn't URL-validated and
+      # INNGEST_SIGNING_KEY is only min(1) at config level — format only matters for the
+      # SDK, exercised below in the full-boot step. Grep uses -qF fixed strings on the
+      # adapter names, never the ✓/✗ glyphs.
+      - name: "Doctor matrix: full dummy set (no RESEND_API_KEY)"
+        env:
+          STRIPE_SECRET_KEY: sk_test_ci_dummy_stripe_secret_key
+          STRIPE_WEBHOOK_SECRET: whsec_ci_dummy_stripe_webhook_secret
+          OPENROUTER_API_KEY: sk-or-ci-dummy-openrouter-key
+          INNGEST_EVENT_KEY: ci-dummy-inngest-event-key
+          INNGEST_SIGNING_KEY: ci-dummy-inngest-signing-key
+          POSTHOG_KEY: phc_ci_dummy_posthog_key
+          SENTRY_DSN: https://abc@o0.ingest.sentry.io/0
+        run: |
+          set -e
+          OUTPUT=$(env -u NODE_ENV pnpm factory:doctor)
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -qF 'billing: stripe'
+          echo "$OUTPUT" | grep -qF 'llm: openrouter'
+          echo "$OUTPUT" | grep -qF 'email: console'
+          echo "$OUTPUT" | grep -qF 'jobs: inngest'
+          echo "$OUTPUT" | grep -qF 'analytics: posthog'
+          echo "$OUTPUT" | grep -qF 'errors: sentry'
+
+      # Doctor matrix, part 2: only the minimum env (job-level DATABASE_URL +
+      # BETTER_AUTH_SECRET) — every optional service must report its degradation notice.
+      - name: "Doctor matrix: minimum env only (degradation notices)"
+        run: |
+          set -e
+          OUTPUT=$(env -u NODE_ENV pnpm factory:doctor)
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -qF 'billing: disabled'
+          echo "$OUTPUT" | grep -qF 'llm: disabled'
+          echo "$OUTPUT" | grep -qF 'jobs: disabled'
+          echo "$OUTPUT" | grep -qF 'analytics: disabled'
+          echo "$OUTPUT" | grep -qF 'errors: disabled'
+
+      - run: pnpm db:migrate
+
+      - run: pnpm build
+
+      # Full boot: standalone server with the full dummy set PLUS RESEND_API_KEY, and
+      # SDK-format-sensitive values corrected (even-length hex signing key, well-formed
+      # Sentry DSN) — mirrors minimal-boot's boot block. All vendor SDKs are lazy
+      # (verified empirically in the plan's research), so there are no outbound-call
+      # expectations here beyond the health check.
+      - name: Boot standalone server (full profile) and poll /api/health
+        env:
+          STRIPE_SECRET_KEY: sk_test_ci_dummy_stripe_secret_key
+          STRIPE_WEBHOOK_SECRET: whsec_ci_dummy_stripe_webhook_secret
+          OPENROUTER_API_KEY: sk-or-ci-dummy-openrouter-key
+          RESEND_API_KEY: re_ci_dummy_resend_key
+          INNGEST_EVENT_KEY: ci-dummy-inngest-event-key
+          INNGEST_SIGNING_KEY: abcdef1234567890
+          POSTHOG_KEY: phc_ci_dummy_posthog_key
+          SENTRY_DSN: https://abc@o0.ingest.sentry.io/0
+        run: |
+          set -e
+          PORT=3100 HOSTNAME=127.0.0.1 node apps/web/.next/standalone/apps/web/server.js &
+          SERVER_PID=$!
+
+          status=1
+          for _ in $(seq 1 30); do
+            if body=$(curl -fsS http://127.0.0.1:3100/api/health 2>/dev/null); then
+              if echo "$body" | grep -q '"status":"ok"'; then
+                echo "Health check passed: $body"
+                status=0
+                break
+              fi
+            fi
+            sleep 1
+          done
+
+          kill "$SERVER_PID" 2>/dev/null || true
+          exit $status
+
   # CI security gates (design spec §8.5, plan D.7 + D.1 + D.9.6): secret scanning,
   # dependency audit, and SAST. Runs in parallel with `quality` — these gates don't depend
   # on the app building. Each tool is invoked as a plain container step (D.1: gitleaks'
@@ -139,7 +358,7 @@ jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # gitleaks scans full git history (D.9.6), not just the working tree — needs
           # every commit, not the default single-commit shallow clone.
@@ -150,9 +369,9 @@ jobs:
           docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 \
             git /repo --config /repo/.gitleaks.toml --redact --no-banner
 
-      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: pnpm
@@ -193,7 +412,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 

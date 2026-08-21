@@ -1,0 +1,64 @@
+services:
+  db: # always on
+    image: postgres:18-alpine
+    environment: { POSTGRES_PASSWORD: postgres }
+    volumes: [ff-db-data:/var/lib/postgresql] # PG18 path, NOT .../data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  migrate: # always on, one-shot
+    build: { context: ., target: migrate }
+    restart: "no"
+    environment: { DATABASE_URL: postgres://postgres:postgres@db:5432/postgres }
+    depends_on: { db: { condition: service_healthy } }
+
+  app: # always on
+    build: { context: ., target: runner }
+    ports: ["${APP_PORT:-3000}:3000"]
+    env_file: [{ path: ./.env, required: false }]
+    environment: # overrides env_file
+      DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?required — generate with `openssl rand -hex 32` and put it in .env}
+      # Operator's APP_URL wins (origin check + billing redirects break behind a real
+      # domain otherwise); empty interpolation is safe, "" is dropped by
+      # readMergedEnv/parseEnv before zod ever sees it.
+      APP_URL: ${APP_URL:-http://localhost:${APP_PORT:-3000}}
+      INNGEST_BASE_URL: http://inngest:8288 # harmless when jobs profile is off (SDK-read, not capability-derived)
+      # NO LLM_LOCAL_BASE_URL here: capabilities.ts derives `llm: local` from its mere
+      # presence, which would advertise a non-running Ollama in the default quickstart.
+      # Documented in README next to LLM_PROFILE=local instead.
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+
+  inngest: # profile: jobs
+    image: inngest/inngest:v1.43.0
+    profiles: [jobs]
+    command: ["inngest", "start", "-u", "http://app:3000/api/inngest"]
+    environment:
+      # No `:?` fail-fast here: compose interpolates the whole file at load time
+      # regardless of active profiles, so a required var on this service would break
+      # `docker compose up`/`config` even with the jobs profile off, breaking the
+      # minimal quickstart. With jobs ON and these unset, the inngest server itself
+      # refuses to start with its own error; the README documents that both keys must
+      # be set in .env (signing key even-length hex).
+      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY:-}
+      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY:-}
+      INNGEST_SQLITE_DIR: /data
+    ports: ["8288:8288"]
+    volumes: [ff-inngest-data:/data]
+    # service_healthy, not service_started: the -u sync fires at boot and must hit a
+    # LISTENING app; the runner image's HEALTHCHECK provides the signal.
+    depends_on: { app: { condition: service_healthy } }
+
+  ollama: # profile: llm (image is 2.78 GB — documented)
+    image: ollama/ollama:0.32.15
+    profiles: [llm]
+    volumes: [ff-ollama-data:/root/.ollama]
+    healthcheck: { test: ["CMD", "ollama", "list"], interval: 30s, timeout: 5s, retries: 3 }
+
+volumes: { ff-db-data: {}, ff-inngest-data: {}, ff-ollama-data: {} }

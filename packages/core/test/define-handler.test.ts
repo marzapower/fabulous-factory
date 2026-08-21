@@ -90,6 +90,57 @@ describe("defineHandler — auth modes", () => {
   });
 });
 
+describe("defineHandler — public-arm session tolerance (I.3.b)", () => {
+  it("public + getSession() throws: handler still runs, OBSERVES session: null (200), and the warning logs only once across repeated failures", async () => {
+    mockGetSession.mockRejectedValue(new Error("auth stack is down"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const handle = defineHandler({
+        auth: "public",
+        input: "none",
+        rateLimit: "none",
+        handler: async (ctx) => {
+          // CONTRACT (I.10.10): session is null here because getSession() failed, NOT
+          // because the caller was unauthenticated — this asserts the ARGUMENT the
+          // handler observed, not merely a 200 status.
+          expect(ctx.session).toBeNull();
+          return { ok: true };
+        },
+      });
+
+      const first = await handle(new NextRequest("http://localhost/api/x"), emptyParams());
+      expect(first.status).toBe(200);
+      expect(await first.json()).toEqual({ ok: true });
+      // `sessionFailureWarned` is module-level with no reset between tests, so this
+      // assertion depends on this being the FIRST public-arm getSession() failure in this
+      // file's execution order — a new, earlier failing test would break it.
+      expect(consoleError).toHaveBeenCalledTimes(1);
+
+      // A second failure on the same process must NOT log again — /api/health is
+      // rateLimit: "none" and gets polled every 30s by the Docker HEALTHCHECK.
+      const second = await handle(new NextRequest("http://localhost/api/x"), emptyParams());
+      expect(second.status).toBe(200);
+      expect(consoleError).toHaveBeenCalledTimes(1);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("required + getSession() throws: 500 via the existing catch (NOT 401), handler never runs", async () => {
+    mockGetSession.mockRejectedValue(new Error("auth stack is down"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const handler = vi.fn();
+      const handle = defineHandler({ auth: "required", input: "none", handler });
+      const res = await handle(new NextRequest("http://localhost/api/x"), emptyParams());
+      expect(res.status).toBe(500);
+      expect(handler).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+});
+
 describe("defineHandler — input validation", () => {
   const schema = z.object({ name: z.string().min(1) });
 

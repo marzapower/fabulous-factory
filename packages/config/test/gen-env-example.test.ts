@@ -22,12 +22,20 @@ describe("generateEnvExample", () => {
     }
   });
 
-  it("emits the required var uncommented, with its example value", () => {
+  it("emits every required var uncommented, with its example value", () => {
     const output = generateEnvExample();
     const requiredNames = ENV_REGISTRY.filter((spec) => spec.required).map((spec) => spec.name);
-    expect(requiredNames).toEqual(["DATABASE_URL"]);
+    expect(requiredNames).toEqual(["DATABASE_URL", "BETTER_AUTH_SECRET"]);
+
     const databaseUrl = ENV_REGISTRY.find((spec) => spec.name === "DATABASE_URL")!;
     expect(output).toContain(`\nDATABASE_URL=${databaseUrl.example}\n`);
+
+    // BETTER_AUTH_SECRET ships uncommented but with an EMPTY value (I.10.7) — required
+    // vars are never commented out, but this one must never carry a working default
+    // secret either.
+    const betterAuthSecret = ENV_REGISTRY.find((spec) => spec.name === "BETTER_AUTH_SECRET")!;
+    expect(betterAuthSecret.example).toBe("");
+    expect(output).toContain("\nBETTER_AUTH_SECRET=\n");
   });
 
   it("comments out every optional var", () => {

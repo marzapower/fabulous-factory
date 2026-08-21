@@ -65,6 +65,11 @@ describe.skipIf(!TEST_DATABASE_URL)("demo pipeline (integration)", () => {
     // process-wide — set the env var BEFORE dynamically importing the jobs modules
     // below, never via a static top-of-file import.
     process.env.DATABASE_URL = TEST_DATABASE_URL;
+    // M8: BETTER_AUTH_SECRET is now required (I.3.a) — checkMonitor calls `isEnabled()`
+    // (llm, email), which runs the real, validated `getEnv()` via `@factory/config`'s
+    // `getCapabilities()`. Without this, the "changed" path 500s on a plain
+    // EnvValidationError instead of exercising the business logic this suite tests.
+    process.env.BETTER_AUTH_SECRET = "test-suite-better-auth-secret-16plus-chars";
   });
 
   afterAll(async () => {

@@ -9,13 +9,10 @@
  * (the underlying `pg.Pool` never actually connects at build — see `@factory/db`'s
  * `getDb()`).
  *
- * `BETTER_AUTH_SECRET` (spec §5.2 tension): `undefined` is fine in development — Better
- * Auth 1.7.1 falls back to a built-in dev secret — but it is REQUIRED in production: the
- * library throws when `NODE_ENV=production` and the secret is unset. Because the auth
- * context is built lazily behind a promise, that throw doesn't crash the app at boot; it
- * surfaces as 500s on every `/api/auth/*` request once the promise is first awaited (see
- * plan C.9 — expected behavior, not a regression). Set `BETTER_AUTH_SECRET` before
- * deploying to production; `doctor`'s auth section warns about this.
+ * `BETTER_AUTH_SECRET`: hard-required (≥16 chars) by `packages/config`'s env validation
+ * since M8 — "pg + auth is the minimum" — so `Env["BETTER_AUTH_SECRET"]` is always a
+ * string by the time this module runs; there is no dev-fallback or unset case to handle
+ * here, in any environment.
  *
  * Email posture (spec §5.2, plan E.5/E.9): `requireEmailVerification` and the `magicLink`
  * plugin both follow `capabilities.email !== "disabled"` — verification is required (and
@@ -76,8 +73,8 @@ export const auth = betterAuth({
   },
   // `undefined` → Better Auth's same-origin default.
   baseURL: env.APP_URL,
-  // `undefined` is fine in development (documented dev fallback); required in production
-  // — see the module doc comment above.
+  // Always a string — hard-required by config validation since M8; see the module doc
+  // comment above.
   secret: env.BETTER_AUTH_SECRET,
   socialProviders,
   plugins: emailFeatures.magicLink

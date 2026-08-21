@@ -55,6 +55,10 @@ describe.skipIf(!TEST_DATABASE_URL)("stripe adapter handleWebhook (integration)"
     // `getDb()`/`getEnv()` are memoized process-wide — set BEFORE the dynamic import
     // below, never via a static top-of-file import (F.10.6 idiom).
     process.env.DATABASE_URL = TEST_DATABASE_URL;
+    // M8: BETTER_AUTH_SECRET is now required (I.3.a) — the stripe adapter calls
+    // `getEnv()` directly (`:28`, `:239`), which would otherwise throw EnvValidationError
+    // before this suite's real webhook-handling logic ever runs.
+    process.env.BETTER_AUTH_SECRET = "test-suite-better-auth-secret-16plus-chars";
     process.env.STRIPE_SECRET_KEY = "sk_test_dummy";
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_secret";
     process.env.APP_URL = "https://example.test";
