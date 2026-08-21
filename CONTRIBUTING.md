@@ -37,9 +37,9 @@ Everything past `DATABASE_URL` + `BETTER_AUTH_SECRET` is optional — see
 pnpm check
 ```
 
-Lint → boundaries (`dependency-cruiser`) → format check → typecheck → tests → adoption
-manifest freshness, in that order. All green is the machine-checkable bar; nothing merges
-that doesn't clear it. Full conventions: `docs/agents/conventions.md`.
+Lint → boundaries (`dependency-cruiser`) → format check → typecheck → tests, in that
+order. All green is the machine-checkable bar; nothing merges that doesn't clear it.
+Full conventions: `docs/agents/conventions.md`.
 
 ## Commits and PRs
 
@@ -65,16 +65,17 @@ those paths until the checklist's final line reads exactly `- [x] security-check
 
 ## Touching a shipped default
 
-If your change edits one of the 8 files the Adoption Ledger tracks (theme, landing page,
-legal pages, demo, email templates, plans catalog, README, `PRODUCT.md`), run the
-`update-ledger-hashes` skill (or `pnpm factory:manifest`) before you commit — otherwise
-`pnpm factory:manifest --check` goes red in CI.
+If your change edits one of the 9 files seeded as a `LAUNCH.md` item (theme, landing
+page, legal pages, demo, email templates, plans catalog, README, `PRODUCT.md`, template
+showcase), check whether the item's "Done means" bullets in
+`.factory/handoff/LAUNCH.md` still describe it accurately — update them if the shape of
+the change has moved. There is no mechanical check for this; it's reviewer judgment.
 
 ## Delegating to agents
 
 `.claude/agents/` holds the `fab-*` subagent roster. In this repo you have `fab-forge`
 (template packages, kernel, adapters, registry) and `fab-steward` (the adoption surface —
-ledger hashes, handoff mirrors, skill and agent tiering, ADRs), plus the three agents shared
+handoff mirrors, skill and agent tiering, ADRs), plus the three agents shared
 with adopters: `fab-warden` (conventions and quality review), `fab-bastion` (security
 review), and `fab-medic` (systematic debugging). Reviewers have no write tools and never run
 the gates — you do.

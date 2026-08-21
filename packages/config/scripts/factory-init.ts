@@ -6,11 +6,13 @@
  *
  * Every step is individually idempotent, so a re-run with `.factory/handoff/` still present
  * (e.g. an interrupted prior run) completes whatever remains and still returns `ok: true`.
- * Step order: copy CLAUDE.md/AGENTS.md → move every handoff skill into `.claude/skills/`
- * (removing any stale destination first — `renameSync` can't overwrite a non-empty dir) →
- * delete the factory-dev-only skills → copy every handoff agent into `.claude/agents/` →
- * delete the factory-dev-only agents → delete `.factory/handoff/` → drop the `template` flag
- * from `.factory/config.json`.
+ * Step order: copy CLAUDE.md/AGENTS.md (force-overwrite) → copy LAUNCH.md (copy-if-absent —
+ * an interrupted-run re-run must never overwrite a ticked checklist with the pristine seed;
+ * see docs/superpowers/specs/2026-08-21-launch-checklist-design.md §7) → move every handoff
+ * skill into `.claude/skills/` (removing any stale destination first — `renameSync` can't
+ * overwrite a non-empty dir) → delete the factory-dev-only skills → copy every handoff agent
+ * into `.claude/agents/` → delete the factory-dev-only agents → delete `.factory/handoff/` →
+ * drop the `template` flag from `.factory/config.json`.
  *
  * The skills loop and the agents loop are deliberately not factored into one helper — see
  * docs/adr/0002-stage-adopter-agents-in-handoff.md for why.
@@ -28,12 +30,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** Adopters never see these — they're the template maintainer's own tooling (plan §J.4.c). */
-export const FACTORY_DEV_ONLY_SKILLS = [
-  "add-integration-package",
-  "update-ledger-hashes",
-  "write-adr",
-  "release-template",
-];
+export const FACTORY_DEV_ONLY_SKILLS = ["add-integration-package", "write-adr", "release-template"];
 
 /**
  * Same idea for subagents: these two build and maintain the template itself, so an adopter
@@ -60,6 +57,21 @@ export function runFactoryInit(rootDir: string): { ok: boolean; messages: string
     } else {
       messages.push(`handoff/${name} not found — skipped.`);
     }
+  }
+
+  // LAUNCH.md is copy-if-absent, unlike CLAUDE.md/AGENTS.md above: an interrupted-run
+  // re-run must never clobber a ticked checklist with the pristine seed (design spec §7).
+  const launchSrc = path.join(handoffDir, "LAUNCH.md");
+  const launchDest = path.join(rootDir, "LAUNCH.md");
+  if (existsSync(launchSrc)) {
+    if (existsSync(launchDest)) {
+      messages.push("LAUNCH.md already exists at root — left untouched.");
+    } else {
+      cpSync(launchSrc, launchDest);
+      messages.push("Copied handoff/LAUNCH.md → LAUNCH.md.");
+    }
+  } else {
+    messages.push("handoff/LAUNCH.md not found — skipped.");
   }
 
   const skillsDestDir = path.join(rootDir, ".claude", "skills");

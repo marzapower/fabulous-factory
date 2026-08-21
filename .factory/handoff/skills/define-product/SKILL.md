@@ -41,8 +41,11 @@ From the filled `PRODUCT.md`, derive the first feature SPEC using
 buildable first, and write it as `docs/specs/<slug>.md` (create the directory if it
 doesn't exist). This SPEC is what `add-a-feature` starts from next.
 
-## Phase 4 — Re-check the ledger
+## Phase 4 — Verify and tick
 
-Run `pnpm factory:status`. The `product-def` item should now report `touched` — if it
-still reports `factory-default`, `PRODUCT.md` wasn't actually edited (a formatter pass
-alone won't flip it either way that matters — the content has to change).
+Check the filled `PRODUCT.md` against `LAUNCH.md`'s `Product definition` item —
+"Done means" every bullet: real audience and problem, a stated core loop, real pricing
+intent, no placeholder markers. `Product definition` is 🔒: request explicit human
+sign-off (the human whose interview filled Phase 1) and record it on the item's
+Signed off line, then tick it — don't tick it yourself on a content check alone. Run
+`pnpm factory:status` afterward to confirm the render agrees.

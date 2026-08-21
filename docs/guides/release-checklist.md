@@ -1,8 +1,11 @@
-# Launch checklist
+# Release checklist
 
 For maintainers of the **template repo itself**, cutting it loose as a public "Use this
 template" starting point. Not for adopters shipping a product built from it — that's
-`.factory/handoff/skills/pre-ship-check`.
+`.factory/handoff/skills/pre-ship-check`, gated by the adopter-facing `LAUNCH.md`
+staged at `.factory/handoff/LAUNCH.md`. This guide and that checklist are two different
+things: this one is about releasing the template; `LAUNCH.md` is about shipping a
+product built from it.
 
 Steps marked **(account)** need credentials this repo can't hold (Vercel, GitHub) and
 can't be automated by an agent running inside it — do them yourself, then come back.

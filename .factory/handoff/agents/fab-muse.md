@@ -56,8 +56,9 @@ kernel-rules exemption just because it's "just a page."
 
 `pnpm dev` and look at the actual result in a browser — the landing page, the layout
 `<title>`, the rendered email (or its `console`-transport output in dev) for any template
-you touched. Then `pnpm factory:status`: confirm `app-identity` / `design-system` /
-`email-templates` moved from `factory-default` to `touched` if that's the work you did.
+you touched. Then check `LAUNCH.md`: verify the "Done means" bullets for whichever of
+`App identity`, `Design system`, and `Email templates` you touched, and tick each one
+that's satisfied. Run `pnpm factory:status` afterward to confirm the render agrees.
 
 ## Definition of done
 

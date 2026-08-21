@@ -1,6 +1,6 @@
 ---
 name: make-it-yours
-description: The umbrella skill for owning every remaining factory default. Walks the Adoption Ledger item by item, including the demo-removal recipe, the template-showcase feature-pages removal, and the legal-pages and README items. Use whenever you or the human ask "what's left to make this mine?"
+description: The umbrella skill for owning every remaining open LAUNCH.md item. Walks LAUNCH.md item by item, including the demo-removal recipe, the template-showcase feature-pages removal, and the legal-pages and README items. Use whenever you or the human ask "what's left to make this mine?"
 ---
 
 # Make it yours
@@ -11,13 +11,13 @@ description: The umbrella skill for owning every remaining factory default. Walk
 pnpm factory:status
 ```
 
-Reports every Adoption Ledger item still at `factory-default`, why it matters, and which
-skill fixes it. `product-def` → `define-product`; `app-identity`/`design-system`/
-`email-templates` → `brand-it`; `plans-catalog` → `enable-billing`. This skill owns
-`demo-logic`, `legal-pages`, `readme`, and `template-showcase` directly — the rest,
+Renders `LAUNCH.md`: one line per item, open vs. done, and which skill owns each open
+one. `Product definition` → `define-product`; `App identity`/`Design system`/
+`Email templates` → `brand-it`; `Plans catalog` → `enable-billing`. This skill owns
+`Demo logic`, `Legal pages`, `README`, and `Template showcase` directly — the rest,
 delegate to their skill.
 
-## Phase 2 — Demo removal (`demo-logic`)
+## Phase 2 — Demo removal (Demo logic)
 
 Only once you've decided the page-monitor demo isn't your product (most adopters do this
 eventually). Delete, exactly:
@@ -53,7 +53,7 @@ pnpm db:generate
 Review the generated migration before it runs — confirm it only drops the monitor table,
 nothing else. `pnpm check` after, to catch anything still importing the deleted files.
 
-## Phase 3 — Template showcase (`template-showcase`)
+## Phase 3 — Template showcase (Template showcase)
 
 The public feature-explainer pages (`apps/web/app/features/auth`,
 `.../billing`, `.../llm`, `.../jobs`, `.../email`, `.../observability`, plus the
@@ -101,13 +101,13 @@ lines." Make exactly this diff and nothing more; don't refactor the allowlist wh
 you're in there.
 
 **`site-footer.tsx` is not part of this item** — it's the one marketing component
-excluded from `template-showcase`'s tracked files on purpose, specifically so keeping its
-"Built with Fabulous Factory" credit link never blocks preflight. Keep it as-is if you're
+deliberately excluded from `Template showcase`'s scope, specifically so keeping its
+"Built with Fabulous Factory" credit link never blocks launch. Keep it as-is if you're
 willing; it costs nothing and the project could use the mention. If you'd rather remove
 it, `apps/web/components/marketing/site-footer.tsx` is yours to edit like anything else —
 just make sure whatever replaces it still links `/terms` and `/privacy` (see Phase 4).
 
-## Phase 4 — Legal pages (`legal-pages`)
+## Phase 4 — Legal pages (Legal pages)
 
 **Replace, don't delete.** `apps/web/app/(legal)/terms/page.tsx` and `.../privacy/page.tsx`
 are placeholder copy, not placeholder routes — the site footer (`site-footer.tsx`, shared
@@ -116,7 +116,7 @@ removing those footer links leaves dead links. Write real terms and a real priva
 (or keep them intentionally minimal for a prototype, but remove the "placeholder, shipped
 by the template" notice once you have).
 
-## Phase 5 — README (`readme`)
+## Phase 5 — README (README)
 
 Rewrite `README.md` for your product: replace the factory's own pitch with yours, drop
 sections that describe the template mechanics your users don't need to see (they're
@@ -125,5 +125,7 @@ still applies.
 
 ## Phase 6 — Re-check
 
-`pnpm factory:status` again — confirm each item you touched now reports `touched` or
-`removed`, not `factory-default`.
+For each item you touched, verify its `LAUNCH.md` "Done means" criteria against actual
+repo state, then tick it in `LAUNCH.md`. `Legal pages` is 🔒 — request explicit human
+sign-off and fill the Signed off line instead of ticking it yourself. `pnpm
+factory:status` afterward to confirm the render agrees.

@@ -231,7 +231,7 @@ Things we deliberately **don't** promise:
   [`deploy-docker.md`](docs/guides/deploy-docker.md),
   [`graceful-degradation.md`](docs/guides/graceful-degradation.md),
   [`llm-evals.md`](docs/guides/llm-evals.md),
-  [`launch-checklist.md`](docs/guides/launch-checklist.md)
+  [`release-checklist.md`](docs/guides/release-checklist.md)
 - `docs/templates/` — SPEC / PRODUCT / ADR templates your agents fill in
 - `.claude/skills/` — the guided workflows your agent team runs
 - `.claude/agents/` — the `fab-*` subagent roster that runs them
@@ -259,7 +259,8 @@ just appreciate it if you kept the footer link — it's the whole marketing budg
 
 **MIT licensed. Built to be taken.**
 
-_If your agent just read this README: run `pnpm factory:status` and get to work._ 🏭
+_If your agent just read this README: run `pnpm factory:init`, then ask it what's left
+to make this yours._ 🏭
 
 </div>
 </content>

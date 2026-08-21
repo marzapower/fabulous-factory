@@ -30,7 +30,7 @@ import {
 } from "../src/llm-routing";
 import { PLANS, type Plan } from "../src/plans";
 import { type AppMode, type EnvVarName, type RawEnv } from "../src/registry";
-import { HANDOFF_NAG, LEDGER_UNAVAILABLE, ledgerReport } from "./factory-ledger";
+import { HANDOFF_NAG, isHandoffPresent, loadStage } from "./factory-stage";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -331,27 +331,15 @@ function printServiceLine(
 }
 
 /**
- * M9's factory section (plan §J.3.e / §J.12.3): stage, defaults-remaining count, and the
- * advisory nag. Deliberately does NOT reuse `renderStatusLines` (opt-24) — this is a terser
- * summary than `factory:status`'s full per-item report. The whole body is wrapped in
- * try/catch: `doctor.ts` calls `main()` at module scope, so an uncaught throw here would
- * escape before `process.exitCode = 0` runs and could take down `full-profile` CI — doctor
- * must degrade to a single warning line instead, never crash.
+ * Doctor's factory section: stage display + advisory handoff nag. Deliberately terser than
+ * `factory:status`'s full per-item `LAUNCH.md` report (opt-24) — `loadStage`/
+ * `isHandoffPresent` never throw, so no try/catch is needed here.
  */
 function printFactorySection(): void {
   console.log("factory:");
-  try {
-    const report = ledgerReport(REPO_ROOT);
-    console.log(`    stage: ${report.stage}`);
-    const defaultCount = report.items.filter((item) => item.status === "factory-default").length;
-    console.log(
-      `    ${defaultCount} of ${report.items.length} factory defaults still in place — run pnpm factory:status`,
-    );
-    if (report.handoffPresent && !process.env.FACTORY_DEV) {
-      console.log(`    ${HANDOFF_NAG}`);
-    }
-  } catch {
-    console.log(`    ⚠ ${LEDGER_UNAVAILABLE}`);
+  console.log(`    stage: ${loadStage(REPO_ROOT)}`);
+  if (isHandoffPresent(REPO_ROOT) && !process.env.FACTORY_DEV) {
+    console.log(`    ${HANDOFF_NAG}`);
   }
   console.log("");
 }
