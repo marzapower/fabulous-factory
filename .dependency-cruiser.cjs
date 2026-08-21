@@ -110,19 +110,22 @@ module.exports = {
       },
     },
     {
-      name: "no-bare-drizzle-outside-db-core-jobs",
+      name: "no-bare-drizzle-outside-db-core-jobs-billing",
       severity: "error",
       comment:
         "The bare `drizzle-orm` entry (query-expression builders — `sql`, `eq`, `lt`, " +
         "etc.) is confined to packages/db, packages/core (plan D.4: the rate limiter's " +
-        "atomic upsert), and packages/jobs (M6: the demo pipeline's queries and the " +
+        "atomic upsert), packages/jobs (M6: the demo pipeline's queries and the " +
         "per-monitor pg_advisory_xact_lock need the operators against `getDb()` — same " +
-        "rationale as core) plus test fixtures. Everywhere else — including apps/web and " +
-        "packages/auth — must go through @factory/db or @factory/jobs instead of " +
-        "importing drizzle-orm directly. The actual connection still only ever happens " +
-        "inside packages/db's getDb()/migrator.",
+        "rationale as core), and packages/billing (M7/H.10.4: drizzle-orm is a RUNTIME " +
+        "dep of billing — the webhook transaction's dedupe insert and guarded " +
+        "subscriptions upsert need the operators against `getDb()`) plus test fixtures. " +
+        "Everywhere else — including apps/web and packages/auth — must go through " +
+        "@factory/db, @factory/jobs, or @factory/billing instead of importing " +
+        "drizzle-orm directly. The actual connection still only ever happens inside " +
+        "packages/db's getDb()/migrator.",
       from: {
-        pathNot: "^packages/(db|core|jobs)/|^packages/[^/]+/test/",
+        pathNot: "^packages/(db|core|jobs|billing)/|^packages/[^/]+/test/",
       },
       to: {
         path: "(^|/)node_modules/drizzle-orm(/|$)",
@@ -286,6 +289,19 @@ module.exports = {
       },
       to: {
         path: "(^|/)node_modules/resend(/|$)",
+      },
+    },
+    {
+      name: "stripe-only-in-billing",
+      severity: "error",
+      comment:
+        "The stripe SDK may only be imported in packages/billing (guarded dynamic " +
+        "import per plan H.10.3 — never loaded on the disabled adapter branch).",
+      from: {
+        pathNot: "^packages/billing/",
+      },
+      to: {
+        path: "(^|/)node_modules/stripe(/|$)",
       },
     },
     {
@@ -454,6 +470,23 @@ module.exports = {
       to: {
         path: "^packages/",
         pathNot: "^packages/(config|db|core|llm|email|analytics|observability|jobs)/",
+      },
+    },
+    {
+      name: "dag-billing-imports-config-db",
+      severity: "error",
+      comment:
+        "packages/billing (M7) may depend on packages/config and packages/db only " +
+        "(plan H.10.9 amends H.2.1/H.2.11: the originally-planned jobs → billing edge is " +
+        "DELETED — entitlement is resolved at the apps/web action layer and passed down " +
+        "as a plain value, never a second getDb() checkout inside jobs' advisory-locked " +
+        "transaction). Only apps/web imports @factory/billing.",
+      from: {
+        path: "^packages/billing/",
+      },
+      to: {
+        path: "^packages/",
+        pathNot: "^packages/(config|db|billing)/",
       },
     },
   ],

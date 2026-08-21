@@ -1,11 +1,13 @@
 import { AnalyticsProvider } from "@factory/analytics/client";
 import { requireSession } from "@factory/auth";
+import { getEntitlement } from "@factory/billing";
 import { getClientConfig, isEnabled } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
-import { MAX_MONITORS, listMonitorsForUser, listRecentEventsForUser } from "@factory/jobs";
+import { listMonitorsForUser, listRecentEventsForUser } from "@factory/jobs";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BillingCard } from "@/components/billing/billing-card";
 import { MonitorsCard } from "@/components/demo/monitors-card";
 import { FeedCard } from "@/components/demo/feed-card";
 import { CapabilityPanel } from "../capability-panel";
@@ -20,9 +22,15 @@ export default async function DashboardPage() {
   const session = await requireSession({ redirectTo: "/login" });
   const config = getClientConfig();
 
-  const [monitors, events] = await Promise.all([
+  // Entitlement is fetched ONCE here, server-side, and threaded to both cards below
+  // (m7-billing.md H.2.3) — `getEntitlement` itself resolves `monitorLimit: null` when
+  // billing is disabled (unlimited, still subject to `MONITOR_HARD_CEILING`), so
+  // `MonitorsCard`'s cap stays correct in every profile without this page branching on
+  // `isEnabled("billing")` itself; only the billing card's mount below does.
+  const [monitors, events, entitlement] = await Promise.all([
     listMonitorsForUser(session.user.id),
     listRecentEventsForUser(session.user.id, FEED_LIMIT),
+    getEntitlement(session.user.id),
   ]);
 
   return (
@@ -47,9 +55,15 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
+          {/* Billing card is mounted ONLY when billing is enabled (m7-billing.md H.0
+              exit criterion) — with billing disabled there must be zero billing UI. */}
+          {isEnabled("billing") && (
+            <BillingCard entitlement={entitlement} monitorCount={monitors.length} />
+          )}
+
           <MonitorsCard
             monitors={monitors}
-            maxMonitors={MAX_MONITORS}
+            monitorLimit={entitlement.monitorLimit}
             jobsEnabled={isEnabled("jobs")}
           />
 

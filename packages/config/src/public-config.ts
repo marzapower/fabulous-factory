@@ -1,3 +1,4 @@
+import { resolveAppUrl } from "./app-url";
 import type { Capabilities, ServiceName } from "./capabilities";
 import type { RawEnv } from "./registry";
 
@@ -16,7 +17,6 @@ export interface ClientConfig {
   posthog: { key: string; host: string } | null;
 }
 
-const DEFAULT_APP_URL = "http://localhost:3000";
 const DEFAULT_POSTHOG_HOST = "https://us.i.posthog.com";
 
 /** Pure. Never reads `process.env` — both inputs arrive as parameters. */
@@ -35,7 +35,7 @@ export function buildClientConfig(env: RawEnv, capabilities: Capabilities): Clie
 
   return {
     capabilities: capabilityFlags,
-    appUrl: env.APP_URL ?? DEFAULT_APP_URL,
+    appUrl: resolveAppUrl(env.APP_URL),
     posthog,
   };
 }

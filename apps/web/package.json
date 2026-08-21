@@ -11,6 +11,7 @@
   "dependencies": {
     "@factory/analytics": "workspace:*",
     "@factory/auth": "workspace:*",
+    "@factory/billing": "workspace:*",
     "@factory/config": "workspace:*",
     "@factory/core": "workspace:*",
     "@factory/db": "workspace:*",

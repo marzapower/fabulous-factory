@@ -105,7 +105,7 @@ vi.mock("@factory/db", () => ({
   schema: fakeSchema,
 }));
 
-import { MAX_MONITORS } from "../src/demo/constants";
+import { MONITOR_HARD_CEILING } from "../src/demo/constants";
 import { createMonitorRow } from "../src/demo/queries";
 
 beforeEach(() => {
@@ -114,35 +114,128 @@ beforeEach(() => {
   fakeDb = createFakeDb();
 });
 
-describe("createMonitorRow — MAX_MONITORS cap (review fix: enforced inside the same tx as the insert)", () => {
-  it("inserts normally when under the cap", async () => {
-    monitorCount = MAX_MONITORS - 1;
+describe("createMonitorRow — entitlement cap (H.10.9/12/16: enforced inside the same tx as the insert)", () => {
+  it("inserts normally when under a plan limit of 3", async () => {
+    monitorCount = 2;
 
     const row = await createMonitorRow({
       userId: "user-1",
       name: "Example",
       url: "https://example.com",
+      monitorLimit: 3,
     });
 
     expect(row).toMatchObject({ userId: "user-1", name: "Example", url: "https://example.com" });
     expect(insertedCount).toBe(1);
   });
 
-  it("throws monitor_limit_reached at the cap, without inserting", async () => {
-    monitorCount = MAX_MONITORS;
+  it("a plan limit of 3 blocks at exactly 3, without inserting", async () => {
+    monitorCount = 3;
 
     await expect(
-      createMonitorRow({ userId: "user-1", name: "Example", url: "https://example.com" }),
+      createMonitorRow({
+        userId: "user-1",
+        name: "Example",
+        url: "https://example.com",
+        monitorLimit: 3,
+      }),
     ).rejects.toMatchObject({ status: 422, code: "monitor_limit_reached" });
     expect(insertedCount).toBe(0);
   });
 
-  it("throws once already over the cap (not just exactly at it)", async () => {
-    monitorCount = MAX_MONITORS + 5;
+  it("a plan limit of 3 blocks once already over it (not just exactly at it)", async () => {
+    monitorCount = 8;
 
     await expect(
-      createMonitorRow({ userId: "user-1", name: "Example", url: "https://example.com" }),
+      createMonitorRow({
+        userId: "user-1",
+        name: "Example",
+        url: "https://example.com",
+        monitorLimit: 3,
+      }),
     ).rejects.toMatchObject({ status: 422, code: "monitor_limit_reached" });
+    expect(insertedCount).toBe(0);
+  });
+
+  it("a plan limit of 25 (below the hard ceiling) blocks at 25, not at the ceiling", async () => {
+    monitorCount = 25;
+
+    await expect(
+      createMonitorRow({
+        userId: "user-1",
+        name: "Example",
+        url: "https://example.com",
+        monitorLimit: 25,
+      }),
+    ).rejects.toMatchObject({
+      status: 422,
+      code: "monitor_limit_reached",
+      message: "You've reached your plan's limit of 25 monitors.",
+    });
+    expect(insertedCount).toBe(0);
+  });
+
+  it("a plan limit of 25 still inserts normally when under it", async () => {
+    monitorCount = 24;
+
+    const row = await createMonitorRow({
+      userId: "user-1",
+      name: "Example",
+      url: "https://example.com",
+      monitorLimit: 25,
+    });
+
+    expect(row).toMatchObject({ userId: "user-1" });
+    expect(insertedCount).toBe(1);
+  });
+
+  it("a null limit (unlimited plan, or billing disabled) is capped by MONITOR_HARD_CEILING", async () => {
+    monitorCount = MONITOR_HARD_CEILING - 1;
+
+    const row = await createMonitorRow({
+      userId: "user-1",
+      name: "Example",
+      url: "https://example.com",
+      monitorLimit: null,
+    });
+
+    expect(row).toMatchObject({ userId: "user-1" });
+    expect(insertedCount).toBe(1);
+  });
+
+  it("a null limit blocks at the hard ceiling — the abuse floor applies in every profile, worded as a safety ceiling, not a plan limit", async () => {
+    monitorCount = MONITOR_HARD_CEILING;
+
+    await expect(
+      createMonitorRow({
+        userId: "user-1",
+        name: "Example",
+        url: "https://example.com",
+        monitorLimit: null,
+      }),
+    ).rejects.toMatchObject({
+      status: 422,
+      code: "monitor_limit_reached",
+      message: `You've reached the safety ceiling of ${MONITOR_HARD_CEILING} monitors.`,
+    });
+    expect(insertedCount).toBe(0);
+  });
+
+  it("a plan limit ABOVE the hard ceiling is still clamped to the ceiling, worded as a safety ceiling (upgrading can't raise it)", async () => {
+    monitorCount = MONITOR_HARD_CEILING;
+
+    await expect(
+      createMonitorRow({
+        userId: "user-1",
+        name: "Example",
+        url: "https://example.com",
+        monitorLimit: MONITOR_HARD_CEILING + 1000,
+      }),
+    ).rejects.toMatchObject({
+      status: 422,
+      code: "monitor_limit_reached",
+      message: `You've reached the safety ceiling of ${MONITOR_HARD_CEILING} monitors.`,
+    });
     expect(insertedCount).toBe(0);
   });
 });

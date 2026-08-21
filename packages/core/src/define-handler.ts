@@ -25,8 +25,13 @@ export interface HandlerCtx<S extends z.ZodTypeAny | "none", Sess> {
  * `auth: "required"` handlers may omit `rateLimit` entirely (limiting an
  * authenticated-only endpoint is the developer's call, not a mandatory decision).
  *
- * No `webhook` option — deliberately omitted per D.9.17 (reserved for M7; an
- * unused-but-typed field would weaken the excess-property check this union relies on).
+ * `auth: "webhook"` (M7, D.9.17 redeemed, corrected by H.10.1) is its OWN discriminant —
+ * NOT a variant of `"public"` — because a `"public"`-discriminant arm would admit
+ * `input`/`rateLimit`/`handler` silently under union excess-property semantics. A
+ * webhook's auth IS its signature verification (performed inside the adapter the
+ * `webhook` fn delegates to): rate-limiting it only causes provider redelivery storms,
+ * and origin checks are meaningless for server-to-server delivery. No `input`/
+ * `rateLimit`/`handler` keys on this arm.
  */
 export type HandlerOptions<S extends z.ZodTypeAny | "none"> =
   | {
@@ -40,7 +45,47 @@ export type HandlerOptions<S extends z.ZodTypeAny | "none"> =
       input: S;
       rateLimit: RateLimitPolicy | "none";
       handler: (ctx: HandlerCtx<S, Session | null>) => Promise<unknown>;
+    }
+  | {
+      auth: "webhook";
+      webhook: (req: NextRequest) => Promise<Response>;
     };
+
+/** 1 MiB — content-length guard for the webhook arm (H.10.18(a)). Applied BEFORE the
+ * webhook fn ever touches the body: the route is unauthenticated (signature
+ * verification happens inside the adapter, after this guard) and deliberately
+ * unrate-limited (rate-limiting a webhook only causes provider redelivery storms), so
+ * this is the one cheap defense available pre-verification against an oversized
+ * payload tying up the request. */
+const WEBHOOK_MAX_CONTENT_LENGTH = 1_048_576;
+
+/** Body-size envelope for the webhook arm (H.10 review fix over H.10.18(a)): a bare
+ * content-length check trusted the header's PRESENCE, which a chunked-transfer request
+ * (no content-length at all) or a malformed value would simply skip — the adapter would
+ * then buffer an unbounded body via its own `req.text()`. Server-to-server webhook
+ * senders (Stripe, Inngest) always send a valid content-length; there is no legitimate
+ * reason for this unauthenticated arm to accept a request that omits or garbles it, so
+ * that case is refused by design rather than let through.
+ *   - missing/non-finite header → 411 length_required
+ *   - finite header over the cap → 413 payload_too_large (unchanged)
+ *   - finite header within the cap → pass */
+function checkWebhookContentLength(req: NextRequest): Response | undefined {
+  const raw = req.headers.get("content-length");
+  const contentLength = Number(raw);
+  if (raw === null || !Number.isFinite(contentLength)) {
+    return Response.json(
+      { error: { code: "length_required", message: "Content-Length header is required" } },
+      { status: 411 },
+    );
+  }
+  if (contentLength > WEBHOOK_MAX_CONTENT_LENGTH) {
+    return Response.json(
+      { error: { code: "payload_too_large", message: "Payload too large" } },
+      { status: 413 },
+    );
+  }
+  return undefined;
+}
 
 export interface NextRouteContext {
   params: Promise<Record<string, string | string[] | undefined>>;
@@ -54,7 +99,11 @@ const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
  * checking, input validation, and error shaping all run inside this wrapper so an agent
  * cannot forget them: there is nowhere left to write a raw handler.
  *
- * Runtime order (plan D.4, rewritten by D.9.2/D.9.11/D.9.12):
+ * Runtime order (plan D.4, rewritten by D.9.2/D.9.11/D.9.12, webhook arm by H.10.1):
+ *   0. webhook   — `auth: "webhook"` short-circuits here, before ANY of steps 1-6: a
+ *                  content-length guard (411 when missing/non-finite — refuses chunked
+ *                  transfer on this unauthenticated arm by design; 413 over 1 MiB), then
+ *                  straight to `opts.webhook`.
  *   1. session   — resolved once via `getSession()`.
  *   2. rate limit — subject `user:{id}` when a session exists, else `ip:{clientIp}`.
  *   3. auth      — `'required'` + no session → 401.
@@ -67,6 +116,22 @@ export function defineHandler<S extends z.ZodTypeAny | "none">(
 ): (req: NextRequest, ctx: NextRouteContext) => Promise<Response> {
   return async function handleRequest(req, routeCtx) {
     try {
+      // (0) Webhook arm — checked FIRST, before getSession()/rate-limit/origin/input
+      // (H.10.1): a webhook's auth is its own signature verification, performed inside
+      // `opts.webhook` itself, so none of the session/DB/rate-limit machinery below
+      // should run. Still inside this try/catch, so a thrown error is shaped into a 500
+      // by the same `shapeError` call every other arm uses (providers retry on 5xx).
+      if (opts.auth === "webhook") {
+        const lengthError = checkWebhookContentLength(req);
+        if (lengthError) {
+          return lengthError;
+        }
+        // The wrapper never touches the body — reading it (json()/text()) is a
+        // single-consumption operation that belongs entirely to the adapter behind
+        // `opts.webhook` (e.g. Stripe's raw-body signature check).
+        return await opts.webhook(req);
+      }
+
       // (1) Session, resolved once. Better Auth's own `getSession` implementation reads
       // the session cookie from headers before touching the database, so cookie-less
       // requests — the common case for public traffic — never reach Postgres; no extra

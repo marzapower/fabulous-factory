@@ -516,3 +516,154 @@ describe("defineHandler — handler return + error shaping", () => {
     expect(await res.json()).toEqual({ id: "1", tags: ["a", "b"] });
   });
 });
+
+describe("defineHandler — webhook arm (H.10.1)", () => {
+  it("bypasses session/rate-limit entirely — getSession and checkRateLimit are never called", async () => {
+    const webhook = vi.fn(async () => Response.json({ received: true }));
+    const handle = defineHandler({ auth: "webhook", webhook });
+    const res = await handle(
+      new NextRequest("http://localhost/api/billing/webhook", {
+        method: "POST",
+        headers: { "content-length": "2" },
+      }),
+      emptyParams(),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ received: true });
+    expect(webhook).toHaveBeenCalledTimes(1);
+    expect(mockGetSession).not.toHaveBeenCalled();
+    expect(mockCheckRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("bypasses the origin check — a cross-site Origin does not block a POST", async () => {
+    const handle = defineHandler({
+      auth: "webhook",
+      webhook: async () => new Response(null, { status: 200 }),
+    });
+    const res = await handle(
+      new NextRequest("http://localhost/api/billing/webhook", {
+        method: "POST",
+        headers: {
+          origin: "https://evil.example",
+          "sec-fetch-site": "cross-site",
+          "content-length": "2",
+        },
+      }),
+      emptyParams(),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("content-length over 1 MiB → 413, webhook fn never called", async () => {
+    const webhook = vi.fn(async () => new Response(null, { status: 200 }));
+    const handle = defineHandler({ auth: "webhook", webhook });
+    const res = await handle(
+      new NextRequest("http://localhost/api/billing/webhook", {
+        method: "POST",
+        headers: { "content-length": String(1_048_576 + 1) },
+      }),
+      emptyParams(),
+    );
+    expect(res.status).toBe(413);
+    expect(webhook).not.toHaveBeenCalled();
+  });
+
+  it("content-length exactly at the 1 MiB boundary is allowed through", async () => {
+    const webhook = vi.fn(async () => new Response(null, { status: 200 }));
+    const handle = defineHandler({ auth: "webhook", webhook });
+    const res = await handle(
+      new NextRequest("http://localhost/api/billing/webhook", {
+        method: "POST",
+        headers: { "content-length": String(1_048_576) },
+      }),
+      emptyParams(),
+    );
+    expect(res.status).toBe(200);
+    expect(webhook).toHaveBeenCalledTimes(1);
+  });
+
+  it("missing content-length header → 411 length_required, webhook fn never called (H.10 review fix: a chunked-transfer body would otherwise buffer unbounded)", async () => {
+    const webhook = vi.fn(async () => new Response(null, { status: 200 }));
+    const handle = defineHandler({ auth: "webhook", webhook });
+    const res = await handle(
+      new NextRequest("http://localhost/api/billing/webhook", { method: "POST" }),
+      emptyParams(),
+    );
+    expect(res.status).toBe(411);
+    expect((await readJson(res)).error.code).toBe("length_required");
+    expect(webhook).not.toHaveBeenCalled();
+  });
+
+  it("malformed content-length header → 411 length_required, webhook fn never called", async () => {
+    const webhook = vi.fn(async () => new Response(null, { status: 200 }));
+    const handle = defineHandler({ auth: "webhook", webhook });
+    const res = await handle(
+      new NextRequest("http://localhost/api/billing/webhook", {
+        method: "POST",
+        headers: { "content-length": "not-a-number" },
+      }),
+      emptyParams(),
+    );
+    expect(res.status).toBe(411);
+    expect((await readJson(res)).error.code).toBe("length_required");
+    expect(webhook).not.toHaveBeenCalled();
+  });
+
+  it("a thrown error inside the webhook fn → shaped 500 (provider retries on 5xx)", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const handle = defineHandler({
+        auth: "webhook",
+        webhook: async () => {
+          throw new Error("signature verification blew up");
+        },
+      });
+      const res = await handle(
+        new NextRequest("http://localhost/api/billing/webhook", {
+          method: "POST",
+          headers: { "content-length": "2" },
+        }),
+        emptyParams(),
+      );
+      expect(res.status).toBe(500);
+      const body = await readJson(res);
+      expect(body.error.code).toBe("internal_error");
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("an ApiError thrown inside the webhook fn is shaped by its own status/code", async () => {
+    const handle = defineHandler({
+      auth: "webhook",
+      webhook: async () => {
+        throw new (await import("../src/errors")).ApiError(400, "bad_signature", "Bad signature");
+      },
+    });
+    const res = await handle(
+      new NextRequest("http://localhost/api/billing/webhook", {
+        method: "POST",
+        headers: { "content-length": "2" },
+      }),
+      emptyParams(),
+    );
+    expect(res.status).toBe(400);
+    expect((await readJson(res)).error.code).toBe("bad_signature");
+  });
+
+  it("a returned Response passes through unchanged", async () => {
+    const handle = defineHandler({
+      auth: "webhook",
+      webhook: async () => new Response("plain text", { status: 201 }),
+    });
+    const res = await handle(
+      new NextRequest("http://localhost/api/billing/webhook", {
+        method: "POST",
+        headers: { "content-length": "2" },
+      }),
+      emptyParams(),
+    );
+    expect(res.status).toBe(201);
+    expect(await res.text()).toBe("plain text");
+  });
+});

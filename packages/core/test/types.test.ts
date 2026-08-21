@@ -151,3 +151,39 @@ const _publicActionWithoutRateLimit: ReturnType<typeof defineAction> = defineAct
   action: async () => null,
 });
 void _publicActionWithoutRateLimit;
+
+// --- webhook arm negative fixtures (H.10.1: own discriminant, no input/rateLimit/handler) --
+
+// The webhook arm must reject an `input` key — it has no discriminant overlap with
+// `"public"`/`"required"`, so this is a plain excess-property check on its own arm.
+// Excess-property errors surface AT the offending property, not the assignment line, so
+// `@ts-expect-error` sits directly above each one (unlike the missing-property fixtures
+// above, where the error surfaces at the assignment).
+const _webhookWithInput: ReturnType<typeof defineHandler> = defineHandler({
+  auth: "webhook",
+  // @ts-expect-error — webhook arm does not accept `input`
+  input: "none",
+  webhook: async () => new Response(null, { status: 200 }),
+});
+void _webhookWithInput;
+
+const _webhookWithRateLimit: ReturnType<typeof defineHandler> = defineHandler({
+  auth: "webhook",
+  // @ts-expect-error — webhook arm does not accept `rateLimit`
+  rateLimit: "none",
+  webhook: async () => new Response(null, { status: 200 }),
+});
+void _webhookWithRateLimit;
+
+const _webhookWithHandler: ReturnType<typeof defineHandler> = defineHandler({
+  auth: "webhook",
+  // @ts-expect-error — webhook arm does not accept `handler` (it takes `webhook` instead)
+  handler: async () => null,
+});
+void _webhookWithHandler;
+
+// @ts-expect-error — webhook arm requires the `webhook` key
+const _webhookMissingFn: ReturnType<typeof defineHandler> = defineHandler({
+  auth: "webhook",
+});
+void _webhookMissingFn;
