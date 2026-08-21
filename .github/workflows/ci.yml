@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [master]
 
 jobs:
   pr-title:
@@ -397,7 +397,7 @@ jobs:
 
       # SAST: OWASP Top Ten ruleset, anonymously fetchable from the semgrep registry (no
       # token needed — D.1). PRs scan only files changed since the PR's base commit to
-      # keep runtime reasonable (D.7); push-to-main runs the full scan.
+      # keep runtime reasonable (D.7); push-to-master runs the full scan.
       - name: semgrep (OWASP Top Ten)
         env:
           SEMGREP_BASELINE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
@@ -437,10 +437,10 @@ jobs:
         run: |
           set -e
           # Three-dot (merge-base) diff, not two-dot: two-dot compares the two snapshots
-          # directly and would surface files that changed on main *after* this branch
-          # forked as "PR-touched," even though the PR itself never touched them (M3).
-          # Three-dot diffs HEAD against the merge-base of BASE and HEAD, showing only
-          # what this branch actually changed since it diverged.
+          # directly and would surface files that changed on the base branch *after* this
+          # branch forked as "PR-touched," even though the PR itself never touched them
+          # (M3). Three-dot diffs HEAD against the merge-base of BASE and HEAD, showing
+          # only what this branch actually changed since it diverged.
           CHANGED=$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA" -- \
             packages/auth packages/core packages/billing apps/web/middleware.ts packages/db/migrations)
 
