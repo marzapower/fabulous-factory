@@ -1,13 +1,15 @@
 ---
 name: update-ledger-hashes
-description: Regenerate the Adoption Ledger's file hashes after a shipped factory default changes. Use whenever a commit touches one of the 8 manifest items' files (theme, landing page, legal pages, demo, email templates, plans catalog, README, PRODUCT.md) in the template repo itself.
+description: Regenerate the Adoption Ledger's file hashes after a shipped factory default changes. Use whenever a commit touches one of the 9 manifest items' files (theme, landing page, legal pages, demo, email templates, plans catalog, README, PRODUCT.md, template showcase) in the template repo itself.
 ---
 
 # Update ledger hashes
 
-`.factory/manifest.json` records SHA-256 hashes of the shipped bytes of 8 factory
+`.factory/manifest.json` records SHA-256 hashes of the shipped bytes of 9 factory
 defaults (see the `items` list in the manifest, or `pnpm factory:status` for the live
-view). When you edit one of those files in the **template repo** — not a product repo
+view) — theme, landing page, legal pages, demo, email templates, plans catalog, README,
+`PRODUCT.md`, and the `template-showcase` feature pages + marketing components. When you
+edit one of those files in the **template repo** — not a product repo
 adopted from it — the committed hash goes stale, and CI's `factory:manifest --check` (run
 as part of `pnpm check` here) goes red until it's regenerated.
 

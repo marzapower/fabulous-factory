@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BillingCard } from "@/components/billing/billing-card";
 import { MonitorsCard } from "@/components/demo/monitors-card";
 import { FeedCard } from "@/components/demo/feed-card";
+import { SiteFooter } from "@/components/marketing/site-footer";
 import { CapabilityPanel } from "../capability-panel";
 
 // Capability-conditional UI must render dynamically (design spec §5.1), and this page's
@@ -41,7 +42,7 @@ export default async function DashboardPage() {
           to more of the app via a shared dynamic layout; the demo (M6) adds event
           call sites. */}
       <AnalyticsProvider>
-        <main className="mx-auto flex min-h-svh max-w-2xl flex-col gap-6 p-6">
+        <main className="fab-shell mx-auto flex min-h-svh max-w-2xl flex-col gap-6 p-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">Dashboard</CardTitle>
@@ -79,6 +80,8 @@ export default async function DashboardPage() {
 
           <CapabilityPanel />
         </main>
+
+        <SiteFooter />
       </AnalyticsProvider>
     </ClientConfigProvider>
   );

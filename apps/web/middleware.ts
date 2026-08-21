@@ -48,10 +48,15 @@ const EXACT_ALLOWLIST = new Set([
   "/api/health",
   "/api/billing/webhook",
   "/api/inngest",
+  // Public template feature-explainer pages index.
+  "/features",
 ]);
-const PREFIX_ALLOWLIST = ["/api/auth/"];
+// Trailing slash required (H.10-style review fix): a bare "/features" prefix would also
+// match "/features-secret", the exact same-prefix-sibling failure mode this file's own
+// comments condemn for the exact-match entries above.
+const PREFIX_ALLOWLIST = ["/api/auth/", "/features/"];
 
-function isPublicPath(pathname: string): boolean {
+export function isPublicPath(pathname: string): boolean {
   if (EXACT_ALLOWLIST.has(pathname)) return true;
   return PREFIX_ALLOWLIST.some((prefix) => pathname.startsWith(prefix));
 }

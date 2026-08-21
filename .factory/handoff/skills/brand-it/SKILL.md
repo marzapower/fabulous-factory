@@ -13,16 +13,30 @@ look unexamined.
 
 - `apps/web/app/layout.tsx` — `metadata.title` (and `description`, if set) is still the
   template's name. Replace it with your product's.
-- `apps/web/app/page.tsx` — the landing page copy (hero, feature list, footer) is the
-  template's own pitch. Replace it with yours; keep the `/terms` and `/privacy` footer
-  links pointed at the (still-present) legal pages — see `make-it-yours` if you're
-  touching those.
+- `apps/web/app/page.tsx` — a thin composition, not where the copy lives. The landing
+  page's actual copy and layout is in `apps/web/components/marketing/` (`site-header`,
+  `hero`, `control-panel`, `feature-card`, `features-meta`, `site-footer`, and more) —
+  edit those components directly rather than `page.tsx`, unless you're changing the
+  composition's structure itself. Keep the `/terms` and `/privacy` links in
+  `site-footer.tsx` pointed at the (still-present) legal pages — see `make-it-yours` if
+  you're touching those.
+- **Watermarks are opt-out, not a bug to fix.** `site-footer.tsx` carries a "Built with
+  Fabulous Factory" credit link, some `marketing/` files carry a 2-line source comment
+  crediting the project, and a few inert `fab-*` marker classes (`fab-shell`, `fab-card`,
+  `fab-station`, …) sit in classNames — zero CSS, no visual effect, purely a fingerprint.
+  None of it blocks preflight and none of it costs you a line of styling. You're free to
+  remove any of it — see `make-it-yours`'s `template-showcase` phase for the removal
+  recipe — we'd just appreciate it if you kept the footer link; no dark patterns, just a
+  polite ask.
 
 ## Phase 2 — Theme
 
 `apps/web/app/globals.css` holds the Tailwind v4 CSS-native design tokens (colors,
 radii, fonts). Adjust them to your product's palette — follow the repo's existing
-token structure (don't hand-roll a parallel system).
+token structure (don't hand-roll a parallel system). `--font-sans` and `--font-mono`
+map to vendored IBM Plex Sans / IBM Plex Mono by default (human voice / machine voice) —
+swap the font files and update those two token values to rebrand typography in one
+place; nothing else in the app references a font family directly.
 
 ## Phase 3 — Email copy
 

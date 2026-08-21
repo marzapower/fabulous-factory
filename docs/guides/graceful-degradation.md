@@ -36,6 +36,19 @@ render. `pnpm factory:doctor` is the one place the full identity map is printed,
 a local CLI command, never an HTTP response. The dashboard's `CapabilityPanel`
 (`apps/web/app/capability-panel.tsx`) is the on/off view of that same boolean map.
 
+**The precise boundary**, now that the public `/features/*` pages exist alongside the
+dashboard: runtime config — anything a request can trigger, in-app or over HTTP — exposes
+boolean capabilities only, never the resolved adapter identity. That line doesn't move for
+a public page any more than it does for the dashboard. **Static template documentation**
+(the feature-explainer pages' prose, the README) is a different thing entirely: it may
+name every adapter the template _supports_ for a capability — that's public knowledge the
+moment the repo is public, not a fact about any one deployment — but it must never render
+which adapter a live deployment actually resolved to. For a capability with only one
+supported adapter (billing → Stripe, jobs → Inngest), the boolean _is_ the identity by
+construction — "billing: enabled" only ever means Stripe — and that inference is accepted
+as inherent public-repo knowledge, not a leak; there's no second adapter for it to
+distinguish from.
+
 ## How a capability turns on
 
 Every service's enabling var(s) are marked `enables: true` in the single source of

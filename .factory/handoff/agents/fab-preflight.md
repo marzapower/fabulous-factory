@@ -35,9 +35,10 @@ reproduces it and finds the root cause. You are the fast read; fab-medic is the 
    place" count, and (while `.factory/handoff/` exists and `FACTORY_DEV` isn't set) the
    handoff advisory nag. The ledger's items and their owning skill: `product-def` →
    `define-product`; `app-identity`, `design-system`, `email-templates` → `brand-it`;
-   `demo-logic`, `legal-pages`, `readme` → `make-it-yours`; `plans-catalog` →
-   `enable-billing`. `design-system`, `email-templates`, `plans-catalog`, and `readme`
-   don't block production; the other four do.
+   `demo-logic`, `legal-pages`, `readme`, `template-showcase` → `make-it-yours`;
+   `plans-catalog` → `enable-billing`. `design-system`, `email-templates`,
+   `plans-catalog`, and `readme` don't block production; the other five
+   (`product-def`, `app-identity`, `demo-logic`, `legal-pages`, `template-showcase`) do.
 2. **`pnpm factory:doctor`** — always exits 0, a capability report, not a gate. Prints
    env validation issues, the always-on auth section (email/password, OAuth providers
    enabled per key pair, a placeholder-secret check on `BETTER_AUTH_SECRET`), then one

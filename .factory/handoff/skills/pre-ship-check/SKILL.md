@@ -24,7 +24,9 @@ pnpm preflight
 
 Resolve every failure it lists, in order — it names the skill for each one. Common
 blockers: `product-def` (run `define-product`), `app-identity`/`demo-logic`/
-`legal-pages` (run `brand-it`/`make-it-yours`), `.factory/handoff/` still present (run
+`legal-pages` (run `brand-it`/`make-it-yours`), `template-showcase` — the shipped
+`/features/*` explainer pages and their marketing components (run `make-it-yours`),
+`.factory/handoff/` still present (run
 `pnpm factory:init` — you shouldn't be reading this file if that's true, but re-run is
 idempotent and cheap to confirm), a `STRIPE_SECRET_KEY` still starting with `sk_test_`
 (swap to a live key in `enable-billing`). The email-disabled warning ("auth runs without
