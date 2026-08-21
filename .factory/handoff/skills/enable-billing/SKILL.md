@@ -51,3 +51,12 @@ live Stripe call, and never gated in the UI alone (a hidden button is not enforc
 `pnpm preflight` blocks a `production`-stage ship if `STRIPE_SECRET_KEY` still starts
 with `sk_test_` — swap to a live key deliberately, not by accident, via
 `pre-ship-check`.
+
+## Phase 6 — Verify and tick
+
+Check `plans.ts` against `LAUNCH.md`'s `Plans catalog` item's "Done means": real tiers,
+limits, and prices; no `REPLACE_ME` markers; real Stripe price IDs if billing is
+enabled. `Plans catalog` is 🔒 and does not block launch — request explicit human
+sign-off, record it on the Signed off line, then tick it; don't tick it yourself, and
+don't treat it as blocking if it's left open (surface it to the human at
+`pre-ship-check` instead).

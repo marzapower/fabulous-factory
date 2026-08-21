@@ -65,7 +65,7 @@ bug to route around.
 
 ## Definition of done
 
-`pnpm check` green — lint, boundaries, format, typecheck, tests, manifest freshness.
+`pnpm check` green — lint, boundaries, format, typecheck, tests.
 "It works when I click it" is not done. If scope moved while building, update the
 SPEC's acceptance tests to match what actually shipped.
 

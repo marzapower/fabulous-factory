@@ -72,9 +72,6 @@ jobs:
 
       - run: pnpm test
 
-      - name: Adoption manifest freshness
-        run: pnpm factory:manifest --check
-
       - name: Adoption preflight
         run: pnpm preflight
 

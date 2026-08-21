@@ -31,6 +31,7 @@ function buildFixture(): void {
   );
   writeFile(".factory/handoff/CLAUDE.md", "# adopter CLAUDE.md\n");
   writeFile(".factory/handoff/AGENTS.md", "# adopter AGENTS.md\n");
+  writeFile(".factory/handoff/LAUNCH.md", "## [ ] Seeded item\n");
   writeFile(".factory/handoff/skills/define-product/SKILL.md", "# define-product\n");
   writeFile(".factory/handoff/skills/brand-it/SKILL.md", "# brand-it\n");
   writeFile(".factory/handoff/agents/fab-smith.md", "# fab-smith\n");
@@ -56,6 +57,9 @@ describe("runFactoryInit — full run", () => {
     // Root CLAUDE.md/AGENTS.md are now the adopter versions.
     expect(readFileSync(path.join(rootDir, "CLAUDE.md"), "utf8")).toBe("# adopter CLAUDE.md\n");
     expect(readFileSync(path.join(rootDir, "AGENTS.md"), "utf8")).toBe("# adopter AGENTS.md\n");
+
+    // LAUNCH.md is promoted to root too (design spec §7).
+    expect(readFileSync(path.join(rootDir, "LAUNCH.md"), "utf8")).toBe("## [ ] Seeded item\n");
 
     // Adopter skills installed.
     expect(existsSync(path.join(rootDir, ".claude/skills/define-product/SKILL.md"))).toBe(true);
@@ -96,6 +100,37 @@ describe("runFactoryInit — full run", () => {
     const second = runFactoryInit(rootDir);
     expect(second.ok).toBe(false);
     expect(second.messages.some((m) => m.includes("already initialized"))).toBe(true);
+  });
+});
+
+describe("runFactoryInit — LAUNCH.md promotion is copy-if-absent", () => {
+  it("copies handoff/LAUNCH.md → LAUNCH.md when root LAUNCH.md doesn't exist yet", () => {
+    buildFixture();
+    const { ok } = runFactoryInit(rootDir);
+    expect(ok).toBe(true);
+    expect(readFileSync(path.join(rootDir, "LAUNCH.md"), "utf8")).toBe("## [ ] Seeded item\n");
+  });
+
+  it("does NOT overwrite an existing root LAUNCH.md (simulating a re-run after partial completion)", () => {
+    buildFixture();
+    // Simulate an interrupted prior run: LAUNCH.md was already promoted and ticked, but
+    // handoff/ is still present (e.g. the run crashed on a later step).
+    writeFile("LAUNCH.md", "## [x] Seeded item\n");
+
+    const { ok, messages } = runFactoryInit(rootDir);
+    expect(ok).toBe(true);
+    expect(readFileSync(path.join(rootDir, "LAUNCH.md"), "utf8")).toBe("## [x] Seeded item\n");
+    expect(messages.some((m) => m.includes("LAUNCH.md already exists"))).toBe(true);
+  });
+
+  it("tolerates a missing handoff/LAUNCH.md source", () => {
+    buildFixture();
+    rmSync(path.join(rootDir, ".factory/handoff/LAUNCH.md"), { force: true });
+
+    const { ok, messages } = runFactoryInit(rootDir);
+    expect(ok).toBe(true);
+    expect(messages.some((m) => m.includes("LAUNCH.md") && m.includes("not found"))).toBe(true);
+    expect(existsSync(path.join(rootDir, "LAUNCH.md"))).toBe(false);
   });
 });
 

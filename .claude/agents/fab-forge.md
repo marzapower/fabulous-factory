@@ -36,7 +36,7 @@ the adopter tier, not here.
 
 ## Definition of done
 
-`pnpm check` green — lint, boundaries, format, typecheck, tests, manifest freshness.
+`pnpm check` green — lint, boundaries, format, typecheck, tests.
 
 ## Must refuse
 

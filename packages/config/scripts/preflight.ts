@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 /**
  * `pnpm preflight` — stage-aware ship gate (plan §J.3.e, corrected by §J.12.4/§J.12.13).
+ * Mechanical env gate only — the semantic launch checklist (`LAUNCH.md`) is enforced by
+ * agent/skill discipline, not here (design:
+ * docs/superpowers/specs/2026-08-21-launch-checklist-design.md §2).
  *
  * `evaluatePreflight` is pure: no `process.env` reads inside, `env` arrives as a plain
  * object so tests can pass fixtures directly. The CLI wrapper calls it with
@@ -21,13 +24,7 @@ import { fileURLToPath } from "node:url";
 import { deriveCapabilities } from "../src/capabilities";
 import { readMergedEnv } from "../src/env-file";
 import type { RawEnv } from "../src/registry";
-import {
-  HANDOFF_NAG,
-  LEDGER_UNAVAILABLE,
-  ledgerReportSafe,
-  loadStage,
-  renderStatusLines,
-} from "./factory-ledger";
+import { HANDOFF_NAG, isHandoffPresent, loadStage } from "./factory-stage";
 
 const POINTER_FILES = ["CLAUDE.md", "AGENTS.md"];
 const POINTER_TARGET = "docs/agents/conventions.md";
@@ -49,25 +46,11 @@ export function evaluatePreflight(
   const warnings: string[] = [];
 
   const stage = loadStage(rootDir);
-  // Missing/corrupt manifest is reported once, by the CLI's own print in main() (which
-  // runs ledgerReportSafe again for its stage/per-item output) — pushing the same
-  // sentence here as a warning would print it twice (review finding 10).
-  const report = ledgerReportSafe(rootDir);
-
-  const handoffPresent = existsSync(path.join(rootDir, ".factory", "handoff"));
+  const handoffPresent = isHandoffPresent(rootDir);
   const stripeKey = env.STRIPE_SECRET_KEY;
   const stripeIsTestKey = Boolean(stripeKey && stripeKey.startsWith("sk_test_"));
 
   const productionBlockers: string[] = [];
-  if (report) {
-    for (const item of report.items) {
-      if (item.blocksProduction && item.status === "factory-default") {
-        productionBlockers.push(
-          `'${item.id}' is still a factory default — run pnpm factory:status, use skill '${item.skill}'`,
-        );
-      }
-    }
-  }
   if (handoffPresent) {
     productionBlockers.push(".factory/handoff/ still exists — run pnpm factory:init");
   }
@@ -115,14 +98,9 @@ function main(): void {
     FACTORY_DEV: process.env.FACTORY_DEV,
   };
 
-  const report = ledgerReportSafe(repoRoot);
-  if (report) {
-    for (const line of renderStatusLines(report)) console.log(line);
-    if (report.handoffPresent && !env.FACTORY_DEV) {
-      console.log(HANDOFF_NAG);
-    }
-  } else {
-    console.log(`⚠ ${LEDGER_UNAVAILABLE}`);
+  console.log(`stage: ${loadStage(repoRoot)}`);
+  if (isHandoffPresent(repoRoot) && !env.FACTORY_DEV) {
+    console.log(HANDOFF_NAG);
   }
   console.log("");
 

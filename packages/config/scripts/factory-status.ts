@@ -1,37 +1,51 @@
 #!/usr/bin/env node
 /**
- * `pnpm factory:status` — prints the Adoption Ledger report: stage, one line per item, a
- * defaults-remaining count, and (while `.factory/handoff/` exists) the advisory nag. Always
- * exits 0 — this is a report, not a gate (`pnpm preflight` is the gate).
+ * `pnpm factory:status` — dumb, read-only renderer of `LAUNCH.md` (design:
+ * docs/superpowers/specs/2026-08-21-launch-checklist-design.md §6). Renders it, never gates
+ * it — `LAUNCH.md` enforcement is agent/skill discipline, not a CLI check (§2). Always exits
+ * 0.
  */
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { HANDOFF_NAG, isHandoffPresent, loadStage } from "./factory-stage";
 import {
-  HANDOFF_NAG,
-  LEDGER_UNAVAILABLE,
-  ledgerReportSafe,
-  renderStatusLines,
-} from "./factory-ledger";
+  countDone,
+  countOpenBlockers,
+  loadLaunchChecklist,
+  type LaunchItem,
+} from "./launch-checklist";
 
-/** Pure — exported for tests/reuse. Never touches `process.env` itself. */
+function renderItemLine(item: LaunchItem): string {
+  if (!item.done) {
+    let line = `○ ${item.title}`;
+    if (item.blocksLaunch) line += " — blocks launch";
+    if (item.skill) line += ` → skill: ${item.skill}`;
+    if (item.humanSignoff) line += " 🔒";
+    return line;
+  }
+
+  let line = `✓ ${item.title}`;
+  if (item.humanSignoff) line += " 🔒";
+  return line;
+}
+
+/**
+ * Pure — exported for tests/reuse. Never touches `process.env` itself (`env` arrives as a
+ * plain object, same discipline as `preflight.ts`'s `evaluatePreflight`).
+ */
 export function renderFactoryStatus(
   rootDir: string,
   env: Record<string, string | undefined>,
 ): string[] {
-  const report = ledgerReportSafe(rootDir);
-  if (!report) {
-    return [`⚠ ${LEDGER_UNAVAILABLE}`];
-  }
+  const lines: string[] = [`stage: ${loadStage(rootDir)}`];
 
-  const lines = renderStatusLines(report);
-  const defaultCount = report.items.filter((item) => item.status === "factory-default").length;
-  lines.push(`${defaultCount} of ${report.items.length} factory defaults still in place`);
-
-  if (report.handoffPresent) {
-    if (!env.FACTORY_DEV) {
-      lines.push(HANDOFF_NAG);
-    }
+  // The staged-agents roster announcement (kept verbatim — asserted by
+  // factory-agents.test.ts): printed whenever `.factory/handoff/agents/` exists, independent
+  // of LAUNCH.md's presence. In template/fresh-clone mode this plus the nag below is the
+  // whole useful output.
+  if (existsSync(path.join(rootDir, ".factory", "handoff", "agents"))) {
     lines.push(
       "Adopter skills (define-product, add-a-feature, enable-billing, swap-llm-provider, brand-it, make-it-yours, pre-ship-check) install into .claude/skills/ when you run `pnpm factory:init`.",
     );
@@ -39,6 +53,24 @@ export function renderFactoryStatus(
       "Adopter agents (fab-scribe, fab-smith, fab-muse, fab-preflight) install into .claude/agents/ at the same time; the shared agents (fab-warden, fab-bastion, fab-medic) are already there.",
     );
   }
+
+  const launchPath = path.join(rootDir, "LAUNCH.md");
+  if (!existsSync(launchPath)) {
+    if (isHandoffPresent(rootDir)) {
+      if (!env.FACTORY_DEV) lines.push(HANDOFF_NAG);
+    } else {
+      lines.push("no LAUNCH.md found — nothing to report");
+    }
+    return lines;
+  }
+
+  const items = loadLaunchChecklist(rootDir);
+  for (const item of items) {
+    lines.push(renderItemLine(item));
+  }
+  lines.push(
+    `${countDone(items)}/${items.length} done · ${countOpenBlockers(items)} launch blocker(s) open`,
+  );
 
   return lines;
 }

@@ -13,7 +13,8 @@ review instead of an independent Opus reviewer. Gates and live verify unchanged.
    `graceful-degradation.md` (the degradation-convention doc owed since M4). All
    grounded in real repo state (Dockerfile/compose/CI/registry/llm package) — no
    invented commands.
-3. **Launch checklist**: `docs/guides/launch-checklist.md` (live demo deploy, GitHub
+3. **Launch checklist**: `docs/guides/release-checklist.md` (renamed from
+   `launch-checklist.md` post-M10; live demo deploy, GitHub
    template flag, badges truthful, quickstart re-verified); `release-template` skill
    gets a pointer line to it.
 4. **README final pass**: guides bullet becomes true, quickstart + claims re-verified.

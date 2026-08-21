@@ -86,9 +86,9 @@ service integration, its disabled path must be exercised by a test, not left to 
 
 ## Definition of done
 
-`pnpm check` (lint → boundaries → format:check → typecheck → test → manifest
-freshness) green is the machine-checkable definition of done. Humans judge the running
-product; the repo judges the code.
+`pnpm check` (lint → boundaries → format:check → typecheck → test) green is the
+machine-checkable definition of done. Humans judge the running product; the repo judges
+the code.
 
 ## Commits
 

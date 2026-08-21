@@ -54,5 +54,7 @@ copy.
 
 `pnpm dev`, look at the landing page and layout `<title>` in a real browser tab, and send
 yourself a test email (or check the `console` transport output in dev) for each template
-you touched. Then `pnpm factory:status` — `app-identity` and `email-templates` should
-report `touched`; `design-system` too if you edited `globals.css`.
+you touched. Then check `LAUNCH.md`: verify the "Done means" bullets for whichever of
+`App identity`, `Design system`, and `Email templates` you touched, and tick each one
+that's satisfied — none of the three is 🔒, so this skill ticks them itself. Run `pnpm
+factory:status` afterward to confirm the render agrees.

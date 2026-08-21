@@ -26,7 +26,7 @@ Tailwind + shadcn/ui, pnpm workspaces. Billing (Stripe/disabled) and LLM
 
 ## Definition of done
 
-`pnpm check` green — lint, boundaries, format, typecheck, tests, manifest freshness.
+`pnpm check` green — lint, boundaries, format, typecheck, tests.
 Conventional Commits for every commit message.
 
 Canonical conventions: docs/agents/conventions.md
@@ -37,14 +37,13 @@ Any non-trivial change (new feature, structural refactor, multi-file touch): inv
 `fabulous-feature` — it is the binding build process, not optional guidance.
 
 Factory-dev skills (this repo only — not shipped to adopters): `add-integration-package`,
-`update-ledger-hashes`, `write-adr`, `release-template`. `add-a-job` is shared and
-available here too.
+`write-adr`, `release-template`. `add-a-job` is shared and available here too.
 
 ## Agents
 
 `.claude/agents/` — delegate rather than doing everything in one context. Factory-dev:
 `fab-forge` (template packages, kernel, adapters, registry), `fab-steward` (adoption
-surface — ledger hashes, handoff mirrors, tiering, ADRs). Shared with adopters:
+surface — handoff mirrors, tiering, ADRs). Shared with adopters:
 `fab-warden` (conventions and quality review), `fab-bastion` (security review),
 `fab-medic` (systematic debugging). The adopter agents are staged in
 `.factory/handoff/agents/` and install on `pnpm factory:init` — they are not loaded here.

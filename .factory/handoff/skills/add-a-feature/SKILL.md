@@ -39,6 +39,6 @@ registry-only env reads, graceful degradation).
 
 ## Phase 4 — Done
 
-`pnpm check` green (lint, boundaries, format, typecheck, test, manifest freshness) is the
+`pnpm check` green (lint, boundaries, format, typecheck, test) is the
 definition of done — not "it works when I click it." Update the SPEC's acceptance tests
 to reflect what actually shipped if scope moved during the build.
