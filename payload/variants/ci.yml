@@ -1,0 +1,461 @@
+# Adopter variant maintained in payload/variants/ — keep in sync with the factory original (see docs/superpowers/specs/2026-08-22-npx-installer-design.md §5)
+name: CI
+
+on:
+  pull_request:
+  push:
+    # The installer's `git init` produces a `main` default branch, not `master` — without
+    # `main` here, adopter CI would never fire on a push to their own default branch.
+    branches: [main, master]
+
+jobs:
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint PR title (Conventional Commits)
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: echo "$PR_TITLE" | pnpm commitlint
+
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Real Postgres service (M2): the packages/db integration test connects to this
+      # and creates the auth tables via the migrator; see packages/db/test/integration.
+      TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      # Architecture boundary rules (design spec §8.4, plan D.5 + D.7): dependency-cruiser
+      # enforces the packages/config ← db ← auth ← core ← web DAG and the vendor-SDK/
+      # process.env confinement rules. Runs right after lint, before format/typecheck/test
+      # — a boundary violation is a structural problem worth failing fast on.
+      - run: pnpm boundaries
+
+      - run: pnpm format:check
+
+      - run: pnpm gen:env-example --check
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+      - name: Adoption preflight
+        run: pnpm preflight
+
+  # M1 minimal-profile boot check (design spec §5.1/§9.5): the app must build and serve
+  # liveness with nothing but DATABASE_URL set. M2 fulfills the promise that was
+  # deferred here in M1: a real Postgres service container now backs DATABASE_URL, the
+  # migrator runs against it, and the app still boots to a healthy liveness check with
+  # every other capability var unset.
+  minimal-boot:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+      # Required alongside DATABASE_URL as of M8 (plan I.3.a): Better Auth hard-throws on
+      # the default secret under NODE_ENV=production, which the standalone server.js
+      # always sets. Job-level (not step-level): `pnpm build` below runs page-data
+      # collection that reads this at module scope, before any boot step (plan I.10.2).
+      BETTER_AUTH_SECRET: ci-dummy-better-auth-secret-do-not-use-in-prod
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm db:migrate
+
+      - run: pnpm build
+
+      - name: Boot standalone server and poll /api/health
+        run: |
+          set -e
+          PORT=3100 HOSTNAME=127.0.0.1 node apps/web/.next/standalone/apps/web/server.js &
+          SERVER_PID=$!
+
+          status=1
+          for _ in $(seq 1 30); do
+            if body=$(curl -fsS http://127.0.0.1:3100/api/health 2>/dev/null); then
+              if echo "$body" | grep -q '"status":"ok"'; then
+                echo "Health check passed: $body"
+                status=0
+                break
+              fi
+            fi
+            sleep 1
+          done
+
+          kill "$SERVER_PID" 2>/dev/null || true
+          exit $status
+
+  # M8 docker-build check (plan I.7.1): builds both the runtime and migrate images from
+  # the repo-root Dockerfile and boots each against a real Postgres service container —
+  # build-only was explicitly rejected in the plan critique because the boot is what
+  # would have caught the I.3 BETTER_AUTH_SECRET blocker. needs: quality per plan I.7.1.
+  docker:
+    runs-on: ubuntu-latest
+    needs: quality
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      # ONE shared GHA cache scope for both targets (plan I.10 opt-3): the runner and
+      # migrate targets share the base/deps layers and neither imports the other, so
+      # per-target scopes would just duplicate the cached layers for no benefit.
+      - name: Build runner image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          target: runner
+          tags: fabulous-factory:runner-ci
+          load: true
+          platforms: linux/amd64
+          cache-from: type=gha,scope=docker
+          cache-to: type=gha,mode=max,scope=docker
+
+      - name: Build migrate image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          target: migrate
+          tags: fabulous-factory:migrate-ci
+          load: true
+          platforms: linux/amd64
+          cache-from: type=gha,scope=docker
+          cache-to: type=gha,mode=max,scope=docker
+
+      - name: Assert placeholders not shipped
+        run: |
+          set -e
+          for tag in fabulous-factory:runner-ci fabulous-factory:migrate-ci; do
+            env_json=$(docker inspect -f '{{json .Config.Env}}' "$tag")
+            echo "$tag: $env_json"
+            if echo "$env_json" | grep -qE 'BETTER_AUTH_SECRET|DATABASE_URL'; then
+              echo "::error::$tag bakes BETTER_AUTH_SECRET or DATABASE_URL into its image config"
+              exit 1
+            fi
+          done
+
+      - name: Run migrate image and assert pending migrations ran
+        run: |
+          set -e
+          OUTPUT=$(docker run --rm --network host \
+            -e DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/postgres \
+            fabulous-factory:migrate-ci)
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -qF 'Running pending migrations'
+          echo "$OUTPUT" | grep -qF 'Done.'
+
+      - name: Boot runner image and poll /api/health
+        run: |
+          set -e
+          docker run -d --network host \
+            --name ff-runner-ci \
+            -e DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/postgres \
+            -e BETTER_AUTH_SECRET=ci-dummy-better-auth-secret-do-not-use-in-prod \
+            fabulous-factory:runner-ci
+
+          status=1
+          for _ in $(seq 1 30); do
+            if body=$(curl -fsS http://127.0.0.1:3000/api/health 2>/dev/null); then
+              if echo "$body" | grep -q '"status":"ok"'; then
+                echo "Health check passed: $body"
+                status=0
+                break
+              fi
+            fi
+            sleep 1
+          done
+
+          if [ "$status" -ne 0 ]; then
+            echo "::group::runner container logs (health check failed)"
+            docker logs ff-runner-ci || true
+            echo "::endgroup::"
+          fi
+
+          docker rm -f ff-runner-ci >/dev/null 2>&1 || true
+          exit $status
+
+  # M8 full-profile CI job (plan I.7.2) — the M4 E.9.7/F.10.1 debt: every optional
+  # service enabled via dummy credentials, split into two assertions since "dev-mode
+  # boot" is impossible for the standalone server (server.js always forces production).
+  full-profile:
+    runs-on: ubuntu-latest
+    needs: quality
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+      BETTER_AUTH_SECRET: ci-dummy-better-auth-secret-do-not-use-in-prod
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Doctor matrix, part 1 (plain tsx, no build): dummy credentials for every
+      # optional service EXCEPT RESEND_API_KEY — email must report the 'console'
+      # dev-transport fallback. NODE_ENV is explicitly unset. Dummy values here are
+      # deliberately simplified (plan I.10 opt-5): SENTRY_DSN isn't URL-validated and
+      # INNGEST_SIGNING_KEY is only min(1) at config level — format only matters for the
+      # SDK, exercised below in the full-boot step. Grep uses -qF fixed strings on the
+      # adapter names, never the ✓/✗ glyphs.
+      - name: "Doctor matrix: full dummy set (no RESEND_API_KEY)"
+        env:
+          STRIPE_SECRET_KEY: sk_test_ci_dummy_stripe_secret_key
+          STRIPE_WEBHOOK_SECRET: whsec_ci_dummy_stripe_webhook_secret
+          OPENROUTER_API_KEY: sk-or-ci-dummy-openrouter-key
+          INNGEST_EVENT_KEY: ci-dummy-inngest-event-key
+          INNGEST_SIGNING_KEY: ci-dummy-inngest-signing-key
+          POSTHOG_KEY: phc_ci_dummy_posthog_key
+          SENTRY_DSN: https://abc@o0.ingest.sentry.io/0
+        run: |
+          set -e
+          OUTPUT=$(env -u NODE_ENV pnpm factory:doctor)
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -qF 'billing: stripe'
+          echo "$OUTPUT" | grep -qF 'llm: openrouter'
+          echo "$OUTPUT" | grep -qF 'email: console'
+          echo "$OUTPUT" | grep -qF 'jobs: inngest'
+          echo "$OUTPUT" | grep -qF 'analytics: posthog'
+          echo "$OUTPUT" | grep -qF 'errors: sentry'
+
+      # Doctor matrix, part 2: only the minimum env (job-level DATABASE_URL +
+      # BETTER_AUTH_SECRET) — every optional service must report its degradation notice.
+      - name: "Doctor matrix: minimum env only (degradation notices)"
+        run: |
+          set -e
+          OUTPUT=$(env -u NODE_ENV pnpm factory:doctor)
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -qF 'billing: disabled'
+          echo "$OUTPUT" | grep -qF 'llm: disabled'
+          echo "$OUTPUT" | grep -qF 'jobs: disabled'
+          echo "$OUTPUT" | grep -qF 'analytics: disabled'
+          echo "$OUTPUT" | grep -qF 'errors: disabled'
+
+      - run: pnpm db:migrate
+
+      - run: pnpm build
+
+      # Full boot: standalone server with the full dummy set PLUS RESEND_API_KEY, and
+      # SDK-format-sensitive values corrected (even-length hex signing key, well-formed
+      # Sentry DSN) — mirrors minimal-boot's boot block. All vendor SDKs are lazy
+      # (verified empirically in the plan's research), so there are no outbound-call
+      # expectations here beyond the health check.
+      - name: Boot standalone server (full profile) and poll /api/health
+        env:
+          STRIPE_SECRET_KEY: sk_test_ci_dummy_stripe_secret_key
+          STRIPE_WEBHOOK_SECRET: whsec_ci_dummy_stripe_webhook_secret
+          OPENROUTER_API_KEY: sk-or-ci-dummy-openrouter-key
+          RESEND_API_KEY: re_ci_dummy_resend_key
+          INNGEST_EVENT_KEY: ci-dummy-inngest-event-key
+          INNGEST_SIGNING_KEY: abcdef1234567890
+          POSTHOG_KEY: phc_ci_dummy_posthog_key
+          SENTRY_DSN: https://abc@o0.ingest.sentry.io/0
+        run: |
+          set -e
+          PORT=3100 HOSTNAME=127.0.0.1 node apps/web/.next/standalone/apps/web/server.js &
+          SERVER_PID=$!
+
+          status=1
+          for _ in $(seq 1 30); do
+            if body=$(curl -fsS http://127.0.0.1:3100/api/health 2>/dev/null); then
+              if echo "$body" | grep -q '"status":"ok"'; then
+                echo "Health check passed: $body"
+                status=0
+                break
+              fi
+            fi
+            sleep 1
+          done
+
+          kill "$SERVER_PID" 2>/dev/null || true
+          exit $status
+
+  # CI security gates (design spec §8.5, plan D.7 + D.1 + D.9.6): secret scanning,
+  # dependency audit, and SAST. Runs in parallel with `quality` — these gates don't depend
+  # on the app building. Each tool is invoked as a plain container step (D.1: gitleaks'
+  # own GitHub Action requires an org license and runs on a Node version GitHub is
+  # retiring; semgrep's hosted `semgrep ci` requires an account) rather than a marketplace
+  # action, so nothing here needs a token/secret to run.
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # gitleaks scans full git history (D.9.6), not just the working tree — needs
+          # every commit, not the default single-commit shallow clone.
+          fetch-depth: 0
+
+      - name: gitleaks (secret scanning, full history)
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 \
+            git /repo --config /repo/.gitleaks.toml --redact --no-banner
+
+      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # GREEN via explicit version floors, not silent suppression (plan D.9.6): the 3
+      # high-severity advisories transitive through `next` (sharp CVE-2026-33327 family —
+      # GHSA-f88m-g3jw-g9cj; postcss source-map path traversal — GHSA-6g55-p6wh-862q and
+      # GHSA-r28c-9q8g-f849) are resolved by pinning minimum patched versions via
+      # `overrides` in pnpm-workspace.yaml (sharp>=0.35.0, postcss>=8.5.18), so
+      # `pnpm audit --prod --audit-level high` reports 0 high+ advisories. Those overrides
+      # are a stopgap, not a permanent fix — drop them once `next` itself ships with
+      # patched ranges for both transitive deps.
+      - name: pnpm audit (prod, high+)
+        run: pnpm audit --prod --audit-level high
+
+      # SAST: OWASP Top Ten ruleset, anonymously fetchable from the semgrep registry (no
+      # token needed — D.1). PRs scan only files changed since the PR's base commit to
+      # keep runtime reasonable (D.7); push-to-master runs the full scan.
+      - name: semgrep (OWASP Top Ten)
+        env:
+          SEMGREP_BASELINE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+        run: |
+          set -e
+          if [ -n "$SEMGREP_BASELINE_SHA" ]; then
+            docker run --rm -v "$PWD:/src" semgrep/semgrep:1.173.0 \
+              semgrep scan --config p/owasp-top-ten --error --baseline-commit "$SEMGREP_BASELINE_SHA"
+          else
+            docker run --rm -v "$PWD:/src" semgrep/semgrep:1.173.0 \
+              semgrep scan --config p/owasp-top-ten --error
+          fi
+
+  # Guarded zones (design spec §8.5, plan D.7 + D.9.15): PRs touching security-sensitive
+  # paths must carry a completed security checklist in the PR description (template:
+  # .github/PULL_REQUEST_TEMPLATE.md) before merge.
+  guarded-zones:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Require the security checklist on guarded-zone changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # Read via env var, not templated straight into the script (D.9.15): the PR
+          # body is attacker-controlled free text, and interpolating
+          # `${{ github.event.pull_request.body }}` directly into `run:` would let it
+          # inject shell commands. `env:` hands it over as inert data instead. Also
+          # tolerates a null body — GitHub renders an unset body as an empty string here,
+          # which the grep below simply fails to match (falls through to the error path,
+          # not a crash).
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -e
+          # Three-dot (merge-base) diff, not two-dot: two-dot compares the two snapshots
+          # directly and would surface files that changed on the base branch *after* this
+          # branch forked as "PR-touched," even though the PR itself never touched them
+          # (M3). Three-dot diffs HEAD against the merge-base of BASE and HEAD, showing
+          # only what this branch actually changed since it diverged.
+          CHANGED=$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA" -- \
+            packages/auth packages/core packages/billing apps/web/middleware.ts packages/db/migrations)
+
+          if [ -z "$CHANGED" ]; then
+            echo "No guarded-zone paths touched — nothing to check."
+            exit 0
+          fi
+
+          echo "Guarded-zone paths touched by this PR:"
+          echo "$CHANGED"
+
+          if printf '%s' "$PR_BODY" | grep -qF -- '- [x] security-checklist'; then
+            echo "Security checklist confirmed in the PR body."
+            exit 0
+          fi
+
+          echo "::error::This PR touches a guarded zone (packages/auth, packages/core, packages/billing, apps/web/middleware.ts, or packages/db/migrations) but its description is missing the completed security checklist. Fill in the checklist from .github/PULL_REQUEST_TEMPLATE.md and check the '- [x] security-checklist' line."
+          exit 1

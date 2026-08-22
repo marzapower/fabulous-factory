@@ -1,5 +1,5 @@
 {
-  "name": "fabulous-factory",
+  "name": "fabulous-factory-monorepo",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.22.0",
@@ -7,8 +7,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --filter web dev",
-    "build": "pnpm --filter web build",
+    "dev": "pnpm --filter demo dev",
+    "build": "pnpm --filter demo build",
     "lint": "eslint .",
     "boundaries": "depcruise apps packages --config .dependency-cruiser.cjs",
     "format": "prettier --write .",
@@ -18,9 +18,9 @@
     "check": "pnpm lint && pnpm boundaries && pnpm format:check && pnpm typecheck && pnpm test",
     "factory:doctor": "tsx packages/config/scripts/doctor.ts",
     "factory:status": "tsx packages/config/scripts/factory-status.ts",
-    "factory:init": "tsx packages/config/scripts/factory-init.ts",
     "preflight": "tsx packages/config/scripts/preflight.ts",
     "gen": "tsx packages/config/scripts/gen.ts",
+    "compose": "tsx packages/create/src/compose-build.ts",
     "db:migrate": "tsx packages/db/scripts/migrate.ts",
     "db:seed": "tsx packages/db/scripts/seed.ts",
     "db:generate": "pnpm --filter @factory/db exec drizzle-kit generate",

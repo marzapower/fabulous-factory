@@ -1,6 +1,6 @@
 ---
 name: add-a-job
-description: Add a new Inngest background job — scaffold, register it, name its event correctly. Shared skill, survives pnpm factory:init. Use whenever a feature needs cron, fan-out, or async work.
+description: Add a new Inngest background job — scaffold, register it, name its event correctly. Shared skill, shipped to every scaffolded project. Use whenever a feature needs cron, fan-out, or async work.
 ---
 
 # Add a job

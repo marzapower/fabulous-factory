@@ -4,9 +4,6 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { FACTORY_DEV_ONLY_AGENTS } from "../scripts/factory-init";
-import { renderFactoryStatus } from "../scripts/factory-status";
-
 // Golden-file style, same REPO_ROOT idiom as factory-docs.test.ts. A malformed agent file is
 // not a lint error and not a type error — Claude Code just silently fails to load the agent —
 // so this suite is the only thing standing between a stray colon and an agent that quietly
@@ -15,12 +12,26 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 
 const AGENTS_DIR = path.join(REPO_ROOT, ".claude", "agents");
-const HANDOFF_AGENTS_DIR = path.join(REPO_ROOT, ".factory", "handoff", "agents");
+const PAYLOAD_AGENTS_DIR = path.join(REPO_ROOT, "payload", "agents");
+const PAYLOAD_SKILLS_DIR = path.join(REPO_ROOT, "payload", "skills");
 
 /** Shipped at root: the two factory-dev agents plus the three shared ones. */
 const ROOT_AGENT_COUNT = 5;
-/** Staged for adopters, installed by `pnpm factory:init`. */
-const HANDOFF_AGENT_COUNT = 4;
+/** The adopter set, installed into `.claude/agents/` at compose time (packages/create, M3). */
+const PAYLOAD_AGENT_COUNT = 4;
+/** The adopter set, installed into `.claude/skills/` at compose time (packages/create, M3). */
+const PAYLOAD_SKILL_COUNT = 7;
+
+/**
+ * Factory-dev-only agents — never shipped to adopters (spec §5, "Never shipped"). Lives here
+ * as a literal, not an import, since there is no runtime module that owns this list yet;
+ * `packages/create`'s `compose.config.ts` (M3) becomes the single source of truth once it
+ * exists.
+ */
+const FACTORY_DEV_ONLY_AGENTS = ["fab-forge", "fab-steward"];
+
+/** Factory-dev-only skills — never shipped to adopters, same "Never shipped" tiering. */
+const FACTORY_DEV_ONLY_SKILLS = ["add-integration-package", "write-adr", "release-template"];
 
 const NAME_PATTERN = /^fab-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const VALID_MODELS = ["opus", "sonnet", "haiku", "inherit"];
@@ -60,6 +71,14 @@ function listAgentFiles(dir: string): string[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((name) => name.endsWith(".md"))
+    .sort();
+}
+
+function listSkillDirs(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
     .sort();
 }
 
@@ -121,12 +140,7 @@ function describeAgentDir(label: string, dir: string, expectedCount: number): vo
 }
 
 describeAgentDir(".claude/agents", AGENTS_DIR, ROOT_AGENT_COUNT);
-
-// Skip-clean once `.factory/handoff/` is gone (i.e. in an adopted product repo), mirroring
-// factory-docs.test.ts's handling of the same directory.
-if (existsSync(HANDOFF_AGENTS_DIR)) {
-  describeAgentDir(".factory/handoff/agents", HANDOFF_AGENTS_DIR, HANDOFF_AGENT_COUNT);
-}
+describeAgentDir("payload/agents", PAYLOAD_AGENTS_DIR, PAYLOAD_AGENT_COUNT);
 
 describe("agent tiers", () => {
   it("names every factory-dev-only agent as a file that actually exists", () => {
@@ -135,26 +149,31 @@ describe("agent tiers", () => {
     }
   });
 
-  // Both assertions below compare the two directories, so they are meaningless once the
-  // handoff is gone — guarded for the same reason describeAgentDir's handoff call is.
-  if (existsSync(HANDOFF_AGENTS_DIR)) {
-    it("keeps root and handoff agent names disjoint", () => {
-      // A handoff agent shadowing a root one would be copied over the shared agent it shadows,
-      // or installed and then swept if it collided with a factory-dev name. Neither is visible
-      // at runtime — `factory:init` reports success either way.
-      const rootNames = new Set(listAgentFiles(AGENTS_DIR));
-      const collisions = listAgentFiles(HANDOFF_AGENTS_DIR).filter((name) => rootNames.has(name));
-      expect(collisions).toEqual([]);
-    });
+  it("keeps root and payload agent names disjoint", () => {
+    // A payload agent shadowing a root one would be ambiguous about which instructions an
+    // adopter actually gets once compose installs it into `.claude/agents/`.
+    const rootNames = new Set(listAgentFiles(AGENTS_DIR));
+    const collisions = listAgentFiles(PAYLOAD_AGENTS_DIR).filter((name) => rootNames.has(name));
+    expect(collisions).toEqual([]);
+  });
 
-    it("announces every staged agent in `pnpm factory:status`", () => {
-      // factory-status.ts hardcodes the adopter roster in its announcement line. Without this,
-      // adding a fifth handoff agent would redden only HANDOFF_AGENT_COUNT above — a contributor
-      // bumps the count, and the stale list ships to every adopter unnoticed.
-      const output = renderFactoryStatus(REPO_ROOT, {}).join("\n");
-      for (const file of listAgentFiles(HANDOFF_AGENTS_DIR)) {
-        expect(output).toContain(file.replace(/\.md$/, ""));
-      }
-    });
-  }
+  it("never ships a factory-dev-only agent under payload/agents", () => {
+    for (const name of FACTORY_DEV_ONLY_AGENTS) {
+      expect(existsSync(path.join(PAYLOAD_AGENTS_DIR, `${name}.md`))).toBe(false);
+    }
+  });
+});
+
+describe("payload/skills — adopter skill set", () => {
+  const skillDirs = listSkillDirs(PAYLOAD_SKILLS_DIR);
+
+  it(`ships exactly ${PAYLOAD_SKILL_COUNT} skills`, () => {
+    expect(skillDirs).toHaveLength(PAYLOAD_SKILL_COUNT);
+  });
+
+  it("never ships a factory-dev-only skill", () => {
+    for (const name of FACTORY_DEV_ONLY_SKILLS) {
+      expect(skillDirs).not.toContain(name);
+    }
+  });
 });

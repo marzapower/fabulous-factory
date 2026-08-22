@@ -34,7 +34,8 @@ code via `useClientConfig()` (`packages/config/src/public-config.ts`,
 cross that boundary — they're recon data for an attacker, not something a page needs to
 render. `pnpm factory:doctor` is the one place the full identity map is printed, and it's
 a local CLI command, never an HTTP response. The dashboard's `CapabilityPanel`
-(`apps/web/app/capability-panel.tsx`) is the on/off view of that same boolean map.
+(`apps/*/app/capability-panel.tsx` — `apps/demo` here, `apps/web` in a scaffolded repo)
+is the on/off view of that same boolean map.
 
 **The precise boundary**, now that the public `/features/*` pages exist alongside the
 dashboard: runtime config — anything a request can trigger, in-app or over HTTP — exposes

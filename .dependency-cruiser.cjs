@@ -4,7 +4,7 @@
  * Run via `pnpm boundaries` (`depcruise apps packages --config .dependency-cruiser.cjs`),
  * wired into `pnpm check` between lint and typecheck.
  *
- * DAG (plan D.2): config ← db ← auth ← core ← web. Nothing imports `apps/*`; `apps/web`
+ * DAG (plan D.2): config ← db ← auth ← core ← app. Nothing imports `apps/*`; a preset app
  * may import anything. Vendor-SDK/driver leaks (`better-auth`, `pg`, drizzle-orm's
  * connection subpaths, `undici`) and the `@factory/config/node` poison-free entry are each
  * confined to their owning package, with two narrow, physically-verified subpath
@@ -31,8 +31,8 @@ module.exports = {
       from: {
         pathNot: [
           "^packages/auth/",
-          "^apps/web/app/api/auth/\\[\\.\\.\\.all\\]/route\\.ts$",
-          "^apps/web/middleware\\.ts$",
+          "^apps/[^/]+/app/api/auth/\\[\\.\\.\\.all\\]/route\\.ts$",
+          "^apps/[^/]+/middleware\\.ts$",
         ],
       },
       to: {
@@ -47,7 +47,7 @@ module.exports = {
         "better-auth/next-js subpath (toNextJsHandler) — any other better-auth import " +
         "there defeats the point of the allowlist.",
       from: {
-        path: "^apps/web/app/api/auth/\\[\\.\\.\\.all\\]/route\\.ts$",
+        path: "^apps/[^/]+/app/api/auth/\\[\\.\\.\\.all\\]/route\\.ts$",
       },
       to: {
         path: "(^|/)node_modules/better-auth(/|$)",
@@ -66,7 +66,7 @@ module.exports = {
         "(getSessionCookie) — anything else would pull real session/DB logic into edge " +
         "middleware, defeating the point of the optimistic-only layer (spec §8.5).",
       from: {
-        path: "^apps/web/middleware\\.ts$",
+        path: "^apps/[^/]+/middleware\\.ts$",
       },
       to: {
         path: "(^|/)node_modules/better-auth(/|$)",
@@ -121,7 +121,7 @@ module.exports = {
         "(M7/H.10.4: drizzle-orm is a RUNTIME " +
         "dep of billing — the webhook transaction's dedupe insert and guarded " +
         "subscriptions upsert need the operators against `getDb()`) plus test fixtures. " +
-        "Everywhere else — including apps/web and packages/auth — must go through " +
+        "Everywhere else — including the preset apps and packages/auth — must go through " +
         "@factory/db, @factory/jobs, or @factory/billing instead of importing " +
         "drizzle-orm directly. The actual connection still only ever happens inside " +
         "packages/db's getDb()/migrator.",
@@ -365,8 +365,8 @@ module.exports = {
       },
       to: {
         couldNotResolve: true,
-        // apps/web's "@/*" tsconfig alias (shadcn idiom, M2) only ever targets files
-        // INSIDE apps/web, so these edges carry no boundary information; depcruise's
+        // each preset app's "@/*" tsconfig alias (shadcn idiom, M2) only ever targets files
+        // INSIDE that app, so these edges carry no boundary information; depcruise's
         // enhancedResolveOptions schema rejects an `alias` key, and tsc already fails
         // any typo'd "@/..." import — exempting is both safe and the only clean option.
         pathNot: "^@/",
@@ -397,7 +397,7 @@ module.exports = {
         "inngest/next subpath only, mirroring the better-auth precedent at the top of this " +
         "file (auth-route-mount-next-js-subpath-only).",
       from: {
-        pathNot: ["^packages/jobs/", "^apps/web/app/api/inngest/route\\.ts$"],
+        pathNot: ["^packages/jobs/", "^apps/[^/]+/app/api/inngest/route\\.ts$"],
       },
       to: {
         path: "(^|/)node_modules/(inngest|@inngest)(/|$)",
@@ -419,7 +419,7 @@ module.exports = {
         "which resolves to .../node_modules/inngest/next.js — verified directly against " +
         "the installed 4.18.1 dist under pnpm's node_modules layout.",
       from: {
-        path: "^apps/web/app/api/inngest/route\\.ts$",
+        path: "^apps/[^/]+/app/api/inngest/route\\.ts$",
       },
       to: {
         path: "(^|/)node_modules/(inngest|@inngest)(/|$)",
@@ -450,7 +450,7 @@ module.exports = {
         "extraction/triage/decomposition, daily-plan focus), packages/email " +
         "(daily-plan), packages/analytics (track), and packages/observability " +
         "(captureException) — plan G.2.1/K.6. Must NOT import auth — nothing above jobs " +
-        "in the DAG except apps/web.",
+        "in the DAG except the preset apps.",
       from: {
         path: "^packages/jobs/",
       },
@@ -460,14 +460,39 @@ module.exports = {
       },
     },
     {
+      name: "dag-create-imports-no-workspace-package",
+      severity: "error",
+      comment:
+        "packages/create (the npm-published `fabulous-factory` installer CLI) and " +
+        "packages/create-alias (the `create-fabulous-factory` bin shim) manipulate files, " +
+        "not factory code — they must not import any of the 10 @factory/* packages, even " +
+        "though both live under packages/ (npx-installer design spec §6/§11 M3). This " +
+        "rule's `to.pathNot` allowlists `^packages/(create|create-alias)/` itself, so it " +
+        "does NOT ban create↔create-alias imports (there happen to be none today — " +
+        "create-alias/bin.js's one edge is a dynamic `import()` of the built dist, not a " +
+        "workspace-package import); it only closes the deny-by-default gap (G.3.1) for " +
+        "these two newest packages against the OTHER 10. packages/create-alias/bin.js is " +
+        "excluded from the whole cruise (options.exclude below) for an unrelated, purely " +
+        'mechanical reason: its one edge (`import("fabulous-factory/dist/cli.js")`) only ' +
+        "resolves AFTER `pnpm build` has produced packages/create/dist/, which `pnpm " +
+        "boundaries` must pass without requiring — see that exclude entry's comment.",
+      from: {
+        path: "^packages/(create|create-alias)/",
+      },
+      to: {
+        path: "^packages/",
+        pathNot: "^packages/(create|create-alias)/",
+      },
+    },
+    {
       name: "dag-billing-imports-config-db",
       severity: "error",
       comment:
         "packages/billing (M7) may depend on packages/config and packages/db only " +
         "(plan H.10.9 amends H.2.1/H.2.11: the originally-planned jobs → billing edge is " +
-        "DELETED — entitlement is resolved at the apps/web action layer and passed down " +
+        "DELETED — entitlement is resolved at the app action layer and passed down " +
         "as a plain value, never a second getDb() checkout inside jobs' advisory-locked " +
-        "transaction). Only apps/web imports @factory/billing.",
+        "transaction). Only preset apps import @factory/billing.",
       from: {
         path: "^packages/billing/",
       },
@@ -483,7 +508,18 @@ module.exports = {
       path: "node_modules",
     },
     exclude: {
-      path: "(^|/)(\\.next|coverage|migrations/meta)(/|$)",
+      // packages/create/templates: ephemeral compose output (spec §5) — nested copies of
+      // every workspace package with paths that no longer match the DAG regexes above
+      // (they'd all start with "packages/create/templates/<preset>/packages/...", not
+      // "packages/<name>/..."), crawling them would be both wrong and slow.
+      // packages/create/dist: tsup's bundled build output, not source to boundary-check.
+      // packages/create-alias/bin.js: its single edge — `import("fabulous-factory/dist/
+      // cli.js")` — only resolves once `pnpm build` has produced packages/create/dist/,
+      // which `pnpm boundaries` must pass without requiring; excluded wholesale rather
+      // than special-cased per rule (the dag-create-imports-no-workspace-package rule
+      // above intentionally can't see this one file as a result — its 3-line, single-
+      // import contents make that an acceptable, documented trade-off).
+      path: "(^|/)(\\.next|coverage|migrations/meta|packages/create/templates|packages/create/dist|packages/create-alias/bin\\.js)(/|$)",
     },
     tsPreCompilationDeps: true,
     tsConfig: {

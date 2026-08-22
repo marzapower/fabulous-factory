@@ -11,7 +11,8 @@
 ## Guarded-zone security checklist
 
 Required **only** when this PR touches `packages/auth`, `packages/core`, `packages/billing`,
-`apps/web/middleware.ts`, or `packages/db/migrations` (design spec §8.5). CI's
+your app's `middleware.ts` (`apps/*/middleware.ts`), or `packages/db/migrations` (design
+spec §8.5). CI's
 `guarded-zones` job blocks merge on those paths until every item below is checked and the
 final line reads exactly `- [x] security-checklist`.
 

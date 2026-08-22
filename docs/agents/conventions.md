@@ -1,8 +1,8 @@
 # Agent conventions
 
-Canonical, deterministic rulebook. `CLAUDE.md` and `AGENTS.md` — root and
-`.factory/handoff/` alike — point here instead of copying it; this is the single source.
-If a mirror and this file ever disagree, this file wins.
+Canonical, deterministic rulebook. `CLAUDE.md` and `AGENTS.md` — root and `payload/`
+alike — point here instead of copying it; this is the single source. If a mirror and
+this file ever disagree, this file wins.
 
 ## Kernel rules
 
@@ -30,7 +30,8 @@ If a mirror and this file ever disagree, this file wins.
 Enforced by `pnpm boundaries` (dependency-cruiser, `dag-*` rules in
 `.dependency-cruiser.cjs`). Each package may import only the workspace packages listed as
 its allowlist below — anything not listed is denied by default, including packages added
-later. `apps/web` may import anything; nothing imports `apps/*`.
+later. The app under `apps/` (`apps/demo` here; `apps/web` in a scaffolded repo) may
+import anything; nothing imports `apps/*`.
 
 | Package         | May import                                                           |
 | --------------- | -------------------------------------------------------------------- |
@@ -44,7 +45,7 @@ later. `apps/web` may import anything; nothing imports `apps/*`.
 | `llm`           | `config`, `db`, `core`, `observability`                              |
 | `jobs`          | `config`, `db`, `core`, `llm`, `email`, `analytics`, `observability` |
 | `billing`       | `config`, `db`                                                       |
-| `web` (app)     | anything                                                             |
+| `demo` (app)    | anything                                                             |
 
 Vendor SDKs (Stripe, Resend, Better Auth, Anthropic/OpenAI, …) are confined to the
 adapter package that owns them — importing one anywhere else fails `pnpm boundaries`, not
@@ -103,9 +104,9 @@ subject, enforced by commitlint (`commit-msg` husky hook) and a CI PR-title chec
 - **Rate limiting lives in the wrapper (`defineHandler`/`defineAction`), never in
   middleware** — edge middleware cannot open a TCP connection to Postgres, and the
   Postgres-backed limiter needs one.
-- `apps/web/middleware.ts` is an optimistic first layer only (redirects obviously
-  signed-out page loads before render) — it is **not** the security boundary; the
-  wrapper's mandatory auth mode is.
+- Your app's `middleware.ts` (`apps/*/middleware.ts`) is an optimistic first layer only
+  (redirects obviously signed-out page loads before render) — it is **not** the security
+  boundary; the wrapper's mandatory auth mode is.
 - **Guarded zones**: `packages/auth`, `packages/core`, `packages/billing`,
   `middleware.ts`, and `packages/db` migrations. A PR touching any of these needs a
   security checklist and an independent, fresh-context security review before merging —

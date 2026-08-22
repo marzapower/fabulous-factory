@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   isValidName,
+  parseCliArgs,
   renderTemplate,
+  resolveAppDir,
   targetPath,
   toCamelCase,
   toPascalCase,
@@ -25,6 +27,14 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(rootDir, { recursive: true, force: true });
 });
+
+/** Creates `apps/<name>` (and its `app/` dir, so page-collision checks have somewhere
+ * to look) under `rootDir` for each name given. */
+function makeApps(root: string, ...names: string[]): void {
+  for (const name of names) {
+    mkdirSync(path.join(root, "apps", name, "app"), { recursive: true });
+  }
+}
 
 describe("isValidName", () => {
   it("accepts single and multi-segment kebab-case names", () => {
@@ -73,17 +83,83 @@ describe("toCamelCase / toPascalCase", () => {
   });
 });
 
+describe("parseCliArgs", () => {
+  it("parses positional args with no --app flag", () => {
+    const result = parseCliArgs(["handler", "ping"]);
+    expect(result).toEqual({
+      positional: ["handler", "ping"],
+      appName: undefined,
+      appMissingValue: false,
+    });
+  });
+
+  it("pulls --app <name> out of the tail, leaving positional args in order", () => {
+    const result = parseCliArgs(["handler", "ping", "--app", "service"]);
+    expect(result).toEqual({
+      positional: ["handler", "ping"],
+      appName: "service",
+      appMissingValue: false,
+    });
+  });
+
+  it("flags --app given as the last argv element instead of silently dropping it", () => {
+    const result = parseCliArgs(["handler", "ping", "--app"]);
+    expect(result.appMissingValue).toBe(true);
+    expect(result.appName).toBeUndefined();
+    expect(result.positional).toEqual(["handler", "ping"]);
+  });
+});
+
+describe("resolveAppDir", () => {
+  it("detects the single app under apps/ with no --app flag needed", () => {
+    makeApps(rootDir, "demo");
+    const result = resolveAppDir(rootDir);
+    expect(result.ok).toBe(true);
+    expect(result.appDir).toBe("apps/demo");
+  });
+
+  it("selects the named app when several exist and --app is given", () => {
+    makeApps(rootDir, "demo", "service");
+    const result = resolveAppDir(rootDir, "service");
+    expect(result.ok).toBe(true);
+    expect(result.appDir).toBe("apps/service");
+  });
+
+  it("errors, naming the candidates, when several apps exist and --app is omitted", () => {
+    makeApps(rootDir, "demo", "service");
+    const result = resolveAppDir(rootDir);
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("demo");
+    expect(result.message).toContain("service");
+    expect(result.message).toContain("--app");
+  });
+
+  it("errors when --app names an app that doesn't exist", () => {
+    makeApps(rootDir, "demo");
+    const result = resolveAppDir(rootDir, "nope");
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("nope");
+    expect(result.message).toContain("demo");
+  });
+
+  it("errors when there is no apps/ directory at all", () => {
+    const result = resolveAppDir(rootDir);
+    expect(result.ok).toBe(false);
+    expect(result.message).toBeDefined();
+  });
+});
+
 describe("targetPath", () => {
-  it("maps handler to apps/web/app/api/<name>/route.ts", () => {
-    expect(targetPath("handler", "ping")).toBe("apps/web/app/api/ping/route.ts");
+  it("maps handler to <appDir>/app/api/<name>/route.ts", () => {
+    expect(targetPath("handler", "ping", "apps/demo")).toBe("apps/demo/app/api/ping/route.ts");
   });
 
-  it("maps page to apps/web/app/<name>/page.tsx", () => {
-    expect(targetPath("page", "about")).toBe("apps/web/app/about/page.tsx");
+  it("maps page to <appDir>/app/<name>/page.tsx", () => {
+    expect(targetPath("page", "about", "apps/demo")).toBe("apps/demo/app/about/page.tsx");
   });
 
-  it("maps job to packages/jobs/src/functions/<name>.ts", () => {
-    expect(targetPath("job", "sample-sync")).toBe("packages/jobs/src/functions/sample-sync.ts");
+  it("maps job to packages/jobs/src/functions/<name>.ts regardless of appDir", () => {
+    expect(targetPath("job", "sample-sync", "")).toBe("packages/jobs/src/functions/sample-sync.ts");
   });
 });
 
@@ -119,19 +195,56 @@ describe("writeScaffold", () => {
     expect(result.messages.join("\n")).toContain("Invalid name");
   });
 
-  it("writes a handler scaffold and reports the created path", () => {
+  it("single-app detection: writes a handler scaffold with no --app needed", () => {
+    makeApps(rootDir, "demo");
     const result = writeScaffold(rootDir, "handler", "ping");
     expect(result.ok).toBe(true);
-    expect(result.messages).toContain("Created apps/web/app/api/ping/route.ts");
+    expect(result.messages).toContain("Created apps/demo/app/api/ping/route.ts");
 
-    const written = readFileSync(path.join(rootDir, "apps/web/app/api/ping/route.ts"), "utf8");
+    const written = readFileSync(path.join(rootDir, "apps/demo/app/api/ping/route.ts"), "utf8");
     expect(written).toBe(renderTemplate("handler", "ping"));
   });
 
-  it("writes a page scaffold and reports the created path", () => {
+  it("single-app detection: writes a page scaffold and reports the created path", () => {
+    makeApps(rootDir, "demo");
     const result = writeScaffold(rootDir, "page", "about");
     expect(result.ok).toBe(true);
-    expect(result.messages).toContain("Created apps/web/app/about/page.tsx");
+    expect(result.messages).toContain("Created apps/demo/app/about/page.tsx");
+  });
+
+  it("multi-app + --app: writes a handler scaffold into the named app", () => {
+    makeApps(rootDir, "demo", "service");
+    const result = writeScaffold(rootDir, "handler", "ping", "service");
+    expect(result.ok).toBe(true);
+    expect(result.messages).toContain("Created apps/service/app/api/ping/route.ts");
+  });
+
+  it("multi-app + --app: writes a page scaffold into the named app", () => {
+    makeApps(rootDir, "demo", "service");
+    const result = writeScaffold(rootDir, "page", "about", "demo");
+    expect(result.ok).toBe(true);
+    expect(result.messages).toContain("Created apps/demo/app/about/page.tsx");
+  });
+
+  it("multi-app without --app: errors instead of guessing, for a handler", () => {
+    makeApps(rootDir, "demo", "service");
+    const result = writeScaffold(rootDir, "handler", "ping");
+    expect(result.ok).toBe(false);
+    expect(result.messages.join("\n")).toContain("--app");
+  });
+
+  it("multi-app without --app: errors instead of guessing, for a page", () => {
+    makeApps(rootDir, "demo", "service");
+    const result = writeScaffold(rootDir, "page", "about");
+    expect(result.ok).toBe(false);
+    expect(result.messages.join("\n")).toContain("--app");
+  });
+
+  it("job scaffolds ignore app detection entirely, even with multiple apps present", () => {
+    makeApps(rootDir, "demo", "service");
+    const result = writeScaffold(rootDir, "job", "sample-sync");
+    expect(result.ok).toBe(true);
+    expect(result.messages).toContain("Created packages/jobs/src/functions/sample-sync.ts");
   });
 
   it("writes a job scaffold and reports the created path", () => {
@@ -141,10 +254,11 @@ describe("writeScaffold", () => {
   });
 
   it("refuses to overwrite an existing handler target", () => {
+    makeApps(rootDir, "demo");
     expect(writeScaffold(rootDir, "handler", "ping").ok).toBe(true);
     const second = writeScaffold(rootDir, "handler", "ping");
     expect(second.ok).toBe(false);
-    expect(second.messages.join("\n")).toContain("apps/web/app/api/ping/route.ts already exists");
+    expect(second.messages.join("\n")).toContain("apps/demo/app/api/ping/route.ts already exists");
   });
 
   it("refuses to overwrite an existing job target", () => {
@@ -157,25 +271,28 @@ describe("writeScaffold", () => {
   });
 
   it("refuses to overwrite an existing plain page target", () => {
+    makeApps(rootDir, "demo");
     expect(writeScaffold(rootDir, "page", "about").ok).toBe(true);
     const second = writeScaffold(rootDir, "page", "about");
     expect(second.ok).toBe(false);
-    expect(second.messages.join("\n")).toContain("apps/web/app/about/page.tsx already exists");
+    expect(second.messages.join("\n")).toContain("apps/demo/app/about/page.tsx already exists");
   });
 
   it("refuses a page colliding with a route-group page of the same name (§J.12.9)", () => {
     // Fixture mirrors the real (auth)/login shape.
-    const groupDir = path.join(rootDir, "apps/web/app/(auth)/login");
+    makeApps(rootDir, "demo");
+    const groupDir = path.join(rootDir, "apps/demo/app/(auth)/login");
     mkdirSync(groupDir, { recursive: true });
     writeFileSync(path.join(groupDir, "page.tsx"), "export default function LoginPage() {}\n");
 
     const result = writeScaffold(rootDir, "page", "login");
     expect(result.ok).toBe(false);
-    expect(result.messages.join("\n")).toContain("apps/web/app/(auth)/login/page.tsx");
+    expect(result.messages.join("\n")).toContain("apps/demo/app/(auth)/login/page.tsx");
   });
 
   it("does not flag a route-group collision for an unrelated name", () => {
-    const groupDir = path.join(rootDir, "apps/web/app/(auth)/login");
+    makeApps(rootDir, "demo");
+    const groupDir = path.join(rootDir, "apps/demo/app/(auth)/login");
     mkdirSync(groupDir, { recursive: true });
     writeFileSync(path.join(groupDir, "page.tsx"), "export default function LoginPage() {}\n");
 
@@ -194,6 +311,7 @@ describe("writeScaffold", () => {
   });
 
   it("does not print registration instructions for handler/page scaffolds", () => {
+    makeApps(rootDir, "demo");
     const handlerResult = writeScaffold(rootDir, "handler", "ping");
     expect(handlerResult.messages).toHaveLength(1);
 

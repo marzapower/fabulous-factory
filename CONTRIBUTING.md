@@ -1,11 +1,12 @@
 # Contributing
 
-Fabulous Factory is a **template repo**, not a product (see `CLAUDE.md` — "factory-dev
-mode"). Everything here gets cloned by every adopter, so a contribution here is factory
-work: it changes what ships to every future clone, not a feature for one product.
-Adopters promote their own instruction set out of `.factory/handoff/` via
-`pnpm factory:init`; that flow, and the template's own conventions, are what this file
-protects.
+Fabulous Factory is a **factory repo**, not a product (see `CLAUDE.md` — "factory-dev
+mode"): a runnable multi-preset workspace plus the npx installer CLI, not something
+adopted directly. A contribution here is factory work — it changes what every future
+`npx fabulous-factory@latest install` scaffolds, not a feature for one product. Adopters
+get their own instruction set already installed: the npx installer composes it from
+`payload/` (common adopter surface) and `presets/` (the chosen product shape) at publish
+time. That compose model, and the factory's own conventions, are what this file protects.
 
 ## Set up
 
@@ -58,7 +59,7 @@ guidance. Adding a background job specifically: use `add-a-job`.
 ## Guarded zones
 
 PRs touching `packages/auth`, `packages/core`, `packages/billing`,
-`apps/web/middleware.ts`, or `packages/db/migrations` need the security checklist from
+`apps/*/middleware.ts`, or `packages/db/migrations` need the security checklist from
 `.github/PULL_REQUEST_TEMPLATE.md` completed in the PR description, plus an independent,
 fresh-context security review before merge. CI's `guarded-zones` job blocks merge on
 those paths until the checklist's final line reads exactly `- [x] security-checklist`.
@@ -67,24 +68,25 @@ those paths until the checklist's final line reads exactly `- [x] security-check
 
 If your change edits one of the 9 files seeded as a `LAUNCH.md` item (theme, landing
 page, legal pages, demo, email templates, plans catalog, README, `PRODUCT.md`, template
-showcase), check whether the item's "Done means" bullets in
-`.factory/handoff/LAUNCH.md` still describe it accurately — update them if the shape of
-the change has moved. There is no mechanical check for this; it's reviewer judgment.
+showcase), check whether the item's "Done means" bullets in `payload/LAUNCH.md` still
+describe it accurately — update them if the shape of the change has moved. There is no
+mechanical check for this; it's reviewer judgment.
 
 ## Delegating to agents
 
 `.claude/agents/` holds the `fab-*` subagent roster. In this repo you have `fab-forge`
 (template packages, kernel, adapters, registry) and `fab-steward` (the adoption surface —
-handoff mirrors, skill and agent tiering, ADRs), plus the three agents shared
+payload mirrors, presets, skill and agent tiering, ADRs), plus the three agents shared
 with adopters: `fab-warden` (conventions and quality review), `fab-bastion` (security
 review), and `fab-medic` (systematic debugging). Reviewers have no write tools and never run
 the gates — you do.
 
 The adopter-facing agents (`fab-scribe`, `fab-smith`, `fab-muse`, `fab-preflight`) are staged
-in `.factory/handoff/agents/` and are NOT loaded here; `pnpm factory:init` installs them and
-deletes the factory-dev-only pair. When you add an agent, put it in the tier it belongs to and
-add a test expectation in `packages/config/test/factory-agents.test.ts` — the per-directory
-counts there are deliberate, so a new agent in the wrong tier fails the suite.
+in `payload/agents/` and are NOT loaded here; the npx installer composes them into the
+product repo at publish time, and the factory-dev-only pair never ships. When you add an
+agent, put it in the tier it belongs to and add a test expectation in
+`packages/config/test/factory-agents.test.ts` — the per-directory counts there are
+deliberate, so a new agent in the wrong tier fails the suite.
 
 ## Adding an integration
 

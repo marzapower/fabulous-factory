@@ -1,6 +1,6 @@
 ---
 name: release-template
-description: Maintainer checklist for cutting a new tagged release of the template itself. Use before publishing a new version for adopters to clone.
+description: Maintainer checklist for cutting a new tagged release of the factory — scaffold-and-check plus the lockstep npm publish of fabulous-factory and create-fabulous-factory. Use before publishing a new version.
 ---
 
 # Release the template
@@ -18,16 +18,37 @@ Green in the default (minimal, `DATABASE_URL` + `BETTER_AUTH_SECRET` only) profi
 confirm the full-profile CI job (all services mocked) is green on the branch you're
 releasing — don't tag on a red or skipped full-profile run.
 
-## Phase 2 — Quickstart, re-verified on a clean clone
+## Phase 2 — Scaffold-and-check
 
-Clone the repo fresh (not your working tree — an actual `git clone`, or an rsync minus
-`node_modules`/`.next`/`.git`), and run the README's quickstart exactly as written:
-`cp .env.example .env`, set `DATABASE_URL` + `BETTER_AUTH_SECRET`, `pnpm install`,
-`pnpm dev`. It must boot with zero other service signups. Then `pnpm factory:init` on
-that same clone and confirm it promotes the adopter instruction set correctly (root
-`CLAUDE.md` becomes the adopter version, `LAUNCH.md` lands at the repo root,
-`.factory/handoff/` is gone, factory-dev-only skills are gone, `fabulous-feature`/
-`add-a-job` remain).
+The real check is `packages/create`'s scaffold-and-check job — it validates what adopters
+actually receive, not the factory's own working tree:
+
+```bash
+pnpm compose --preset demo
+tsx packages/create/src/cli.ts install --yes --no-install --no-git --dir <tmp>
+cd <tmp>
+pnpm install
+pnpm check
+# minimal boot: migrate + /api/health
+```
+
+1. `pnpm compose --preset demo` assembles `templates/demo/` (base + payload + the demo
+   preset, per the compose model) into the ephemeral, gitignored `templates/` dir.
+2. The CLI installs that composed template into a fresh temp dir with `--yes` (no
+   prompts), `--no-install` and `--no-git` (this script drives both explicitly next).
+3. Inside the output: `pnpm install`, then the _output's own_ `pnpm check` (lint,
+   boundaries, format, typecheck, test) in the default minimal profile
+   (`DATABASE_URL` + `BETTER_AUTH_SECRET` only), then the minimal boot (`pnpm db:migrate`,
+   build, poll `/api/health`).
+
+Also verify the payload golden surface the compose step draws from is intact:
+`payload/CLAUDE.md`/`AGENTS.md` carry the literal pointer `docs/agents/conventions.md`
+and stay within their line caps (`packages/config/test/factory-docs.test.ts`),
+`payload/agents/` has its 4 files and `payload/skills/` its 7 dirs, `payload/LAUNCH.md`'s
+`<!-- preset:items -->` marker composes with `presets/demo/overlay/launch-items.md` to
+the pinned 9-item order (`packages/config/test/launch-checklist-drift.test.ts`), and no
+factory-dev skill/agent (`add-integration-package`, `write-adr`, `release-template`,
+`fab-forge`, `fab-steward`) appears anywhere under `payload/`.
 
 ## Phase 3 — Docker quickstart
 
@@ -40,11 +61,38 @@ docker compose up --build
 `db` → `migrate` → `app` boot in order; `curl localhost:3000/api/health` returns
 `{"status":"ok"}`.
 
-## Phase 4 — Tag and publish
+## Phase 4 — Bump, then tag: the tag publishes
 
-Tag the release (`git tag vX.Y.Z`), push it, and confirm the GitHub template repository
-setting is still enabled on the repo (Settings → Template repository) so "Use this
-template" keeps working for new adopters.
+Pushing a `vX.Y.Z` tag runs `.github/workflows/release.yml`, which gates on a full
+scaffold-and-check and then publishes both packages. That workflow is the only supported
+way to publish; there is no local `npm publish` path.
+
+- `fabulous-factory` (the installer CLI, `packages/create`) and
+  `create-fabulous-factory` (the thin `npm create`/`pnpm create` alias) carry the **same
+  version number** — bump both `package.json`s together, never one alone. The workflow's
+  `verify` job fails the release if either disagrees with the tag.
+- Rehearse if you want: dispatch the workflow manually with `dry_run` at its default
+  (`true`). It runs the whole gate and packs both tarballs without touching the registry —
+  use it to confirm pnpm rewrites `create-fabulous-factory`'s `workspace:*` dependency on
+  `fabulous-factory` to the concrete version. A dry run does **not** authenticate, so it
+  cannot prove Trusted Publishing is wired correctly; only a real run does.
+- `git tag vX.Y.Z && git push origin vX.Y.Z`. That push _is_ the release — the `gate` job
+  (the reusable `scaffold-and-check.yml`) must be green before anything is published, and
+  its `captured-lockfile-demo` artifact is staged as
+  `presets/demo/pnpm-lock.captured.yaml` by the publish job. No manual lockfile step, and
+  the shipped templates always carry the lockfile that run validated.
+- Publishing authenticates via **Trusted Publishing (OIDC)**, not a token: the publish job
+  requests `id-token: write` and npm exchanges that short-lived identity for publish
+  rights. Both packages register this repo and the `release.yml` **filename** as their
+  trusted publisher on npmjs.com — renaming the workflow file breaks publishing, and
+  there is no `NPM_TOKEN` secret to rotate.
+- The publish job runs in the `npm-publish` environment; if a required reviewer is
+  configured there, the release waits for approval in the Actions UI.
+- `prepack` runs the compose step and regenerates `templates/<preset>/` fresh into each
+  package's tarball — never publish from a stale or hand-edited `templates/` dir.
+- The GitHub template-repository checkbox stays **off** (turned off at first publish,
+  per ADR-0005) — the npx installer is the only supported adoption door; do not
+  re-enable it.
 
 For the first public release specifically, work through `docs/guides/release-checklist.md`
 too — it covers what this phase assumes is already done (LICENSE/CONTRIBUTING, live demo,

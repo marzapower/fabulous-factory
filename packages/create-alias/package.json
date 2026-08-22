@@ -1,0 +1,33 @@
+{
+  "name": "create-fabulous-factory",
+  "version": "0.1.0",
+  "description": "Alias for `fabulous-factory` so `npm create fabulous-factory` / `pnpm create fabulous-factory` work.",
+  "license": "MIT",
+  "author": "Daniele Di Bernardo",
+  "homepage": "https://github.com/marzapower/fabulous-factory#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marzapower/fabulous-factory.git"
+  },
+  "keywords": [
+    "scaffold",
+    "cli",
+    "create",
+    "nextjs",
+    "typescript",
+    "saas"
+  ],
+  "type": "module",
+  "bin": {
+    "create-fabulous-factory": "./bin.js"
+  },
+  "files": [
+    "bin.js"
+  ],
+  "scripts": {
+    "typecheck": "node --check bin.js"
+  },
+  "dependencies": {
+    "fabulous-factory": "workspace:*"
+  }
+}

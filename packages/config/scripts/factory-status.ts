@@ -9,7 +9,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { HANDOFF_NAG, isHandoffPresent, loadStage } from "./factory-stage";
+import { loadStage } from "./factory-stage";
 import {
   countDone,
   countOpenBlockers,
@@ -31,36 +31,13 @@ function renderItemLine(item: LaunchItem): string {
   return line;
 }
 
-/**
- * Pure — exported for tests/reuse. Never touches `process.env` itself (`env` arrives as a
- * plain object, same discipline as `preflight.ts`'s `evaluatePreflight`).
- */
-export function renderFactoryStatus(
-  rootDir: string,
-  env: Record<string, string | undefined>,
-): string[] {
+/** Pure — exported for tests/reuse. Never touches `process.env` itself. */
+export function renderFactoryStatus(rootDir: string): string[] {
   const lines: string[] = [`stage: ${loadStage(rootDir)}`];
-
-  // The staged-agents roster announcement (kept verbatim — asserted by
-  // factory-agents.test.ts): printed whenever `.factory/handoff/agents/` exists, independent
-  // of LAUNCH.md's presence. In template/fresh-clone mode this plus the nag below is the
-  // whole useful output.
-  if (existsSync(path.join(rootDir, ".factory", "handoff", "agents"))) {
-    lines.push(
-      "Adopter skills (define-product, add-a-feature, enable-billing, swap-llm-provider, brand-it, make-it-yours, pre-ship-check) install into .claude/skills/ when you run `pnpm factory:init`.",
-    );
-    lines.push(
-      "Adopter agents (fab-scribe, fab-smith, fab-muse, fab-preflight) install into .claude/agents/ at the same time; the shared agents (fab-warden, fab-bastion, fab-medic) are already there.",
-    );
-  }
 
   const launchPath = path.join(rootDir, "LAUNCH.md");
   if (!existsSync(launchPath)) {
-    if (isHandoffPresent(rootDir)) {
-      if (!env.FACTORY_DEV) lines.push(HANDOFF_NAG);
-    } else {
-      lines.push("no LAUNCH.md found — nothing to report");
-    }
+    lines.push("no LAUNCH.md found — nothing to report");
     return lines;
   }
 
@@ -81,7 +58,7 @@ const invokedDirectly =
 
 if (invokedDirectly) {
   const repoRoot = path.resolve(path.dirname(__filename), "../../..");
-  for (const line of renderFactoryStatus(repoRoot, { FACTORY_DEV: process.env.FACTORY_DEV })) {
+  for (const line of renderFactoryStatus(repoRoot)) {
     console.log(line);
   }
   process.exitCode = 0;

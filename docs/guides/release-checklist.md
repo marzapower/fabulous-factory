@@ -1,11 +1,12 @@
 # Release checklist
 
-For maintainers of the **template repo itself**, cutting it loose as a public "Use this
-template" starting point. Not for adopters shipping a product built from it — that's
-`.factory/handoff/skills/pre-ship-check`, gated by the adopter-facing `LAUNCH.md`
-staged at `.factory/handoff/LAUNCH.md`. This guide and that checklist are two different
-things: this one is about releasing the template; `LAUNCH.md` is about shipping a
-product built from it.
+For maintainers of the **factory repo itself**, cutting a new published release of the
+`fabulous-factory` / `create-fabulous-factory` npm packages. Not for adopters shipping a
+product built from one — that's `pre-ship-check`, one of the adopter skills staged in
+`payload/skills/` and gated by the adopter-facing `LAUNCH.md` staged at
+`payload/LAUNCH.md`. This guide and that checklist are two different things: this one is
+about releasing the installer and its embedded presets; `LAUNCH.md` is about shipping a
+product built from one of them.
 
 Steps marked **(account)** need credentials this repo can't hold (Vercel, GitHub) and
 can't be automated by an agent running inside it — do them yourself, then come back.
@@ -17,8 +18,8 @@ can't be automated by an agent running inside it — do them yourself, then come
 - [ ] README badges are true: license badge matches `LICENSE`, the Conventional Commits
       badge matches `commitlint.config.mjs`, the stack badges (Next.js/TypeScript/
       Postgres/Drizzle) match `package.json`/`tsconfig.base.json`.
-- [ ] The "Use this template" and "Open in Codespaces" README links point at the real
-      `OWNER/REPO`, not the `OWNER/REPO` placeholder.
+- [ ] The "Open in Codespaces" README link points at the real `OWNER/REPO`, not the
+      `OWNER/REPO` placeholder.
 - [ ] `docs/guides/` bullet in the README lists real, existing files.
 
 ## 2. Gates, both profiles
@@ -52,20 +53,53 @@ link once it's up.
 
 ## 5. GitHub repo settings **(account)**
 
-- [ ] Settings → General → **Template repository** checkbox enabled (this is what makes
-      "Use this template" work for adopters).
-- [ ] Repo description and topics set (e.g. `nextjs`, `typescript`, `template`,
-      `drizzle`, `postgres`) so the repo is discoverable.
+- [ ] Settings → General → **Template repository** checkbox is **off**. The npm
+      installer is the only supported distribution door — see ADR-0005 — so "Use this
+      template" is not an adoption path and must not look like one.
+- [ ] Repo description and topics set (e.g. `nextjs`, `typescript`, `drizzle`,
+      `postgres`) so the repo is discoverable.
 - [ ] Repo visibility is public.
 
-## 6. Tag and announce
+## 6. Tag — the tag is the release
 
-```bash
-git tag vX.Y.Z
-git push origin vX.Y.Z
-```
+Both packages publish together, in lockstep — this is the distribution door the rest of
+this checklist builds toward (see
+`docs/superpowers/specs/2026-08-22-npx-installer-design.md` §6–§8). Publishing happens
+**only** via the Release workflow (`.github/workflows/release.yml`), triggered by the tag
+push — there is no local `npm publish` step in this checklist.
 
-Then announce wherever you're launching. The `release-template` skill covers the
-mechanical gate/manifest/quickstart re-check that should already be green by the time you
-reach this step — this checklist is the broader "is it actually public-ready" pass around
-it.
+- [ ] `packages/create/package.json` (published as `fabulous-factory`) and the
+      `create-fabulous-factory` alias package carry the **same version number**. Bump
+      both together and commit — never publish one without the other. The Release
+      workflow fails if either disagrees with the tag.
+- [ ] Optional rehearsal: dispatch the **Release** workflow manually with `dry_run` at its
+      default (`true`). It runs the full gate and packs both tarballs without writing to
+      the registry — use it to confirm that pnpm rewrites `create-fabulous-factory`'s
+      `workspace:*` dependency to the concrete version. A dry run does **not** exercise
+      registry authentication, so it cannot prove Trusted Publishing is wired correctly.
+- [ ] `git tag vX.Y.Z && git push origin vX.Y.Z`, where `X.Y.Z` matches the version just
+      bumped. That push is the release: it runs the `gate` (installer CLI with `--yes`
+      into a temp dir, `pnpm install`, the _output's own_ `pnpm check`, and the minimal
+      boot — migrate + `/api/health`), then publishes both packages if the gate is green.
+- [ ] Approve the `npm-publish` environment in the Actions UI if a required reviewer is
+      configured on it, then confirm both versions are live:
+      `npm view fabulous-factory version && npm view create-fabulous-factory version`.
+
+The lockfile needs no manual step: the `gate` job uploads the `captured-lockfile-demo`
+artifact and the publish job stages it as `presets/demo/pnpm-lock.captured.yaml` before
+packing, so shipped templates always carry the lockfile that run validated. `prepack`
+regenerates `templates/<preset>/` fresh into each tarball (`templates/` is gitignored and
+never hand-edited).
+
+**(account)** Requires npm publish access to both package names. Authentication is
+Trusted Publishing (OIDC) — there is no `NPM_TOKEN` secret; instead each package on
+npmjs.com registers this repository and the `release.yml` workflow filename as its trusted
+publisher. Renaming that file breaks publishing.
+
+## 7. Announce
+
+Announce wherever you're launching — the tag and both npm packages are already published
+by this point (§6). The `release-template` skill covers the mechanical gate/scaffold-and-
+check/tag/lockfile-capture/publish sequence that should already be green by the time you
+reach this step — this checklist is the broader "is it actually public-ready" pass
+around it.

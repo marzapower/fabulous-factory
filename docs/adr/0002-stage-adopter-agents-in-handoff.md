@@ -1,6 +1,6 @@
 # ADR 0002: Stage adopter agents in the handoff, not at root
 
-**Status:** accepted
+**Status:** superseded by ADR-0005
 
 ## Context
 
