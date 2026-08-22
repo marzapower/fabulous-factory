@@ -34,8 +34,8 @@ code via `useClientConfig()` (`packages/config/src/public-config.ts`,
 cross that boundary — they're recon data for an attacker, not something a page needs to
 render. `pnpm factory:doctor` is the one place the full identity map is printed, and it's
 a local CLI command, never an HTTP response. The dashboard's `CapabilityPanel`
-(`apps/*/app/capability-panel.tsx` — `apps/demo` here, `apps/web` in a scaffolded repo)
-is the on/off view of that same boolean map.
+(`apps/*/app/capability-panel.tsx` — `apps/untangle` here, `apps/web` in a scaffolded
+repo) is the on/off view of that same boolean map.
 
 **The precise boundary**, now that the public `/features/*` pages exist alongside the
 dashboard: runtime config — anything a request can trigger, in-app or over HTTP — exposes
@@ -75,7 +75,7 @@ capability derivation logic can never drift apart. In short, per service:
   product it's demonstrating.
 - **llm** — `generate()`/`streamArray()` throw `LlmDisabledError` before any provider SDK
   is imported. The Untangle workspace's `extract`/`triage` steps
-  (`packages/jobs/src/tasks/pipeline.ts`) catch that by design: every step takes a
+  (`packages/untangle/src/tasks/pipeline.ts`) catch that by design: every step takes a
   heuristic fallback branch (`source: "heuristic"`) — regex/keyword extraction and
   triage computed with no LLM call involved — and the `decompose` step reports
   `skipped: true` rather than faking subtasks. Steps still stream, still record timings,

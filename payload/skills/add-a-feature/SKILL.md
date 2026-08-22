@@ -27,7 +27,9 @@ Each scaffold ships with TODO markers for the decisions you must make deliberate
 mode, input schema, rate-limit policy) — `gen handler` defaults to `auth: "required"` as
 the safe starting point; change it only when the SPEC says the route is genuinely public.
 A generated job prints the two edits it still needs in
-`packages/jobs/src/functions/index.ts` — follow `add-a-job` for the details.
+`packages/jobs/src/functions/index.ts` — follow `add-a-job` for the details, including
+when your job needs `@factory/db`/`@factory/llm`/etc. and belongs in your own domain
+package instead (`packages/jobs` itself imports only `@factory/config`).
 
 ## Phase 3 — Build
 

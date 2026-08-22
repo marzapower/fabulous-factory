@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1787225629385,
-      "tag": "0000_mixed_ogun",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1787227880860,
-      "tag": "0001_majestic_leo",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1787235212912,
-      "tag": "0002_previous_agent_brand",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1787245593732,
-      "tag": "0003_glossy_colonel_america",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1787264064465,
-      "tag": "0004_broad_cobalt_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1787280955505,
-      "tag": "0005_confused_morgan_stark",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1787332993255,
-      "tag": "0006_cynical_black_bolt",
+      "when": 1787429388689,
+      "tag": "0000_cool_edwin_jarvis",
       "breakpoints": true
     }
   ]

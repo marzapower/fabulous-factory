@@ -1,0 +1,8 @@
+{
+  "id": "nothing",
+  "label": "Fabulous Nothing",
+  "description": "Blank slate: homepage, capability panel, auth, and an empty dashboard",
+  "appDir": "apps/nothing",
+  "status": "available",
+  "packages": []
+}

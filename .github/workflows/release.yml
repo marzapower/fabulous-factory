@@ -77,11 +77,32 @@ jobs:
           fi
           echo "packages/create and packages/create-alias both match $VERSION."
 
-  # The publish gate: composes the preset, scaffolds it through the real CLI, and runs the
-  # scaffold's own gates and boot check. Nothing reaches the registry unless this is green.
+      # Keeps the `gate` job's matrix (below) and the `publish` job's lockfile-staging loop
+      # honest against `presets/*/preset.json` itself: a preset added or dropped without
+      # updating both literals must fail loudly here, not silently ship half-covered.
+      - name: Assert the preset matrix covers every available preset
+        run: |
+          set -e
+          ACTUAL=$(jq -rs '[.[] | select(.status == "available") | .id] | sort | join(" ")' presets/*/preset.json)
+          EXPECTED="brainstorm nothing untangle"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Available presets are '$ACTUAL' but the gate matrix and publish staging loop are hardcoded to '$EXPECTED'. Update both in this workflow to match presets/*/preset.json."
+            exit 1
+          fi
+          echo "Available presets match the gate matrix and publish staging loop: $ACTUAL."
+
+  # The publish gate: composes each preset, scaffolds it through the real CLI, and runs
+  # the scaffold's own gates and boot check. Nothing reaches the registry unless every
+  # preset in the matrix is green.
   gate:
     needs: verify
+    strategy:
+      matrix:
+        preset: [untangle, nothing, brainstorm]
     uses: ./.github/workflows/scaffold-and-check.yml
+    with:
+      preset: ${{ matrix.preset }}
     permissions:
       contents: read
 
@@ -109,21 +130,38 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # The lockfile the gate job just validated, dropped in where the compose step reads
-      # it from (design spec §5, "Lockfile"). Captured in this same run rather than
-      # committed by hand, so shipped installs reproduce exactly what was tested and the
-      # published templates can never silently ship without a lockfile.
-      - name: Download the lockfile captured by the gate
+      # The lockfiles the gate matrix just validated, one per preset, dropped in where
+      # each preset's compose step reads them from (design spec §5, "Lockfile"). Captured
+      # in this same run rather than committed by hand, so shipped installs reproduce
+      # exactly what was tested and the published templates can never silently ship
+      # without a lockfile. Three explicit steps, not a pattern/merge-multiple download:
+      # every captured artifact is named `pnpm-lock.yaml` internally, so a merged
+      # download would collide the three presets' files into one.
+      - name: Download the lockfile captured by the gate (untangle)
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: captured-lockfile-demo
-          path: ${{ runner.temp }}/captured
+          name: captured-lockfile-untangle
+          path: ${{ runner.temp }}/captured/untangle
 
-      - name: Stage the captured lockfile for the compose step
+      - name: Download the lockfile captured by the gate (nothing)
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: captured-lockfile-nothing
+          path: ${{ runner.temp }}/captured/nothing
+
+      - name: Download the lockfile captured by the gate (brainstorm)
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: captured-lockfile-brainstorm
+          path: ${{ runner.temp }}/captured/brainstorm
+
+      - name: Stage the captured lockfiles for the compose step
         run: |
           set -e
-          cp "$RUNNER_TEMP/captured/pnpm-lock.yaml" presets/demo/pnpm-lock.captured.yaml
-          echo "Staged $(wc -l < presets/demo/pnpm-lock.captured.yaml) lines into presets/demo/pnpm-lock.captured.yaml."
+          for preset in untangle nothing brainstorm; do
+            cp "$RUNNER_TEMP/captured/$preset/pnpm-lock.yaml" "presets/$preset/pnpm-lock.captured.yaml"
+            echo "Staged $(wc -l < "presets/$preset/pnpm-lock.captured.yaml") lines into presets/$preset/pnpm-lock.captured.yaml."
+          done
 
       # Resolved once, into the environment, rather than interpolated into each `run:`
       # body: `${{ ... }}` inside a shell script is a code-injection shape (semgrep's

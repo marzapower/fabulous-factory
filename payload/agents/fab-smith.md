@@ -40,8 +40,11 @@ kebab-case segment) rather than typing it from scratch:
   triggered on `app/<name>.requested` with a `step.run` skeleton. It does not wire
   itself in — it prints the exact import line and array entry to add to
   `packages/jobs/src/functions/index.ts`; follow `add-a-job` for event naming, step
-  granularity, and the jobs import boundary (jobs may import `@factory/{config, db,
-core, llm, email, analytics, observability}` — never `@factory/auth`).
+  granularity, and the jobs import boundary (`packages/jobs` itself imports only
+  `@factory/config` — a job needing `@factory/db`/`core`/`llm`/`email`/`analytics`/
+  `observability` belongs in a domain package instead, same shape as
+  `packages/untangle`/`packages/brainstorm`; never `@factory/auth`, from either
+  location).
 
 All three refuse to overwrite an existing target — that's working as intended, not a
 bug to route around.

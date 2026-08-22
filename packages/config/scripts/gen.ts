@@ -97,11 +97,13 @@ function renderPageTemplate(name: string): string {
 /**
  * `packages/jobs/src/functions/<name>.ts` — event-triggered Inngest function. Event
  * name is `app/<name>.requested` (opt-18: matches the `namespace/entity.action.state`
- * idiom of `untangle/daily-plan.requested`, packages/jobs/src/events.ts), with the
- * const defined right here rather than in the shared `events.ts` (that file is the
- * demo namespace's own registry, plan §J.12.10). Imports only `../client` — jobs may
- * never import `@factory/auth` (depcruise: dag-jobs-imports-config-db-core-llm-email-
- * analytics-observability).
+ * idiom, e.g. the untangle preset's `untangle/daily-plan.requested`,
+ * `packages/untangle/src/events.ts`), with the const defined right here beside the
+ * function rather than in a shared registry — `packages/jobs` is residual
+ * infrastructure only (the Inngest client + the generic, empty `functions` array a
+ * preset's own domain package populates), it owns no event registry of its own. Imports
+ * only `../client` — jobs may depend on `@factory/config` only (depcruise:
+ * dag-jobs-imports-config).
  */
 function renderJobTemplate(name: string): string {
   const camel = toCamelCase(name);
@@ -113,9 +115,8 @@ export const ${camel} = inngest.createFunction(
   { id: "${name}", triggers: [{ event: ${camel}Event }] },
   async ({ step }) => {
     // TODO: implement the job body. The triggering payload is available as
-    // \`event.data\` (destructure \`event\` above once you define its shape, following
-    // packages/jobs/src/events.ts's pattern) — one \`step.run\` per side effect keeps
-    // failures independently retryable.
+    // \`event.data\` (destructure \`event\` above once you define its shape) — one
+    // \`step.run\` per side effect keeps failures independently retryable.
     await step.run("do-work", async () => {
       // TODO: real work goes here.
     });

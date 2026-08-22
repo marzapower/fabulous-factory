@@ -30,22 +30,35 @@ this file ever disagree, this file wins.
 Enforced by `pnpm boundaries` (dependency-cruiser, `dag-*` rules in
 `.dependency-cruiser.cjs`). Each package may import only the workspace packages listed as
 its allowlist below — anything not listed is denied by default, including packages added
-later. The app under `apps/` (`apps/demo` here; `apps/web` in a scaffolded repo) may
-import anything; nothing imports `apps/*`.
+later. Every preset app under `apps/*` (`apps/untangle` here, the example throughout
+this table; also `apps/nothing`, `apps/brainstorm` — `apps/web` in a scaffolded repo,
+which ships exactly one) may import anything; nothing imports `apps/*`.
 
-| Package         | May import                                                           |
-| --------------- | -------------------------------------------------------------------- |
-| `config`        | (none — DAG root)                                                    |
-| `db`            | `config`                                                             |
-| `auth`          | `config`, `db`, `email`                                              |
-| `email`         | `config`                                                             |
-| `analytics`     | `config`                                                             |
-| `observability` | `config`                                                             |
-| `core`          | `config`, `db`, `auth`                                               |
-| `llm`           | `config`, `db`, `core`, `observability`                              |
-| `jobs`          | `config`, `db`, `core`, `llm`, `email`, `analytics`, `observability` |
-| `billing`       | `config`, `db`                                                       |
-| `demo` (app)    | anything                                                             |
+| Package         | May import                                                      |
+| --------------- | --------------------------------------------------------------- |
+| `config`        | (none — DAG root)                                               |
+| `db`            | `config`                                                        |
+| `auth`          | `config`, `db`, `email`                                         |
+| `email`         | `config`                                                        |
+| `analytics`     | `config`                                                        |
+| `observability` | `config`                                                        |
+| `core`          | `config`, `db`, `auth`                                          |
+| `llm`           | `config`, `db`, `core`, `observability`                         |
+| `jobs`          | `config`                                                        |
+| `billing`       | `config`, `db`                                                  |
+| `brainstorm`    | `config`, `db`, `core`, `llm`                                   |
+| `untangle`      | `config`, `db`, `core`, `llm`, `email`, `observability`, `jobs` |
+| preset app      | anything                                                        |
+
+`packages/jobs` is residual infrastructure only — the Inngest client
+(`packages/jobs/src/client.ts`) and the generic, empty `functions` registry a preset's own
+domain package populates. Domain packages (`untangle`, `brainstorm`) ship ONLY with their
+own preset, wired through that preset's `preset.json` `packages` field — not into every
+preset's scaffold. Each domain package's migration chain lives under its own
+`packages/db/migrations/<domain>/` directory, with its own journal/snapshot metadata;
+`pnpm db:generate:<domain>` (e.g. `db:generate:untangle`, `db:generate:brainstorm`)
+regenerates that chain. The base migration chain (`packages/db/migrations/`, no domain
+subdirectory) ships with every preset.
 
 Vendor SDKs (Stripe, Resend, Better Auth, Anthropic/OpenAI, …) are confined to the
 adapter package that owns them — importing one anywhere else fails `pnpm boundaries`, not

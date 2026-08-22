@@ -21,16 +21,27 @@ preset, assembled at publish time by `packages/create`), not a description of it
   `AGENTS.md` 15 lines or fewer — both the root (factory-dev) copies and the payload
   copies. `payload/LAUNCH.md` is the shape-generic launch checklist, carrying the literal
   insertion marker `<!-- preset:items -->` where each preset overlay's items are merged in
-  at compose time — keep the composed 9-item demo output in sync with
-  `packages/config/test/launch-checklist-drift.test.ts`, the drift test that guards it.
+  at compose time — keep the composed per-preset output in sync with
+  `packages/config/test/launch-checklist-drift.test.ts`, the drift test that guards it:
+  9 items for `untangle` (7 generic + `Untangle domain` + `Template showcase`), 8 for
+  `nothing` (7 generic + `Template showcase` only — it ships no example domain), 9 for
+  `brainstorm` (7 generic + `Brainstormer domain` + `Template showcase`).
   `payload/agents/` (4 files) and `payload/skills/` (7 dirs) are the adopter agent/skill
   set, installed into `.claude/agents/` and `.claude/skills/` at compose time — nothing in
   `payload/` may reference `.factory/handoff/` or `pnpm factory:init`, both retired.
 - **Presets.** `presets/<id>/preset.json` (plain JSON, no comments/trailing commas — id,
   label, description, appDir, status, packages) plus `presets/<id>/overlay/` — the preset's
   `PRODUCT.md` seed and its `LAUNCH.md` items fragment, inserted at `payload/LAUNCH.md`'s
-  marker. Only `demo` ships in v1; a second preset needs both a real app under `apps/` and
-  its own `preset.json` + overlay, not a fork of the skeleton.
+  marker. Three presets ship: `untangle` (`apps/untangle`, the full showcase), `nothing`
+  (`apps/nothing`, blank slate), `brainstorm` (`apps/brainstorm`, chat-based project
+  brainstormer). A fourth preset needs the same shape as any of these: a real app under
+  `apps/`, its own `preset.json`, and its own `overlay/` — not a fork of the skeleton.
+  `packages` is load-bearing, not reserved: it's a required array of the domain package
+  dir name(s) this preset claims (`[]` for a preset with none), and it drives compose-time
+  pruning (`packages/create/src/compose.ts`), migration-chain pruning, and Dockerfile
+  marker stamping — checked against the real `packages/` tree at compose time
+  (`assertDomainPackagesExist`, `compose.ts:102-111`), on top of `validatePresetMeta`'s
+  shape-only check.
 - **Tiering.** Skills split three ways: factory-dev-only (never shipped — see the spec's
   §5 "Never shipped" list), shared (`.claude/skills/`, common to factory and every
   scaffolded repo), and adopter-only (staged in `payload/skills/`, installed by compose).

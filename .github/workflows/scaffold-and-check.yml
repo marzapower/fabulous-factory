@@ -1,16 +1,22 @@
-# Composes the demo preset, scaffolds it through the *actual installer CLI*, and runs the
-# output's own gates and boot check — this validates what adopters actually receive,
+# Composes the given preset, scaffolds it through the *actual installer CLI*, and runs
+# the output's own gates and boot check — this validates what adopters actually receive,
 # distinct from the factory's own `quality`/`minimal-boot` jobs (design spec §8.3, §9,
 # §11 M4). Reusable so `ci.yml` (release triggers) and `release.yml` (the publish gate)
-# run the exact same validation rather than two drifting copies.
+# run the exact same validation rather than two drifting copies, once per preset via a
+# caller-side matrix.
 #
-# The `captured-lockfile-demo` artifact it uploads is what `release.yml` drops into
-# presets/demo/pnpm-lock.captured.yaml before packing, so every shipped install carries
-# the lockfile this job just validated.
+# The `captured-lockfile-<preset>` artifact it uploads is what `release.yml` drops into
+# presets/<preset>/pnpm-lock.captured.yaml before packing, so every shipped install
+# carries the lockfile this job just validated.
 name: Scaffold and check
 
 on:
   workflow_call:
+    inputs:
+      preset:
+        description: "Preset id to compose, scaffold, and validate (e.g. untangle, nothing, brainstorm)"
+        required: true
+        type: string
 
 jobs:
   scaffold-and-check:
@@ -46,11 +52,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Compose the demo preset template (packages/create/templates/demo)
-        run: pnpm compose --preset demo
+      - name: Compose the preset template (packages/create/templates/<preset>)
+        env:
+          PRESET: ${{ inputs.preset }}
+        run: pnpm compose --preset "$PRESET"
 
-      - name: Scaffold the demo preset through the installer CLI
-        run: pnpm exec tsx packages/create/src/cli.ts install --yes --no-install --no-git --dir ${{ runner.temp }}/scaffold --preset demo
+      - name: Scaffold the preset through the installer CLI
+        env:
+          PRESET: ${{ inputs.preset }}
+        run: pnpm exec tsx packages/create/src/cli.ts install --yes --no-install --no-git --dir "$RUNNER_TEMP/scaffold" --preset "$PRESET"
 
       # From here on, everything runs inside the scaffold — a standalone pnpm workspace
       # with no relation to the factory's own lockfile or node_modules.
@@ -93,10 +103,10 @@ jobs:
           exit $status
 
       # Captured here, not regenerated at publish time (design spec §5, "Lockfile"): a
-      # later release step commits this into presets/demo/pnpm-lock.captured.yaml so the
-      # shipped install is exactly what this job just validated, not a fresh resolution.
+      # later release step commits this into presets/<preset>/pnpm-lock.captured.yaml so
+      # the shipped install is exactly what this job just validated, not a fresh resolution.
       - name: Upload the captured lockfile
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: captured-lockfile-demo
+          name: captured-lockfile-${{ inputs.preset }}
           path: ${{ runner.temp }}/scaffold/pnpm-lock.yaml

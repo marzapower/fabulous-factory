@@ -15,12 +15,27 @@ export interface PresetMeta {
   description: string;
   appDir: string;
   status: PresetStatus;
-  packages: string[] | null;
-  /** repo-root-relative source directory, e.g. `presets/demo`. */
+  /**
+   * Domain package dir names (under `packages/`) this preset claims, e.g. `["untangle"]`.
+   * May be empty (a preset with no domain package, e.g. `nothing`). Drives compose-time
+   * pruning (see `compose.ts`) — never validated for on-disk existence here (shape only);
+   * that check happens in `composeProject`, which has the real `repoRoot`.
+   */
+  packages: string[];
+  /** repo-root-relative source directory, e.g. `presets/untangle`. */
   sourceDir: string;
 }
 
 const REQUIRED_STRING_FIELDS = ["id", "label", "description", "appDir", "status"] as const;
+
+/**
+ * `preset.json`'s `packages` entries end up as both a Dockerfile COPY path segment
+ * (`dockerfile-stamp.ts`) and a `path.join(repoRoot, "packages", pkgName)` directory name
+ * (`compose.ts`'s existence check and copy destination) — so this is a directory-name
+ * charset, not just "non-empty": no `/`, no `..`, no newline, nothing that could inject a
+ * Dockerfile directive or escape `packages/` on either side.
+ */
+const PACKAGE_NAME_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
 
 /**
  * True if `child` (resolved) is `parent` itself or somewhere inside it. Shared containment
@@ -65,10 +80,11 @@ export function validatePresetMeta(
     );
   }
 
-  if (record.packages !== null && !Array.isArray(record.packages)) {
-    throw new Error(
-      `${sourceDir}/preset.json: "packages" must be null or an array (reserved for v2).`,
-    );
+  if (
+    !Array.isArray(record.packages) ||
+    !record.packages.every((item) => typeof item === "string" && PACKAGE_NAME_PATTERN.test(item))
+  ) {
+    throw new Error(`${sourceDir}/preset.json: "packages" must be an array of non-empty strings.`);
   }
 
   const appDir = record.appDir as string;
@@ -87,7 +103,7 @@ export function validatePresetMeta(
     description: record.description as string,
     appDir,
     status,
-    packages: (record.packages as string[] | null) ?? null,
+    packages: record.packages as string[],
     sourceDir,
   };
 }

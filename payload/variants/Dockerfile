@@ -37,6 +37,7 @@ COPY apps/web/package.json apps/web/package.json
 COPY packages/analytics/package.json packages/analytics/package.json
 COPY packages/auth/package.json packages/auth/package.json
 COPY packages/billing/package.json packages/billing/package.json
+# preset:domain-package-manifests
 COPY packages/config/package.json packages/config/package.json
 COPY packages/core/package.json packages/core/package.json
 COPY packages/db/package.json packages/db/package.json

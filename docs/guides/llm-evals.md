@@ -86,6 +86,6 @@ profile — `generate()`'s cost accounting means you always know what that run c
 ## What this guide is not
 
 It doesn't ship a grader library, a fixtures format, or a CI job — those are product
-decisions the demo (Untangle, the brain-dump→tasks workspace) doesn't need and a
-template shouldn't force on you. Copy the sketch above, adapt the cases to what your
-app's prompts actually do, and keep it out of `pnpm check`.
+decisions none of the shipped presets (`apps/untangle`, `apps/nothing`,
+`apps/brainstorm`) need and a template shouldn't force on you. Copy the sketch above,
+adapt the cases to what your app's prompts actually do, and keep it out of `pnpm check`.

@@ -37,16 +37,20 @@ defined there, not here. This file tells you how to build UI, not what the rules
   polite ask is to keep the footer link; it costs nothing.
 - **Legal pages & the domain rename** — owned by `make-it-yours`: replacing (not
   deleting) `apps/web/app/(legal)/terms/page.tsx` and `.../privacy/page.tsx`, and
-  renaming the shipped Untangle workspace to your own domain. Note the workspace is a
-  keepable base, not a demo to delete — `apps/web/components/workspace/**` is domain UI
-  you rename, and `apps/web/components/marketing/hero.tsx` imports from it. Defer to
-  `make-it-yours` rather than freelancing either.
-- **Email templates** — `packages/email/src/templates/{verify-email,magic-link,
-daily-plan}.tsx` are hand-authored plain JSX, deliberately unstyled, with a fixed
-  props contract. Change the copy; keep every exported prop type exactly as it is —
+  renaming whichever example domain your preset shipped to your own (Untangle's
+  `apps/web/components/workspace/**`, Brainstorm Chat's board UI — Nothing ships none).
+  Note the domain is a keepable base, not a demo to delete — for Untangle,
+  `apps/web/components/marketing/hero.tsx` imports from `workspace/**`, so a marketing
+  file sits downstream of the rename too. Defer to `make-it-yours` rather than
+  freelancing either.
+- **Email templates** — `packages/email/src/templates/{verify-email,magic-link}.tsx`
+  are hand-authored plain JSX, deliberately unstyled, with a fixed props contract.
+  Change the copy; keep every exported prop type exactly as it is —
   `packages/email/src/templates/index.ts` and its callers depend on the shape, not the
   words. Subject lines live separately, in the `SUBJECTS` map in
-  `packages/email/src/send.ts`.
+  `packages/email/src/send.ts`. Plus any template your preset's own domain package
+  owns (e.g. Untangle's `packages/untangle/src/email/daily-plan.tsx`), whose subject
+  lives beside it, not in `SUBJECTS`.
 
 ## Server components by default
 

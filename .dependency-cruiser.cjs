@@ -110,23 +110,29 @@ module.exports = {
       },
     },
     {
-      name: "no-bare-drizzle-outside-db-core-jobs-billing",
+      name: "no-bare-drizzle-outside-db-core-billing-brainstorm-untangle",
       severity: "error",
       comment:
         "The bare `drizzle-orm` entry (query-expression builders — `sql`, `eq`, `lt`, " +
         "etc.) is confined to packages/db, packages/core (plan D.4: the rate limiter's " +
-        "atomic upsert), packages/jobs (M11: the run engine's and task domain's queries " +
-        "and the per-user pg_advisory_xact_lock(hashtext('run-cap:' || userId)) need the " +
-        "operators against `getDb()` — same rationale as core), and packages/billing " +
+        "atomic upsert), packages/billing " +
         "(M7/H.10.4: drizzle-orm is a RUNTIME " +
         "dep of billing — the webhook transaction's dedupe insert and guarded " +
-        "subscriptions upsert need the operators against `getDb()`) plus test fixtures. " +
-        "Everywhere else — including the preset apps and packages/auth — must go through " +
-        "@factory/db, @factory/jobs, or @factory/billing instead of importing " +
-        "drizzle-orm directly. The actual connection still only ever happens inside " +
-        "packages/db's getDb()/migrator.",
+        "subscriptions upsert need the operators against `getDb()`), packages/brainstorm " +
+        "(the brainstorm domain's project/message/item queries against `getDb()` need the " +
+        "same operators — same rationale as billing), and packages/untangle (R6: the run " +
+        "engine's and task domain's queries and the per-user " +
+        "pg_advisory_xact_lock(hashtext('run-cap:' || userId)) need the operators against " +
+        "`getDb()` — same rationale as core; this domain package moved out of " +
+        "packages/jobs, which is now residual client + registry infrastructure with no " +
+        "drizzle-orm dependency of its own) plus test fixtures. " +
+        "Everywhere else — including the preset apps, packages/auth, and packages/jobs — " +
+        "must go through @factory/db, @factory/core, @factory/billing, " +
+        "@factory/brainstorm, or @factory/untangle instead of importing drizzle-orm " +
+        "directly. The actual connection still only ever happens inside packages/db's " +
+        "getDb()/migrator.",
       from: {
-        pathNot: "^packages/(db|core|jobs|billing)/|^packages/[^/]+/test/",
+        pathNot: "^packages/(db|core|billing|brainstorm|untangle)/|^packages/[^/]+/test/",
       },
       to: {
         path: "(^|/)node_modules/drizzle-orm(/|$)",
@@ -388,16 +394,22 @@ module.exports = {
       },
     },
     {
-      name: "inngest-only-in-jobs",
+      name: "inngest-only-in-jobs-untangle",
       severity: "error",
       comment:
         "inngest (and @inngest/*, e.g. the @inngest/test dev dependency) are confined to " +
-        "packages/jobs — the Inngest client, functions, and demo pipeline all live there " +
-        "(plan G.4). One narrow exception below: the framework-mount route may import the " +
-        "inngest/next subpath only, mirroring the better-auth precedent at the top of this " +
-        "file (auth-route-mount-next-js-subpath-only).",
+        "packages/jobs (the client, plan G.4) and packages/untangle (R6: the preset hosts " +
+        "its own Inngest functions — the cron/worker pair split out of packages/jobs — " +
+        "and their @inngest/test-based tests). One narrow exception below: the " +
+        "framework-mount route may import the inngest/next subpath only, mirroring the " +
+        "better-auth precedent at the top of this file " +
+        "(auth-route-mount-next-js-subpath-only).",
       from: {
-        pathNot: ["^packages/jobs/", "^apps/[^/]+/app/api/inngest/route\\.ts$"],
+        pathNot: [
+          "^packages/jobs/",
+          "^packages/untangle/",
+          "^apps/[^/]+/app/api/inngest/route\\.ts$",
+        ],
       },
       to: {
         path: "(^|/)node_modules/(inngest|@inngest)(/|$)",
@@ -442,21 +454,45 @@ module.exports = {
       },
     },
     {
-      name: "dag-jobs-imports-config-db-core-llm-email-analytics-observability",
+      name: "dag-jobs-imports-config",
       severity: "error",
       comment:
-        "packages/jobs (M11) may depend on packages/config, packages/db (runs/run_steps/" +
-        "captures/tasks), packages/core (safeFetch/untrusted), packages/llm (task " +
-        "extraction/triage/decomposition, daily-plan focus), packages/email " +
-        "(daily-plan), packages/analytics (track), and packages/observability " +
-        "(captureException) — plan G.2.1/K.6. Must NOT import auth — nothing above jobs " +
-        "in the DAG except the preset apps.",
+        "packages/jobs (R6: reduced to residual infrastructure) is now just the Inngest " +
+        "client (packages/jobs/src/client.ts) and the generic, empty `functions` " +
+        "registry that a preset's own domain package populates. The run engine, task " +
+        "pipeline, and cron/worker functions that used to justify the wider allowlist " +
+        "here (plan G.2.1/K.6) moved to packages/untangle — see " +
+        "dag-untangle-imports-config-db-core-llm-email-observability-jobs " +
+        "below. packages/jobs may depend on packages/config only.",
       from: {
         path: "^packages/jobs/",
       },
       to: {
         path: "^packages/",
-        pathNot: "^packages/(config|db|core|llm|email|analytics|observability|jobs)/",
+        pathNot: "^packages/(config|jobs)/",
+      },
+    },
+    {
+      name: "dag-untangle-imports-config-db-core-llm-email-observability-jobs",
+      severity: "error",
+      comment:
+        "packages/untangle (R6: split out of packages/jobs into its own preset domain " +
+        "package) may depend on packages/config, packages/db (runs/run_steps/captures/" +
+        "tasks), packages/core (safeFetch/untrusted), packages/llm (task extraction/" +
+        "triage/decomposition, daily-plan focus), packages/email (daily-plan), " +
+        "packages/observability (captureException), and " +
+        "packages/jobs (the generic Inngest client its cron/worker functions register " +
+        "against) — same DAG position packages/jobs held before the split (plan " +
+        "G.2.1/K.6). Must NOT import auth. No import backs a packages/analytics edge " +
+        "today (that dependency was dropped — fab-warden restructure review M9); add it " +
+        "back here if/when untangle actually calls `track`. apps/untangle is the only " +
+        "consumer of @factory/untangle.",
+      from: {
+        path: "^packages/untangle/",
+      },
+      to: {
+        path: "^packages/",
+        pathNot: "^packages/(config|db|core|llm|email|observability|jobs|untangle)/",
       },
     },
     {
@@ -465,7 +501,7 @@ module.exports = {
       comment:
         "packages/create (the npm-published `fabulous-factory` installer CLI) and " +
         "packages/create-alias (the `create-fabulous-factory` bin shim) manipulate files, " +
-        "not factory code — they must not import any of the 10 @factory/* packages, even " +
+        "not factory code — they must not import any of the 11 @factory/* packages, even " +
         "though both live under packages/ (npx-installer design spec §6/§11 M3). This " +
         "rule's `to.pathNot` allowlists `^packages/(create|create-alias)/` itself, so it " +
         "does NOT ban create↔create-alias imports (there happen to be none today — " +
@@ -499,6 +535,25 @@ module.exports = {
       to: {
         path: "^packages/",
         pathNot: "^packages/(config|db|billing)/",
+      },
+    },
+    {
+      name: "dag-brainstorm-imports-config-db-core-llm",
+      severity: "error",
+      comment:
+        "packages/brainstorm may depend on packages/config, packages/db (projects/" +
+        "project_messages/project_items), packages/core (safeFetch/untrusted), and " +
+        "packages/llm (idea/feature extraction from the brainstorm chat). Must NOT " +
+        "import auth, email, analytics, observability, or jobs (packages/jobs is " +
+        "residual client + registry infrastructure post-R6, not a dependency any " +
+        "preset domain package needs unless it registers Inngest functions, as " +
+        "packages/untangle does). Only preset apps import @factory/brainstorm.",
+      from: {
+        path: "^packages/brainstorm/",
+      },
+      to: {
+        path: "^packages/",
+        pathNot: "^packages/(config|db|core|llm|brainstorm)/",
       },
     },
   ],

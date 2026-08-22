@@ -40,15 +40,17 @@ place; nothing else in the app references a font family directly.
 
 ## Phase 3 — Email copy
 
-`packages/email/src/templates/{verify-email,magic-link,daily-plan}.tsx` are
-hand-authored plain-JSX email templates (deliberately no `react-email`/
-`@react-email/components` dependency, though `@react-email/render` does the actual
-rendering) with the factory's own placeholder copy — deliberately unstyled, plain
-html/body/p/a, no styling to update. Update the body text and any product name
-references, and the subject lines in `packages/email/src/send.ts`'s `SUBJECTS` map. Keep
-the same props contract (each template's exported prop types) —
-`packages/email/src/templates/index.ts` and the callers depend on the shape, not the
-copy.
+`packages/email/src/templates/{verify-email,magic-link}.tsx` are hand-authored
+plain-JSX email templates (deliberately no `react-email`/`@react-email/components`
+dependency, though `@react-email/render` does the actual rendering) with the factory's
+own placeholder copy — deliberately unstyled, plain html/body/p/a, no styling to update.
+Update the body text and any product name references, and the subject lines in
+`packages/email/src/send.ts`'s `SUBJECTS` map. Keep the same props contract (each
+template's exported prop types) — `packages/email/src/templates/index.ts` and the
+callers depend on the shape, not the copy. Plus any template your preset's own domain
+package owns (e.g. Untangle's `packages/untangle/src/email/daily-plan.tsx`) — its
+subject lives beside it (a local const in the file that calls `sendRendered`), not in
+`SUBJECTS`.
 
 ## Phase 4 — Verify
 

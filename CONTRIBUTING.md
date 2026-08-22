@@ -66,11 +66,13 @@ those paths until the checklist's final line reads exactly `- [x] security-check
 
 ## Touching a shipped default
 
-If your change edits one of the 9 files seeded as a `LAUNCH.md` item (theme, landing
-page, legal pages, demo, email templates, plans catalog, README, `PRODUCT.md`, template
-showcase), check whether the item's "Done means" bullets in `payload/LAUNCH.md` still
-describe it accurately — update them if the shape of the change has moved. There is no
-mechanical check for this; it's reviewer judgment.
+If your change edits one of the files seeded as a `LAUNCH.md` item (theme, landing page,
+legal pages, the preset's own example domain, email templates, plans catalog, README,
+`PRODUCT.md`, template showcase — the composed count differs per preset: 9 for
+`untangle`, 8 for `nothing`, 9 for `brainstorm`), check whether the item's "Done means"
+bullets in `payload/LAUNCH.md` or the relevant `presets/<id>/overlay/launch-items.md`
+still describe it accurately — update them if the shape of the change has moved. There is
+no mechanical check for this; it's reviewer judgment.
 
 ## Delegating to agents
 

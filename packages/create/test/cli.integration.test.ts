@@ -3,10 +3,12 @@
  * against source, no build required — with `--yes --no-install --no-git`, and asserts the
  * resulting tree.
  *
- * Composes the real "demo" preset into a scratch templates dir (never the tracked
+ * Composes every REAL "available" preset into a scratch templates dir (never the tracked
  * `packages/create/templates/`) and points the spawned CLI at it via
  * `FABULOUS_FACTORY_TEMPLATES_DIR` (`install.ts`'s test-only override, spec §6) — this
- * suite never touches or `rmSync`s the repo's own `packages/create/templates/`.
+ * suite never touches or `rmSync`s the repo's own `packages/create/templates/`. Manifest
+ * covers every preset (not just "available") so the multi-preset ambiguity path below is
+ * exercised the same way the real CLI would see it.
  */
 import { execFileSync } from "node:child_process";
 import {
@@ -33,14 +35,20 @@ const tsxBin = path.join(repoRoot, "node_modules/.bin/tsx");
 
 let templatesDir: string;
 let scratchDir: string;
+let presets: ReturnType<typeof listPresets>;
 
 beforeAll(() => {
   templatesDir = mkdtempSync(path.join(tmpdir(), "fabulous-factory-cli-templates-"));
-  const presets = listPresets(repoRoot);
-  const demo = presets.find((preset) => preset.id === "demo");
-  if (!demo)
-    throw new Error("presets/demo/preset.json not found — cannot run the CLI integration test.");
-  composeProject({ repoRoot, preset: demo, outDir: path.join(templatesDir, "demo") });
+  presets = listPresets(repoRoot);
+  const available = presets.filter((preset) => preset.status === "available");
+  if (available.length === 0) {
+    throw new Error(
+      'No "available" presets found under presets/ — cannot run the CLI integration test.',
+    );
+  }
+  for (const preset of available) {
+    composeProject({ repoRoot, preset, outDir: path.join(templatesDir, preset.id) });
+  }
   writeFileSync(
     path.join(templatesDir, "presets.json"),
     `${JSON.stringify(
@@ -82,7 +90,7 @@ describe("fabulous-factory install --yes --no-install --no-git", () => {
       "--dir",
       target,
       "--preset",
-      "demo",
+      "untangle",
     ]);
 
     expect(existsSync(path.join(target, ".gitignore"))).toBe(true);
@@ -92,7 +100,16 @@ describe("fabulous-factory install --yes --no-install --no-git", () => {
 
   it("stamps the project name into root package.json", () => {
     const target = path.join(scratchDir, "stamp-check");
-    runCli(["install", "--yes", "--no-install", "--no-git", "--dir", target, "--preset", "demo"]);
+    runCli([
+      "install",
+      "--yes",
+      "--no-install",
+      "--no-git",
+      "--dir",
+      target,
+      "--preset",
+      "untangle",
+    ]);
 
     const pkg = JSON.parse(readFileSync(path.join(target, "package.json"), "utf8"));
     expect(pkg.name).toBe("stamp-check");
@@ -104,7 +121,16 @@ describe("fabulous-factory install --yes --no-install --no-git", () => {
     writeFileSync(path.join(target, "existing.txt"), "hi");
 
     expect(() =>
-      runCli(["install", "--yes", "--no-install", "--no-git", "--dir", target, "--preset", "demo"]),
+      runCli([
+        "install",
+        "--yes",
+        "--no-install",
+        "--no-git",
+        "--dir",
+        target,
+        "--preset",
+        "untangle",
+      ]),
     ).toThrow();
 
     // Untouched: still exactly the one pre-existing file, no partial scaffold dropped in.
@@ -125,7 +151,7 @@ describe("fabulous-factory install --yes --no-install --no-git", () => {
       "--dir",
       target,
       "--preset",
-      "demo",
+      "untangle",
     ]);
 
     expect(existsSync(path.join(target, ".gitignore"))).toBe(true);
@@ -148,9 +174,45 @@ describe("fabulous-factory install --yes --no-install --no-git", () => {
       "--dir",
       target,
       "--preset",
-      "demo",
+      "untangle",
     ]);
 
     expect(existsSync(path.join(target, ".gitignore"))).toBe(true);
+  });
+
+  // One full install run on a second preset, bounding runtime (spec §9): this doesn't
+  // repeat every assertion above per preset — the untangle runs already cover the CLI's
+  // general behavior — it just proves a non-default preset installs end to end too.
+  it("scaffolds the brainstorm preset end to end", () => {
+    const target = path.join(scratchDir, "brainstorm-app");
+
+    const output = runCli([
+      "install",
+      "--yes",
+      "--no-install",
+      "--no-git",
+      "--dir",
+      target,
+      "--preset",
+      "brainstorm",
+    ]);
+
+    expect(existsSync(path.join(target, ".gitignore"))).toBe(true);
+    expect(existsSync(path.join(target, "gitignore"))).toBe(false);
+    expect(output).toContain("pnpm dev");
+  });
+
+  it("`--yes` without `--preset` fails with the multi-preset ambiguity error", () => {
+    const target = path.join(scratchDir, "no-preset-ambiguous");
+    const availableIds = presets
+      .filter((preset) => preset.status === "available")
+      .map((preset) => preset.id)
+      .join(", ");
+
+    expect(() => runCli(["install", "--yes", "--no-install", "--no-git", "--dir", target])).toThrow(
+      `Multiple presets are available (${availableIds}) — pass --preset <id> to choose one.`,
+    );
+
+    expect(existsSync(target)).toBe(false);
   });
 });

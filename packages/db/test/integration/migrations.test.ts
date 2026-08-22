@@ -45,7 +45,7 @@ describe.skipIf(!TEST_DATABASE_URL)("migrations (integration)", () => {
     await pool.end();
   });
 
-  it("creates the four Better Auth tables", async () => {
+  it("creates only the shared tables — no domain tables ship from the shared chain", async () => {
     // Idempotent-ish reruns: drop and recreate both the `public` schema (where the app
     // tables live) AND the `drizzle` schema (where the migrator's own
     // `__drizzle_migrations` bookkeeping table lives — a separate schema, so dropping
@@ -63,10 +63,29 @@ describe.skipIf(!TEST_DATABASE_URL)("migrations (integration)", () => {
 
     const result = await db.execute(sql`
         SELECT table_name FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name IN ('user', 'session', 'account', 'verification')
+        WHERE table_schema = 'public'
       `);
     const tableNames = new Set(result.rows.map((row) => String(row.table_name)));
 
-    expect(tableNames).toEqual(new Set(["user", "session", "account", "verification"]));
+    // The shared chain (packages/db) owns only auth + billing + llm-call + rate-limit.
+    expect(tableNames).toEqual(
+      new Set([
+        "user",
+        "session",
+        "account",
+        "verification",
+        "billing_events",
+        "subscriptions",
+        "llm_calls",
+        "rate_limits",
+      ]),
+    );
+
+    // Preset-domain tables (runs/run_steps/captures/tasks/projects/project_messages/
+    // project_items) must never ship from the shared chain — this is the whole point of
+    // the split (user directive: preset domains and tables must not ship to other
+    // presets' scaffolds). The exhaustive `toEqual` above already pins this: it would
+    // fail the moment any domain table leaked in, so no separate per-table assertion is
+    // needed here.
   }, 30_000);
 });

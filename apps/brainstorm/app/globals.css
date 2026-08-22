@@ -1,0 +1,212 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  /* --- Marketing/template tokens (carried over from the shared /features surface) ------
+   * `--fab-live` / `--fab-live-soft` back the shared StatusLight/ControlPanel components;
+   * `--fab-marker` is the marketing pages' highlighter-pen accent (the "// comment" lines,
+   * feature-card icons). Neither is used inside the workbench — the workbench spends its
+   * own, separate accent (`--spark`, below) so an AI-in-flight affordance in the product
+   * UI is never visually confused with the marketing pages' unrelated highlight color. */
+  --fab-live: oklch(0.58 0.19 255);
+  --fab-live-soft: oklch(0.94 0.035 255);
+  --fab-marker: oklch(0.72 0.16 70);
+  --font-serif: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+
+  /* --- Workbench tokens ("the workbench where sparks land") -----------------------------
+   * `--bench-paper` / `--bench-ink` / `--bench-line` are the board/chat surface's own
+   * achromatic scale — hierarchy inside the workbench is carried by ink density, never a
+   * second hue (the same house rule the marketing pages' `--fab-marker` comment states).
+   * `--spark` / `--spark-soft` are spent ONLY on AI-in-flight: the streaming caret pulse,
+   * a proposal card's left edge, and the accept affordance. Nothing else in the workbench
+   * — not a hover state, not a focus ring, not a status badge — reaches for this hue. */
+  --bench-paper: oklch(0.975 0.004 95);
+  --bench-ink: oklch(0.24 0.01 95);
+  --bench-line: oklch(0.88 0.006 95);
+  --spark: oklch(0.55 0.21 262);
+  --spark-soft: oklch(0.94 0.04 262);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+
+  --fab-live: oklch(0.75 0.16 255);
+  --fab-live-soft: oklch(0.32 0.05 255);
+  --fab-marker: oklch(0.78 0.14 70);
+
+  /* Same hues as :root, flipped lightness (house rule — see the :root token comment). */
+  --bench-paper: oklch(0.24 0.012 95);
+  --bench-ink: oklch(0.92 0.006 95);
+  --bench-line: oklch(0.34 0.01 95);
+  --spark: oklch(0.72 0.17 262);
+  --spark-soft: oklch(0.32 0.05 262);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-serif: var(--font-serif);
+  --font-display: var(--font-space-grotesk), var(--font-plex-sans), ui-sans-serif, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-fab-live: var(--fab-live);
+  --color-fab-live-soft: var(--fab-live-soft);
+  --color-fab-marker: var(--fab-marker);
+  --color-bench-paper: var(--bench-paper);
+  --color-bench-ink: var(--bench-ink);
+  --color-bench-line: var(--bench-line);
+  --color-spark: var(--spark);
+  --color-spark-soft: var(--spark-soft);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* --- Workbench motion ("the spark card") ---------------------------------------------
+ * The signature move: a proposal renders in the chat stream tilted 0.4deg with a 2px
+ * `--spark` left edge; on accept it straightens to 0deg as it "files" onto the board — one
+ * 180ms transform+color transition, not a keyframe, so it composes with whatever else the
+ * card is mid-transition on. `.spark-caret` is the streaming indicator: a small
+ * spark-colored caret pulse while a turn is in flight. Both are the ONLY motion the
+ * workbench spends — everything else stays quiet, no other animation, no gradients — and
+ * both collapse to an instant state change under `prefers-reduced-motion: reduce`,
+ * unconditionally: a quality floor, not a feature, never gated behind a per-component prop. */
+.spark-card {
+  transform: rotate(-0.4deg);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.spark-card[data-accepted="true"] {
+  transform: rotate(0deg);
+}
+
+@keyframes spark-caret-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.spark-caret {
+  animation: spark-caret-pulse 900ms ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spark-card {
+    transition: none;
+  }
+  .spark-caret {
+    animation: none;
+    opacity: 1;
+  }
+}

@@ -1,6 +1,6 @@
 ---
 name: make-it-yours
-description: The umbrella skill for owning every remaining open LAUNCH.md item. Walks LAUNCH.md item by item, including the rename-the-domain recipe for the Untangle workspace, the template-showcase removal, and the legal-pages and README items. Use whenever you or the human ask "what's left to make this mine?"
+description: The umbrella skill for owning every remaining open LAUNCH.md item. Walks LAUNCH.md item by item, including the preset's domain-rename item (worked in detail for the Untangle workspace; noted for other presets), the template-showcase removal, and the legal-pages and README items. Use whenever you or the human ask "what's left to make this mine?"
 ---
 
 # Make it yours
@@ -14,48 +14,64 @@ pnpm factory:status
 Renders `LAUNCH.md`: one line per item, open vs. done, and which skill owns each open
 one. `Product definition` → `define-product`; `App identity`/`Design system`/
 `Email templates` → `brand-it`; `Plans catalog` → `enable-billing`. This skill owns
-`Demo logic`, `Legal pages`, `README`, and `Template showcase` directly — the rest,
-delegate to their skill.
+`Legal pages`, `README`, `Template showcase`, and whichever domain-rename item your
+preset seeded (`Demo logic` for Untangle, `Brainstormer domain` for Brainstorm Chat, none
+for Nothing — it ships with no example domain) directly — the rest, delegate to their
+skill.
 
-## Phase 2 — Rename the domain (Demo logic)
+## Phase 2 — Rename the domain
 
-The shipped Untangle workspace is a **keepable base, not a demo to delete**. It splits
-into two halves along a directory boundary drawn on purpose:
+Whichever preset you scaffolded from ships its own example domain as a **keepable base,
+not a demo to delete** — except Nothing, which ships no domain at all and skips this
+phase entirely (there's nothing to rename). The worked example below is Untangle's, in
+full detail, because it's the richest case; the same split — domain-agnostic
+infrastructure kept verbatim, example-specific code renamed or removed — applies to
+Brainstorm Chat too, noted at the end of this phase.
 
-- **Keep, verbatim.** `packages/jobs/src/runs/` (the domain-agnostic run engine: steps,
-  drivers, `runs`/`run_steps` persistence), `packages/db/src/schema/run.ts`, the SSE
-  route (`apps/web/app/api/runs/route.ts`), and the run-history page
+### Untangle (worked example)
+
+The shipped Untangle workspace splits into two halves along a directory boundary drawn
+on purpose:
+
+- **Keep, verbatim.** `packages/untangle/src/runs/` (the domain-agnostic run engine:
+  steps, drivers, `runs`/`run_steps` persistence), `packages/untangle/src/schema/run.ts`,
+  the SSE route (`apps/web/app/api/runs/route.ts`), and the run-history page
   (`apps/web/app/runs/page.tsx`, `apps/web/lib/sse.ts`). Anything AI-shaped you build
   next rides on this unchanged — you only ever swap the step list it runs.
-- **Rename to your own noun.** `packages/jobs/src/tasks/` (the pipeline, heuristics,
+- **Rename to your own noun.** `packages/untangle/src/tasks/` (the pipeline, heuristics,
   prompts, queries, constants — everything riding on the engine), and
-  `packages/db/src/schema/task.ts` (the `captures`/`tasks` tables), and
+  `packages/untangle/src/schema/task.ts` (the `captures`/`tasks` tables), and
   `apps/web/components/workspace/**` (the dump box, the list, the run strip — all of it
   is domain UI, including `run-reducer.ts`, which only ever handles the domain's own
   opaque `data` events).
 
-Do the rename as a rename, not a rewrite — `git mv packages/jobs/src/tasks
-packages/jobs/src/<your-noun>` and `git mv packages/db/src/schema/task.ts
-packages/db/src/schema/<your-noun>.ts`, then let your editor's rename-symbol tool (or a
-careful find-and-replace) carry `captures`/`tasks`/`Task`/`Capture` through the file
+Do the rename as a rename, not a rewrite — `git mv packages/untangle/src/tasks
+packages/untangle/src/<your-noun>` and `git mv packages/untangle/src/schema/task.ts
+packages/untangle/src/schema/<your-noun>.ts`, then let your editor's rename-symbol tool
+(or a careful find-and-replace) carry `captures`/`tasks`/`Task`/`Capture` through the file
 contents to your product's vocabulary. Ten touchpoints outside the renamed
 directories/files, easy to miss because nothing above names them:
 
-- `packages/db/src/schema/index.ts` — the `export * from "./task";` barrel line follows
-  the file rename.
-- `packages/jobs/src/index.ts` — the re-exported symbol groups sourced from
+- `packages/untangle/src/schema/index.ts` — the `export * from "./task";` barrel line
+  follows the file rename.
+- `packages/untangle/src/index.ts` — the re-exported symbol groups sourced from
   `./tasks/*` follow the directory rename; keep the export list, just repoint the paths.
-- `packages/jobs/src/events.ts` — `DAILY_PLAN_EVENT`'s value
+- `packages/untangle/src/events.ts` — `DAILY_PLAN_EVENT`'s value
   (`"untangle/daily-plan.requested"`) carries the placeholder namespace; rename the
   `untangle/` segment to your product's own (see `add-a-job`'s Phase 3 on event naming).
-- `packages/jobs/src/cron/daily-plan-cron.ts` and `daily-plan-worker.ts` — the Inngest
-  function `id`s and the `"daily-plan"` run `kind` string are cosmetic but worth renaming
-  to match; nothing structural changes.
+- `packages/untangle/src/cron/daily-plan-cron.ts` and `daily-plan-worker.ts` — the
+  Inngest function `id`s and the `"daily-plan"` run `kind` string are cosmetic but worth
+  renaming to match; nothing structural changes. These functions register into
+  `packages/untangle/src/functions/index.ts`'s own array (`add-a-job`'s Phase 2) — that
+  registration follows the rename too; `packages/jobs`' generic array stays empty by
+  construction, since it owns no domain code of its own — the merge happens at the mount
+  (`apps/web/app/api/inngest/route.ts`).
 - `apps/web/app/dashboard/actions.ts` — `toggleTaskAction`, `createManualTaskAction`,
   `deleteTaskAction` follow your renamed nouns.
-- `packages/email/src/templates/daily-plan.tsx` and its `SUBJECTS` entry in
-  `packages/email/src/send.ts` — copy referencing "tasks" follows the rename; the
-  template *file*name can stay `daily-plan` (that's the cron's name, not the domain's).
+- `packages/untangle/src/email/daily-plan.tsx` and its subject (a local const in
+  `packages/untangle/src/tasks/daily-plan.ts`, not `SUBJECTS` — that map now holds only
+  the two auth templates) — copy referencing "tasks" follows the rename; the template
+  *file*name can stay `daily-plan` (that's the cron's name, not the domain's).
 - `apps/web/components/marketing/hero.tsx` — **the non-obvious one.** The landing page's
   replayed run imports `DumpPanel`, `PriorityChip`, `RunStrip` and `runReducer` from
   `apps/web/components/workspace/`, deliberately: the replay runs through the real state
@@ -80,11 +96,16 @@ directories/files, easy to miss because nothing above names them:
 - `apps/web/components/marketing/site-header.tsx` — brands the site by name (plus an
   emoji); update it alongside the rename.
 
-Generate the rename migration:
+Generate the rename migration, against your domain package's own chain
+(`packages/db/migrations/untangle/`) — not the factory's generic `db:generate`, which
+only ever touches the base chain:
 
 ```bash
-pnpm db:generate
+pnpm --filter @factory/untangle exec drizzle-kit generate
 ```
+
+The shipped preset names this `pnpm db:generate:untangle` in `package.json` — use
+whichever name your `git mv` above landed on if you renamed the package too.
 
 Review it before it runs — a table/column _rename_ migration should contain `ALTER
 TABLE ... RENAME`, not a drop-and-recreate; if Drizzle proposes the latter, it read the
@@ -93,21 +114,46 @@ give it the right diff. `pnpm check` after, to catch anything still importing th
 names.
 
 **If you want no run engine at all** (rare — most products in this shape want to keep
-it): the deletion recipe is `rm -rf packages/jobs/src/runs/ packages/jobs/src/tasks/
-apps/web/components/workspace/`, plus deleting `packages/db/src/schema/{run,task}.ts`,
-`apps/web/app/api/runs/route.ts`, and `apps/web/app/runs/page.tsx`, and the same barrel
-cleanup as above except removing the touchpoints instead of renaming them. Generate and
-review a drop migration the same way.
+it): the deletion recipe is `rm -rf packages/untangle/`, plus deleting
+`apps/web/app/api/runs/route.ts` and `apps/web/app/runs/page.tsx`, and the same barrel
+cleanup as above except removing the touchpoints instead of renaming them. The
+cron/worker entries live in `packages/untangle/src/functions/index.ts`, so
+`rm -rf packages/untangle/` removes them along with everything else — there is nothing
+left to clean up in `packages/jobs`, whose generic array stays empty by construction and
+which owns no domain code of its own. Generate and review a drop migration the same way.
+
+### Brainstorm Chat
+
+The equivalent surface is `packages/brainstorm` (the per-user projects/chat/board
+domain), self-contained the same way `packages/untangle` is — its schema lives at
+`packages/brainstorm/src/schema.ts`, not under `packages/db` — same rename-or-keep
+decision, same barrel-touchpoint discipline (`packages/brainstorm`'s own re-export index,
+and any marketing component that imports from the board UI the way `hero.tsx` imports
+from Untangle's `workspace/` above), same domain-chain regeneration step
+(`pnpm --filter @factory/brainstorm exec drizzle-kit generate`, named
+`db:generate:brainstorm` in the shipped preset) against
+`packages/db/migrations/brainstorm/`. `LAUNCH.md` seeds this as the `Brainstormer domain`
+item rather than `Untangle domain`.
+
+### Nothing
+
+No equivalent — the preset ships no example domain, so there is nothing to rename or
+keep. `LAUNCH.md` doesn't seed a domain-rename item at all for this preset; skip straight
+to Phase 3.
 
 ## Phase 3 — Template showcase (Template showcase)
 
 `apps/web/app/page.tsx` runs in two acts, on purpose: act one is your product's own
-landing page (`SiteHeader`, `Hero`, `ThreePasses`, `NothingDisappears`, an inline "what
-it won't do" section, `DemoTeaser`, `SiteFooter` — keep this shape, it's yours) and act
-two is the factory's own reveal (`BuiltOnFactory`, `FeaturesLink` — delete this with
-the showcase). The two directories below make up the rest of that showcase — real for
-the factory repo, convincing a developer evaluating it, not relevant once you have a
-real product:
+landing page (its hero, feature highlights, and any inline "what it won't do" section —
+keep this shape, it's yours) and act two is the factory's own reveal (a "built on the
+factory" section and a link into the `/features` showcase — delete this with the
+showcase). Component names below are Untangle's worked example (`SiteHeader`, `Hero`,
+`ThreePasses`, `NothingDisappears`, `DemoTeaser`, `SiteFooter` for act one;
+`BuiltOnFactory`, `FeaturesLink` for act two) — Nothing and Brainstorm Chat ship their
+own landing-page components under the same two-act shape, so apply the same split by
+role, not by these exact names. The two directories below make up the rest of that
+showcase — real for the factory repo, convincing a developer evaluating it, not relevant
+once you have a real product:
 
 - **The component-docs pages** under `apps/web/app/features/` — one page per factory
   primitive (auth, billing, llm, jobs, email, observability, security, config, kernel),
@@ -225,6 +271,13 @@ deliberately excluded from `Template showcase`'s scope, specifically so keeping 
 willing; it costs nothing and the project could use the mention. If you'd rather remove
 it, `apps/web/components/marketing/site-footer.tsx` is yours to edit like anything else —
 just make sure whatever replaces it still links `/terms` and `/privacy` (see Phase 4).
+
+**Nothing and Brainstorm Chat**: everything above about `/features/` and
+`apps/web/app/api/demo/` applies to both unchanged. Nothing's landing page has no
+run-replay component to strip (there's no example domain to power one). Brainstorm
+Chat's equivalent of `hero.tsx`'s replay is its own sample brainstorm surface (a seeded
+example project/chat/board) rather than a recorded run — strip or repoint it the same
+way, on the same trigger (deleting its backing fixture/data).
 
 ## Phase 4 — Legal pages (Legal pages)
 

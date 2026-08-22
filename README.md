@@ -75,10 +75,19 @@ openssl rand -hex 32       # → paste as BETTER_AUTH_SECRET in .env
 pnpm dev                   # migrations self-apply; you're running.
 ```
 
-The installer walks you through picking a **preset** — a product shape (a full SaaS
-first; a smart web app and an API-only micro-service are coming) — and scaffolds a repo
-that's already yours: common infrastructure, your chosen app, and your agent's
-instruction set, all installed. Then ask your agent: _"what's left to make this mine?"_
+The installer walks you through picking a **preset** — a product shape — and scaffolds a
+repo that's already yours: common infrastructure, your chosen app, and your agent's
+instruction set, all installed. Three presets ship:
+
+- **Fabulous Untangle** — a full working micro-SaaS: paste messy text, get it captured,
+  normalized, and turned into a daily plan.
+- **Fabulous Nothing** — a blank slate: homepage, capability pages, auth, and an empty
+  dashboard, with no example domain to rip out.
+- **Fabulous Brainstorm Chat** — a per-user project brainstormer: an LLM chat that
+  streams prose and proposal cards you accept or dismiss onto an Ideas/Features/Notes
+  board.
+
+Then ask your agent: _"what's left to make this mine?"_
 
 <details>
 <summary>Environment setup details — Postgres and a Better Auth secret, everything else optional</summary>
@@ -95,16 +104,16 @@ later via env vars — nothing above is required to get running.
 
 ## 🧩 What's in the box
 
-|                      |                                             |                                                                                                     |                                                                   |
-| -------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| 🔐 **Auth**          | Better Auth on your Postgres                | email/password always; magic links + OAuth auto-enable                                              | [`/features/auth`](apps/demo/app/features/auth)                   |
-| 💳 **Billing**       | `BillingProvider` seam + Stripe             | webhook-cached subscriptions; free mode when disabled                                               | [`/features/billing`](apps/demo/app/features/billing)             |
-| 🤖 **LLM gateway**   | Vercel AI SDK                               | local (Ollama) / OpenRouter / direct; quality tiers + cost caps                                     | [`/features/llm`](apps/demo/app/features/llm)                     |
-| ⏰ **Jobs & cron**   | Inngest, in-app                             | domain-agnostic run engine + step functions; interactive runs stay inline, unaffected when disabled | [`/features/jobs`](apps/demo/app/features/jobs)                   |
-| ✉️ **Email**         | Resend + hand-authored templates            | console transport in dev                                                                            | [`/features/email`](apps/demo/app/features/email)                 |
-| 📊 **Observability** | PostHog analytics + Sentry/OpenTelemetry    | events, feature flags, tracing; no-op fallback for either                                           | [`/features/observability`](apps/demo/app/features/observability) |
-| 🐳 **Deploy**        | Vercel **and** Docker, both first-class     | standalone output, compose profiles, migrate image                                                  | —                                                                 |
-| 🏭 **Factory layer** | Agent skills, spec/ADR templates, scaffolds | the repo _is_ your agents' memory                                                                   | —                                                                 |
+|                      |                                             |                                                                                                     |                                                                       |
+| -------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 🔐 **Auth**          | Better Auth on your Postgres                | email/password always; magic links + OAuth auto-enable                                              | [`/features/auth`](apps/untangle/app/features/auth)                   |
+| 💳 **Billing**       | `BillingProvider` seam + Stripe             | webhook-cached subscriptions; free mode when disabled                                               | [`/features/billing`](apps/untangle/app/features/billing)             |
+| 🤖 **LLM gateway**   | Vercel AI SDK                               | local (Ollama) / OpenRouter / direct; quality tiers + cost caps                                     | [`/features/llm`](apps/untangle/app/features/llm)                     |
+| ⏰ **Jobs & cron**   | Inngest, in-app                             | domain-agnostic run engine + step functions; interactive runs stay inline, unaffected when disabled | [`/features/jobs`](apps/untangle/app/features/jobs)                   |
+| ✉️ **Email**         | Resend + hand-authored templates            | console transport in dev                                                                            | [`/features/email`](apps/untangle/app/features/email)                 |
+| 📊 **Observability** | PostHog analytics + Sentry/OpenTelemetry    | events, feature flags, tracing; no-op fallback for either                                           | [`/features/observability`](apps/untangle/app/features/observability) |
+| 🐳 **Deploy**        | Vercel **and** Docker, both first-class     | standalone output, compose profiles, migrate image                                                  | —                                                                     |
+| 🏭 **Factory layer** | Agent skills, spec/ADR templates, scaffolds | the repo _is_ your agents' memory                                                                   | —                                                                     |
 
 Frozen stack, on purpose: Next.js 15 (App Router) · TypeScript strict · Postgres ·
 Drizzle · Tailwind + shadcn/ui · pnpm workspaces. No variant matrix to maintain — every
@@ -153,25 +162,25 @@ nothing" stays honest by machine, not by memory.
 - **Definition of done is machine-checkable**: `pnpm check` green. You judge the running
   product; the repo judges the code.
 
-## 🔍 The demo is a keepable base, not a throwaway
+## 🔍 The flagship preset is a keepable base, not a throwaway
 
-The template ships as a working AI workspace, **Untangle**: paste a wall of messy text
-(or a URL) → a streaming, multi-step run extracts tasks, triages them by priority/effort/
-due date, and decomposes the vague ones into subtasks. It exercises every package, shows
-cost discipline as example code (_every step reports its model, tokens, and cost; the
-heuristic fallback needs no LLM call at all_), and degrades live — run it with nothing
-configured and you still get a fully usable, heuristically-triaged list.
+The **Fabulous Untangle** preset ships as a working AI workspace: paste a wall of messy
+text (or a URL) → a streaming, multi-step run extracts tasks, triages them by
+priority/effort/due date, and decomposes the vague ones into subtasks. It exercises every
+package, shows cost discipline as example code (_every step reports its model, tokens,
+and cost; the heuristic fallback needs no LLM call at all_), and degrades live — run it
+with nothing configured and you still get a fully usable, heuristically-triaged list.
 
-The domain-agnostic half — the run engine (`packages/jobs/src/runs/`), its schema, the
-SSE transport, and the run-history page — is meant to be **inherited, not deleted**:
+The domain-agnostic half — the run engine (`packages/untangle/src/runs/`), its schema,
+the SSE transport, and the run-history page — is meant to be **inherited, not deleted**:
 anything AI-shaped you build next rides on it unchanged. Only the Untangle-specific half
-(`packages/jobs/src/tasks/`, its schema, the workspace UI) is yours to rename to your own
-product. When you adopt, the `make-it-yours` skill (installed to `.claude/skills/` by
+(`packages/untangle/src/tasks/`, its schema, the workspace UI) is yours to rename to your
+own product. When you adopt, the `make-it-yours` skill (installed to `.claude/skills/` by
 the installer) walks you through exactly that split.
 
 ## 🚀 Deploy anywhere that runs Node or containers
 
-- **Vercel** — connect repo (root directory `apps/demo`), set `DATABASE_URL` +
+- **Vercel** — connect repo (root directory `apps/untangle`), set `DATABASE_URL` +
   `BETTER_AUTH_SECRET` for Production and Preview, run migrations yourself before each
   deploy that needs them (no release-phase job — see `docs/guides/deploy-vercel.md`),
   done.

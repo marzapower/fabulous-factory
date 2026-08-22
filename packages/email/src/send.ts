@@ -1,8 +1,6 @@
 /**
- * `send()` — the package's single entry point (spec §5.6, plan E.2, binding E.9).
- *
- * Reads `getCapabilities().email` (never `process.env` directly — E.9.2 / the
- * `factory/no-process-env` lint rule) and picks one of three paths:
+ * `send()`/`sendRendered()` — the package's two entry points (spec §5.6, plan E.2,
+ * binding E.9). Both funnel through the same `deliver()` transport/degradation path:
  *   - `disabled`   → typed no-op, no render, no vendor SDK loaded at all.
  *   - `console`    → renders html+text, logs the rendered output, typed no-op (never
  *                    claims delivery — spec §5.6 is explicit that `console` must not
@@ -13,10 +11,18 @@
  *                    NEVER the `react` field (E.1 — keeps `resend` the sole vendor import;
  *                    render happens once, here, not duplicated inside the SDK).
  *
- * `@react-email/render`'s `render()` is invoked only inside this function, at request
- * time — never at module init (E.9.8) — so importing this package costs nothing extra at
- * boot even once `packages/auth` depends on it.
+ * `send()` looks a template up by name from this package's own `TEMPLATES` map (the auth
+ * templates — `verify-email`/`magic-link` — the only ones this package still owns).
+ * `sendRendered()` is the generic escape hatch for a caller (e.g. a preset domain
+ * package) that owns its OWN React element and just needs the same transport/degradation
+ * machinery — no template registration required, and no duplicate transport code.
+ *
+ * `@react-email/render`'s `render()` is invoked only inside `deliver()`, at request time
+ * — never at module init (E.9.8) — so importing this package costs nothing extra at boot
+ * even once `packages/auth` depends on it.
  */
+import type { ReactElement } from "react";
+
 import { render } from "@react-email/render";
 
 import { getCapabilities, getEnv } from "@factory/config";
@@ -51,22 +57,18 @@ async function getResendClient(apiKey: string): Promise<import("resend").Resend>
 const SUBJECTS: Record<TemplateName, string> = {
   "verify-email": "Verify your email address",
   "magic-link": "Your sign-in link",
-  "daily-plan": "Your plan for today",
 };
 
-export async function send<T extends TemplateName>(
-  template: T,
-  to: string,
-  props: TemplateProps[T],
-): Promise<SendResult> {
+/** The shared transport/degradation path — the ONLY function in this package that reads
+ * `getCapabilities()`/`getEnv()` for email or loads the `resend` SDK. Both `send()` and
+ * `sendRendered()` fully reduce to this. */
+async function deliver(subject: string, to: string, element: ReactElement): Promise<SendResult> {
   const capabilities = getCapabilities();
 
   if (capabilities.email === "disabled") {
     return { delivered: false, reason: "disabled" };
   }
 
-  const element = TEMPLATES[template](props);
-  const subject = SUBJECTS[template];
   const text = await render(element, { plainText: true });
 
   if (capabilities.email === "console") {
@@ -95,4 +97,28 @@ export async function send<T extends TemplateName>(
   }
 
   return { delivered: true };
+}
+
+export async function send<T extends TemplateName>(
+  template: T,
+  to: string,
+  props: TemplateProps[T],
+): Promise<SendResult> {
+  const element = TEMPLATES[template](props);
+  const subject = SUBJECTS[template];
+  return deliver(subject, to, element);
+}
+
+/**
+ * Generic rendered-send: a caller supplies its own already-built React element (e.g. a
+ * preset domain package's own template, outside this package's `TEMPLATES` registry) and
+ * gets the exact same transport/degradation path `send()` uses — no duplicate resend
+ * client, no duplicate capability/env handling.
+ */
+export async function sendRendered(opts: {
+  to: string;
+  subject: string;
+  react: ReactElement;
+}): Promise<SendResult> {
+  return deliver(opts.subject, opts.to, opts.react);
 }

@@ -1,7 +1,9 @@
+import { createElement } from "react";
+
 import type { Capabilities, Env } from "@factory/config";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { send } from "../src/send";
+import { send, sendRendered } from "../src/send";
 
 // Tracks whether the `resend` module was ever imported (module-registry check, E.8/E.9.5)
 // and whether `new Resend(...)` was actually constructed (per-test, reset in beforeEach).
@@ -65,8 +67,16 @@ beforeEach(() => {
   resendState.sendMock.mockClear();
   mockedGetCapabilities.mockReset();
   mockedGetEnv.mockReset();
-  vi.spyOn(console, "log").mockImplementation(() => {});
-  vi.spyOn(console, "error").mockImplementation(() => {});
+  // `.mockClear()` matters here, not just `.mockImplementation()`: `vi.spyOn` on an
+  // already-spied method returns the SAME mock instance rather than wrapping it again,
+  // so a prior test's call count otherwise leaks into this one — any test asserting
+  // `toHaveBeenCalledTimes` would only pass by accident of declaration order.
+  vi.spyOn(console, "log")
+    .mockImplementation(() => {})
+    .mockClear();
+  vi.spyOn(console, "error")
+    .mockImplementation(() => {})
+    .mockClear();
 });
 
 describe("send — disabled", () => {
@@ -98,6 +108,54 @@ describe("send — console", () => {
     const logged = logSpy.mock.calls[0]?.[0] as string;
     expect(logged).toContain("console transport");
     expect(logged).toContain("https://example.com/magic");
+  });
+});
+
+// `sendRendered` is the generic escape hatch a preset domain package (e.g.
+// `@factory/untangle`'s daily-plan template) uses to reach the same transport/
+// degradation path `send()` uses, for a React element it built itself rather than one
+// registered in this package's own `TEMPLATES` map. It funnels through the exact same
+// `deliver()` internals, so only the disabled/console paths get their own coverage here
+// — the resend-branch behavior (render, guarded dynamic import, provider-error mapping)
+// is already exercised above via `send()`, and duplicating it would just be testing the
+// shared internals twice. Declared BEFORE any resend-enabled test (same ordering
+// constraint the file header documents for `send`'s own disabled/console tests) — module
+// resolution of "resend" is cached process-wide, so `everImported` only proves anything
+// asserted before the first real import happens anywhere in this file.
+describe("sendRendered — disabled", () => {
+  it("returns the typed no-op and loads no resend module", async () => {
+    mockedGetCapabilities.mockReturnValue(capabilitiesWith("disabled"));
+
+    const result = await sendRendered({
+      to: "user@example.com",
+      subject: "Your plan for today",
+      react: createElement("p", null, "hello"),
+    });
+
+    expect(result).toEqual({ delivered: false, reason: "disabled" });
+    expect(resendState.everImported).toBe(false);
+    expect(mockedGetEnv).not.toHaveBeenCalled();
+  });
+});
+
+describe("sendRendered — console", () => {
+  it("logs the rendered output under the caller's own subject, loading no resend module", async () => {
+    mockedGetCapabilities.mockReturnValue(capabilitiesWith("console"));
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const result = await sendRendered({
+      to: "user@example.com",
+      subject: "Your plan for today",
+      react: createElement("p", null, "Call Marco"),
+    });
+
+    expect(result).toEqual({ delivered: false, reason: "console" });
+    expect(resendState.everImported).toBe(false);
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    const logged = logSpy.mock.calls[0]?.[0] as string;
+    expect(logged).toContain("console transport");
+    expect(logged).toContain("Your plan for today");
+    expect(logged).toContain("Call Marco");
   });
 });
 

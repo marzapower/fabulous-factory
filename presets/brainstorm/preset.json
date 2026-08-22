@@ -1,0 +1,8 @@
+{
+  "id": "brainstorm",
+  "label": "Fabulous Brainstorm Chat",
+  "description": "Chat-based project brainstormer: talk ideas out, keep what sparks",
+  "appDir": "apps/brainstorm",
+  "status": "available",
+  "packages": ["brainstorm"]
+}

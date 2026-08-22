@@ -7,8 +7,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --filter demo dev",
-    "build": "pnpm --filter demo build",
+    "dev": "pnpm --filter untangle dev",
+    "dev:nothing": "pnpm --filter nothing dev",
+    "dev:brainstorm": "pnpm --filter brainstorm dev",
+    "build": "pnpm --filter untangle build",
     "lint": "eslint .",
     "boundaries": "depcruise apps packages --config .dependency-cruiser.cjs",
     "format": "prettier --write .",
@@ -24,6 +26,8 @@
     "db:migrate": "tsx packages/db/scripts/migrate.ts",
     "db:seed": "tsx packages/db/scripts/seed.ts",
     "db:generate": "pnpm --filter @factory/db exec drizzle-kit generate",
+    "db:generate:untangle": "pnpm --filter @factory/untangle exec drizzle-kit generate",
+    "db:generate:brainstorm": "pnpm --filter @factory/brainstorm exec drizzle-kit generate",
     "gen:env-example": "tsx packages/config/scripts/gen-env-example.ts",
     "prepare": "husky"
   },

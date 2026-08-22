@@ -89,6 +89,9 @@ jobs:
   # every other capability var unset.
   minimal-boot:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [untangle, nothing, brainstorm]
     services:
       postgres:
         image: postgres:18-alpine
@@ -122,12 +125,17 @@ jobs:
 
       - run: pnpm db:migrate
 
-      - run: pnpm build
+      - name: Build the preset app
+        env:
+          APP: ${{ matrix.app }}
+        run: pnpm --filter "$APP" build
 
       - name: Boot standalone server and poll /api/health
+        env:
+          APP: ${{ matrix.app }}
         run: |
           set -e
-          PORT=3100 HOSTNAME=127.0.0.1 node apps/demo/.next/standalone/apps/demo/server.js &
+          PORT=3100 HOSTNAME=127.0.0.1 node "apps/$APP/.next/standalone/apps/$APP/server.js" &
           SERVER_PID=$!
 
           status=1
@@ -216,6 +224,27 @@ jobs:
           echo "$OUTPUT"
           echo "$OUTPUT" | grep -qF 'Running pending migrations'
           echo "$OUTPUT" | grep -qF 'Done.'
+
+      # R6: the factory image's migrate step applies every chain under
+      # packages/db/migrations/{,untangle/,brainstorm/} — the shared chain (user, plus
+      # the rest of auth/billing) and both domain chains (untangle's runs/tasks,
+      # brainstorm's projects). All four tables must exist after the run above, or a
+      # chain silently failed to apply. Uses the same postgres:18-alpine image already
+      # running as this job's service container, over --network host, mirroring how the
+      # migrate image itself is invoked just above.
+      - name: Assert domain migration chains created their tables
+        run: |
+          set -e
+          TABLES=$(docker run --rm --network host postgres:18-alpine \
+            psql "postgres://postgres:postgres@127.0.0.1:5432/postgres" -tAc \
+            "select table_name from information_schema.tables where table_schema = 'public'")
+          echo "$TABLES"
+          for TABLE in user runs tasks projects; do
+            if ! echo "$TABLES" | grep -qxF "$TABLE"; then
+              echo "::error::expected table '$TABLE' not found after migrate — a migration chain under packages/db/migrations/{,untangle/,brainstorm/} did not apply"
+              exit 1
+            fi
+          done
 
       - name: Boot runner image and poll /api/health
         run: |
@@ -341,7 +370,7 @@ jobs:
           SENTRY_DSN: https://abc@o0.ingest.sentry.io/0
         run: |
           set -e
-          PORT=3100 HOSTNAME=127.0.0.1 node apps/demo/.next/standalone/apps/demo/server.js &
+          PORT=3100 HOSTNAME=127.0.0.1 node apps/untangle/.next/standalone/apps/untangle/server.js &
           SERVER_PID=$!
 
           status=1
@@ -421,6 +450,11 @@ jobs:
   # `pnpm check` plus a build/boot cycle is too expensive to pay on every PR (§9).
   scaffold-and-check:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+    strategy:
+      matrix:
+        preset: [untangle, nothing, brainstorm]
     uses: ./.github/workflows/scaffold-and-check.yml
+    with:
+      preset: ${{ matrix.preset }}
     permissions:
       contents: read

@@ -33,8 +33,8 @@ this product is.
 
 ## [ ] App identity · blocks launch
 
-**Why:** The landing page, layout metadata, and demo teaser still show the factory's
-own name and copy, not the product's.
+**Why:** The landing page and layout metadata still show the factory's own name and
+copy, not the product's.
 **Skill:** brand-it
 
 **Done means:**
@@ -43,8 +43,7 @@ own name and copy, not the product's.
   prop, not the factory's
 - `apps/web/app/layout.tsx` metadata title (and description, if set) name the real
   product
-- The demo teaser and any remaining home-page copy reference the product, not
-  "Fabulous Factory"
+- Any remaining home-page copy references the product, not "Fabulous Factory"
 
 **Signed off:** _(date + who confirmed — filled only when ticked)_
 
@@ -80,16 +79,18 @@ product-specific brand applied yet.
 
 ## [ ] Email templates
 
-**Why:** Verify-email, magic-link, and daily-plan emails still use the factory's
-default copy and styling.
+**Why:** Verify-email and magic-link emails (plus any email template your preset's own
+domain package owns) still use the factory's default copy and styling.
 **Skill:** brand-it
 
 **Done means:**
 
-- Verify-email, magic-link, and daily-plan templates carry the product's branding and
-  copy
-- Sender identity and subject lines (the `SUBJECTS` map in
-  `packages/email/src/send.ts`) reference the real product name
+- Verify-email and magic-link templates, plus any template your preset's own domain
+  package owns (e.g. Untangle's `packages/untangle/src/email/daily-plan.tsx`), carry the
+  product's branding and copy
+- Sender identity and subject lines (the `SUBJECTS` map in `packages/email/src/send.ts`
+  for the two auth templates; a local const beside the template itself for a
+  domain-owned one) reference the real product name
 
 **Signed off:** _(date + who confirmed — filled only when ticked)_
 

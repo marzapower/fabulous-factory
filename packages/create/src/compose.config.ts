@@ -48,6 +48,15 @@ export const BASE_STATIC_ENTRIES: CopyEntry[] = [
 export const BASE_EXCLUDED_PACKAGES = ["create", "create-alias"];
 
 /**
+ * The shared `@factory/db` package's dir name and its migrations subdirectory — used to
+ * prune per-domain migration chains at compose time (only the composing preset's own
+ * claimed `packages/db/migrations/<domain>` subdirectories ship; the shared root chain
+ * always ships). See `compose.ts`'s `composeBase`.
+ */
+export const DB_PACKAGE_NAME = "db";
+export const DB_MIGRATIONS_DIR = "migrations";
+
+/**
  * Repo-root-relative files never copied into the base, even though their parent
  * directory otherwise ships verbatim — maintainer-only tests/docs that assert on THIS
  * repo's own factory-dev shape (payload mirrors, presets, factory agents/skills) and
@@ -90,6 +99,13 @@ export const VARIANT_ENTRIES: CopyEntry[] = [
   { src: "payload/variants/README.md", dest: "README.md" },
   { src: "payload/variants/gitignore", dest: "gitignore" },
 ];
+
+/**
+ * `VARIANT_ENTRIES`' Dockerfile `dest` — singled out because `compose.ts` doesn't copy it
+ * verbatim: it stamps in the composing preset's claimed domain package manifest COPY lines
+ * (see `lib/dockerfile-stamp.ts`) instead of running `VARIANT_ENTRIES`' generic copy loop.
+ */
+export const VARIANT_DOCKERFILE_DEST = "Dockerfile";
 
 /** Preset overlay (spec §5): `PRODUCT.md` seed. */
 export const PRESET_PRODUCT_MD_OVERLAY = "overlay/PRODUCT.md";
