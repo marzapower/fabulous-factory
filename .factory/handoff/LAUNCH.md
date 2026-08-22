@@ -65,17 +65,21 @@ product-specific brand applied yet.
 
 ## [ ] Demo logic · blocks launch
 
-**Why:** The page-monitor demo feature (jobs, dashboard, schema, components) is still
-the shipped example, not the product's real feature.
+**Why:** The Untangle workspace (the run engine plus the tasks domain riding on it) is
+still the shipped example domain, not the product's own.
 **Skill:** make-it-yours
 
 **Done means:**
 
-- The page-monitor demo (jobs, dashboard, schema, components) is either fully removed
-  or rebuilt into the product's real feature
-- No orphaned demo tables, routes, or components remain if removed
+- The Untangle domain (`packages/jobs/src/tasks/`, `packages/db/src/schema/task.ts`,
+  the workspace components) is renamed to the product's own noun, or deliberately kept
+  as-is with that choice recorded — either is a valid outcome, silence is not
+- The run engine (`packages/jobs/src/runs/`, `packages/db/src/schema/run.ts`, the SSE
+  route, the run-history page) is kept — it is domain-agnostic infrastructure, not demo
+  code to delete
+- No orphaned tables, routes, or components remain from whichever parts were removed
 - `packages/jobs/src/functions/index.ts` and related barrels no longer reference
-  deleted demo modules
+  deleted or unrenamed modules
 
 **Signed off:** _(date + who confirmed — filled only when ticked)_
 
@@ -94,14 +98,14 @@ the shipped example, not the product's real feature.
 
 ## [ ] Email templates
 
-**Why:** Verify-email, magic-link, and change-digest emails still use the template's
+**Why:** Verify-email, magic-link, and daily-plan emails still use the template's
 default copy and styling.
 **Skill:** brand-it
 
 **Done means:**
 
-- Verify-email, magic-link, and change-digest templates carry the product's branding
-  and copy
+- Verify-email, magic-link, and daily-plan templates carry the product's branding and
+  copy
 - Sender identity and subject lines (the `SUBJECTS` map in
   `packages/email/src/send.ts`) reference the real product name
 
@@ -122,18 +126,22 @@ default copy and styling.
 
 ## [ ] Template showcase · blocks launch
 
-**Why:** The public /features/* explainer pages still document the template itself — a
-real product must not ship its starter kit's guided tour.
+**Why:** The public `apps/web/app/features/` component-docs pages and the landing
+page's recorded-run demo still document the template's own machinery — a real product
+must not ship its starter kit's guided tour.
 **Skill:** make-it-yours
 
 **Done means:**
 
-- `/features/*` explainer pages and their marketing-only components
-  (`feature-page-shell.tsx`, `env-table.tsx`) are removed or replaced with product
-  content
-- Dead links from the home page's feature cards are removed or repointed
-- `apps/web/middleware.ts`'s `/features/` allowlist entry is removed if the pages are
-  deleted
+- The `apps/web/app/features/` directory's per-primitive docs pages and the
+  marketing-only components that exist solely to power them are removed or replaced
+  with product content
+- The landing page's recorded-run replay and "degradation, side by side" demo section
+  are removed or repointed at the product's own feature, not the template's example
+  domain
+- Dead links from the home page's feature grid are removed or repointed
+- `apps/web/middleware.ts`'s `/features/` allowlist entries (and any public demo route
+  under `apps/web/app/api/demo/`) are removed if the pages/routes are deleted
 
 **Signed off:** _(date + who confirmed — filled only when ticked)_
 

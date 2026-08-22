@@ -68,25 +68,27 @@ capability derivation logic can never drift apart. In short, per service:
 ## What each service does when disabled
 
 - **billing** — `getEntitlement()` (`packages/billing/src/entitlement.ts`) returns the
-  free plan with `monitorLimit: null` — **unlimited**, not zero — and `source:
-"disabled"`; checkout UI stays hidden. This is deliberate: a template with billing
-  turned off should never gate the product it's demonstrating.
-- **llm** — `generate()` throws `LlmDisabledError` before any provider SDK is imported.
-  The page-monitor demo (`packages/jobs/src/demo/check-monitor.ts`) catches that by
-  design: every change gets a diff-based fallback summary (`source: "diff"`) computed
-  from the raw content diff, no LLM call involved; when `llm` is live, that diff summary
-  is upgraded to an AI summary (`source: "llm"`) as a post-commit step, never blocking
-  the write.
+  free plan with `runsPerDay: null` — **unlimited** (subject only to the abuse-floor
+  `RUN_HARD_CEILING_PER_DAY`), not zero — and `source: "disabled"`; checkout UI stays
+  hidden. This is deliberate: a template with billing turned off should never gate the
+  product it's demonstrating.
+- **llm** — `generate()`/`streamArray()` throw `LlmDisabledError` before any provider SDK
+  is imported. The Untangle workspace's `extract`/`triage` steps
+  (`packages/jobs/src/tasks/pipeline.ts`) catch that by design: every step takes a
+  heuristic fallback branch (`source: "heuristic"`) — regex/keyword extraction and
+  triage computed with no LLM call involved — and the `decompose` step reports
+  `skipped: true` rather than faking subtasks. Steps still stream, still record timings,
+  still look structurally identical whichever branch ran.
 - **email** — `send()` (`packages/email/src/send.ts`) no-ops (`{ delivered: false,
 reason: "disabled" }`), no vendor SDK loaded. Better Auth's `requireEmailVerification`
   and the magic-link plugin both follow the same `email !== "disabled"` check
   (`packages/auth/src/auth.ts`), so auth never deadlocks waiting on an email that will
   never send — sign-up just skips verification. In development with no `RESEND_API_KEY`,
   email falls back to `console` — logged, never claimed as delivered.
-- **jobs** — cron-driven checks don't fire, but nothing about the feature disappears:
-  the dashboard's manual "check now" action (`checkNowAction`,
-  `apps/web/app/dashboard/actions.ts`, backed by `checkMonitor()`) runs the exact same
-  check pipeline synchronously, independent of whether Inngest is wired up.
+- **jobs** — the daily-plan cron doesn't fire, but nothing about the interactive feature
+  disappears: interactive runs (`POST /api/runs`) were always driven by the inline
+  driver, independent of whether Inngest is wired up, so pasting text and getting a
+  triaged list works identically either way. Only the scheduled daily digest is affected.
 - **analytics** — `track()`/`isFeatureEnabled()` (`packages/analytics/src/track.ts`)
   no-op silently; the PostHog SDK is never imported.
 - **errors** — `captureException()`/`captureMessage()`

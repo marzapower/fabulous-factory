@@ -6,11 +6,16 @@ that guide.
 
 ## What `@factory/llm` gives you
 
-- **`generate()`** (`packages/llm/src/generate.ts`) — the single entry point for every
-  LLM call in the app. It resolves a provider from the active profile, assembles a
+- **`generate()`** (`packages/llm/src/generate.ts`) — the entry point for a single-shot
+  LLM call. It resolves a provider from the active profile, assembles a
   trusted-instructions + untrusted-context prompt, optionally validates output against a
   zod `schema`, and returns a typed envelope: `output`, `model`, `profile`, `usage`,
   `costCents`, `costSource`, `latencyMs`.
+- **`streamArray()`** (`packages/llm/src/stream.ts`) — the streaming counterpart, for
+  calls that produce a list of typed elements (e.g. Untangle's task extraction) and want
+  each element handed to the caller as it arrives rather than after the whole call
+  completes. Shares the same routing, budget, cost, and OTel accounting as `generate()`
+  — extracted once, in `call.ts`, so neither path forks the other's behavior.
 - **Profile routing** (`packages/llm/src/profile.ts`, `routing.ts`, `models.json`) — one
   of `local` (Ollama-compatible), `openrouter`, `direct` (Anthropic or OpenAI), or
   `disabled`, auto-detected from whichever credentials are present (or forced via
@@ -81,6 +86,6 @@ profile — `generate()`'s cost accounting means you always know what that run c
 ## What this guide is not
 
 It doesn't ship a grader library, a fixtures format, or a CI job — those are product
-decisions the demo (page-monitor) doesn't need and a template shouldn't force on you.
-Copy the sketch above, adapt the cases to what your app's prompts actually do, and keep
-it out of `pnpm check`.
+decisions the demo (Untangle, the brain-dump→tasks workspace) doesn't need and a
+template shouldn't force on you. Copy the sketch above, adapt the cases to what your
+app's prompts actually do, and keep it out of `pnpm check`.

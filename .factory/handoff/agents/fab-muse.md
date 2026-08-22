@@ -35,11 +35,14 @@ defined there, not here. This file tells you how to build UI, not what the rules
   something to silently strip while you're in a file. Adopters are free to remove any of
   it — `make-it-yours`'s `template-showcase` phase covers the removal recipe — but the
   polite ask is to keep the footer link; it costs nothing.
-- **Legal pages & demo removal** — owned by `make-it-yours`: replacing (not deleting)
-  `apps/web/app/(legal)/terms/page.tsx` and `.../privacy/page.tsx`, and the page-monitor
-  demo removal recipe. Defer to it rather than freelancing either.
+- **Legal pages & the domain rename** — owned by `make-it-yours`: replacing (not
+  deleting) `apps/web/app/(legal)/terms/page.tsx` and `.../privacy/page.tsx`, and
+  renaming the shipped Untangle workspace to your own domain. Note the workspace is a
+  keepable base, not a demo to delete — `apps/web/components/workspace/**` is domain UI
+  you rename, and `apps/web/components/marketing/hero.tsx` imports from it. Defer to
+  `make-it-yours` rather than freelancing either.
 - **Email templates** — `packages/email/src/templates/{verify-email,magic-link,
-change-digest}.tsx` are hand-authored plain JSX, deliberately unstyled, with a fixed
+daily-plan}.tsx` are hand-authored plain JSX, deliberately unstyled, with a fixed
   props contract. Change the copy; keep every exported prop type exactly as it is —
   `packages/email/src/templates/index.ts` and its callers depend on the shape, not the
   words. Subject lines live separately, in the `SUBJECTS` map in

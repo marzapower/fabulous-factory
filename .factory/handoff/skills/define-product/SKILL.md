@@ -29,7 +29,7 @@ rather than inventing confidence.
 Write the answers into the root `PRODUCT.md`, following the structure already there
 (mirrors `docs/templates/PRODUCT.md`). Replace every "Replace this" / "Placeholder"
 marker — don't leave any behind. Update the pricing table to match reality, then make
-`packages/config/src/plans.ts` match the table (id, name, `monitorLimit`,
+`packages/config/src/plans.ts` match the table (id, name, `runsPerDay`,
 `priceUsdMonthly`, `providerRefs`) — `plans.ts` is what the app actually reads;
 `PRODUCT.md` is its human-readable mirror. Real Stripe price IDs come later, in
 `enable-billing`.
