@@ -30,7 +30,8 @@ this file ever disagree, this file wins.
 Enforced by `pnpm boundaries` (dependency-cruiser, `dag-*` rules in
 `.dependency-cruiser.cjs`). Each package may import only the workspace packages listed as
 its allowlist below — anything not listed is denied by default, including packages added
-later. `apps/demo` may import anything; nothing imports `apps/*`.
+later. The app under `apps/` (`apps/demo` here; `apps/web` in a scaffolded repo) may
+import anything; nothing imports `apps/*`.
 
 | Package         | May import                                                           |
 | --------------- | -------------------------------------------------------------------- |
@@ -103,9 +104,9 @@ subject, enforced by commitlint (`commit-msg` husky hook) and a CI PR-title chec
 - **Rate limiting lives in the wrapper (`defineHandler`/`defineAction`), never in
   middleware** — edge middleware cannot open a TCP connection to Postgres, and the
   Postgres-backed limiter needs one.
-- `apps/demo/middleware.ts` is an optimistic first layer only (redirects obviously
-  signed-out page loads before render) — it is **not** the security boundary; the
-  wrapper's mandatory auth mode is.
+- Your app's `middleware.ts` (`apps/*/middleware.ts`) is an optimistic first layer only
+  (redirects obviously signed-out page loads before render) — it is **not** the security
+  boundary; the wrapper's mandatory auth mode is.
 - **Guarded zones**: `packages/auth`, `packages/core`, `packages/billing`,
   `middleware.ts`, and `packages/db` migrations. A PR touching any of these needs a
   security checklist and an independent, fresh-context security review before merging —

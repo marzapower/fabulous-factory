@@ -1,0 +1,117 @@
+# Publishing is maintainer-triggered, never automatic on a tag push or a merge to
+# master — see .claude/skills/release-template for the full checklist this workflow is
+# one step of (design spec §8.4, §11 M4). Run with dry_run left at its default (true)
+# first; only flip it to false once the dry run looks right.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish, semver without a leading v (e.g. 1.2.0)"
+        required: true
+        type: string
+      dry_run:
+        description: "Dry run — pass --dry-run to both npm publish commands, no registry writes"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate version is well-formed semver
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -e
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version '$VERSION' is not well-formed semver (expected X.Y.Z, e.g. 1.2.0)."
+            exit 1
+          fi
+          echo "Version $VERSION is well-formed semver."
+
+      # The documented flow (release-template skill) tags BEFORE publishing, so the tag
+      # push triggers scaffold-and-check and produces the captured lockfile. An existing
+      # tag is therefore expected — but it must point at the commit being released.
+      - name: Assert tag v${{ inputs.version }}, if present, points at this commit
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -e
+          TAG="v$VERSION"
+          # "^{}" asks for the peeled commit, so annotated and lightweight tags compare alike.
+          REMOTE_SHA="$(git ls-remote origin "refs/tags/$TAG^{}" "refs/tags/$TAG" | head -1 | cut -f1)"
+          if [ -z "$REMOTE_SHA" ]; then
+            echo "::warning::Tag $TAG does not exist on origin yet — fine for a dry run, but the documented flow tags first so scaffold-and-check captures the lockfile."
+          elif [ "$REMOTE_SHA" != "$GITHUB_SHA" ]; then
+            echo "::error::Tag $TAG exists but points at $REMOTE_SHA, not the dispatched commit $GITHUB_SHA. Re-dispatch from the tagged commit or move the tag."
+            exit 1
+          else
+            echo "Tag $TAG points at this commit."
+          fi
+
+      - name: Assert packages/create and packages/create-alias are both at ${{ inputs.version }}
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -e
+          EXPECTED="$VERSION"
+          CREATE_VERSION=$(jq -r .version packages/create/package.json)
+          ALIAS_VERSION=$(jq -r .version packages/create-alias/package.json)
+
+          if [ "$CREATE_VERSION" != "$EXPECTED" ] || [ "$ALIAS_VERSION" != "$EXPECTED" ]; then
+            echo "::error::packages/create is at $CREATE_VERSION and packages/create-alias is at $ALIAS_VERSION, but this run was asked to publish $EXPECTED. Bump both package.json versions to $EXPECTED, commit, and re-run."
+            exit 1
+          fi
+          echo "packages/create and packages/create-alias both match $EXPECTED."
+
+      - name: Warn if the captured lockfile is missing
+        run: |
+          if [ ! -f presets/demo/pnpm-lock.captured.yaml ]; then
+            echo "::warning::presets/demo/pnpm-lock.captured.yaml is absent — publishing now would ship templates with no captured lockfile. Download the captured-lockfile-demo artifact from the scaffold-and-check run for this tag and commit it as presets/demo/pnpm-lock.captured.yaml before dispatching this workflow for real."
+          else
+            echo "presets/demo/pnpm-lock.captured.yaml is present."
+          fi
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+
+      - run: pnpm install --frozen-lockfile
+
+      # No explicit compose step here: each package's `prepack` hook recomposes
+      # `templates/<preset>/` fresh at publish time, so a separate compose step would
+      # just be redundant work discarded before the tarball is built.
+      - name: Publish fabulous-factory
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm --filter fabulous-factory publish --access public --no-git-checks ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Publish create-fabulous-factory
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm --filter create-fabulous-factory publish --access public --no-git-checks ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Post-publish reminder
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          echo "::notice::If the tag was not pushed before dispatch (dry runs): git tag v$VERSION && git push origin v$VERSION — the documented flow tags first so scaffold-and-check captures the lockfile."
+          echo "::notice::Keep the GitHub Template-repository checkbox OFF — the npx installer is the only supported adoption door (design spec §9; docs/guides/release-checklist.md §5)."

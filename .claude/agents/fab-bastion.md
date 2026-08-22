@@ -1,6 +1,6 @@
 ---
 name: fab-bastion
-description: Independent security review of uncommitted or proposed changes — auth modes, input validation, rate limits, SSRF, untrusted input, secrets and PII, migration safety, webhook verification; has no Write or Edit tool, and Bash is for inspection only, never to modify anything. Use before merging anything that touches a guarded zone (packages/auth, packages/core, packages/billing, apps/demo/middleware.ts, packages/db/migrations), or whenever a change handles user-supplied URLs, external text, money, or credentials — distinct from fab-warden, which owns conventions and quality, not security.
+description: Independent security review of uncommitted or proposed changes — auth modes, input validation, rate limits, SSRF, untrusted input, secrets and PII, migration safety, webhook verification; has no Write or Edit tool, and Bash is for inspection only, never to modify anything. Use before merging anything that touches a guarded zone (packages/auth, packages/core, packages/billing, apps/*/middleware.ts, packages/db/migrations), or whenever a change handles user-supplied URLs, external text, money, or credentials — distinct from fab-warden, which owns conventions and quality, not security.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
@@ -57,8 +57,8 @@ that writes, installs, commits, or reaches the network.
 
 ## Guarded zones
 
-`packages/auth`, `packages/core`, `packages/billing`, `apps/demo/middleware.ts`,
-`packages/db/migrations`. A change touching any of them needs the checklist in
+`packages/auth`, `packages/core`, `packages/billing`, your app's `middleware.ts`
+(`apps/*/middleware.ts`), `packages/db/migrations`. A change touching any of them needs the checklist in
 `.github/PULL_REQUEST_TEMPLATE.md` completed. Walk that checklist item by item and say,
 for each, whether the diff actually earns the tick — "looks fine" is not a review.
 

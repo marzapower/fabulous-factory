@@ -5,3 +5,6 @@ pnpm-lock.yaml
 .husky
 # drizzle-kit generated artifacts — regenerated verbatim, not ours to style
 packages/db/migrations
+# npx-installer ephemeral compose output / build output — not source to style
+packages/create/templates/
+packages/create/dist/

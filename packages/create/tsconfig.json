@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Same rationale as packages/db and packages/config: this package reads process.argv,
+    // node: builtins (fs, path, child_process, url), and import.meta.url directly —
+    // declare @types/node explicitly.
+    "types": ["node"]
+  },
+  "include": ["src", "test"]
+}

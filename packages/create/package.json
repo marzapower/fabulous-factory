@@ -1,0 +1,44 @@
+{
+  "name": "fabulous-factory",
+  "version": "0.1.0",
+  "description": "Scaffold a new product repo from the fabulous-factory template — npx fabulous-factory@latest install",
+  "license": "MIT",
+  "author": "Daniele Di Bernardo",
+  "homepage": "https://github.com/marzapower/fabulous-factory#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marzapower/fabulous-factory.git"
+  },
+  "keywords": [
+    "scaffold",
+    "cli",
+    "create",
+    "nextjs",
+    "typescript",
+    "saas",
+    "template",
+    "monorepo"
+  ],
+  "type": "module",
+  "bin": {
+    "fabulous-factory": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsup src/cli.ts --format esm --clean",
+    "prepack": "tsx src/compose-build.ts && pnpm build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@clack/prompts": "^1.7.0",
+    "@types/node": "^22.20.1",
+    "tsup": "8.3.0",
+    "tsx": "^4.23.12",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
+  }
+}

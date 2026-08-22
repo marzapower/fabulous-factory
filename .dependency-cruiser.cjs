@@ -460,6 +460,31 @@ module.exports = {
       },
     },
     {
+      name: "dag-create-imports-no-workspace-package",
+      severity: "error",
+      comment:
+        "packages/create (the npm-published `fabulous-factory` installer CLI) and " +
+        "packages/create-alias (the `create-fabulous-factory` bin shim) manipulate files, " +
+        "not factory code — they must not import any of the 10 @factory/* packages, even " +
+        "though both live under packages/ (npx-installer design spec §6/§11 M3). This " +
+        "rule's `to.pathNot` allowlists `^packages/(create|create-alias)/` itself, so it " +
+        "does NOT ban create↔create-alias imports (there happen to be none today — " +
+        "create-alias/bin.js's one edge is a dynamic `import()` of the built dist, not a " +
+        "workspace-package import); it only closes the deny-by-default gap (G.3.1) for " +
+        "these two newest packages against the OTHER 10. packages/create-alias/bin.js is " +
+        "excluded from the whole cruise (options.exclude below) for an unrelated, purely " +
+        'mechanical reason: its one edge (`import("fabulous-factory/dist/cli.js")`) only ' +
+        "resolves AFTER `pnpm build` has produced packages/create/dist/, which `pnpm " +
+        "boundaries` must pass without requiring — see that exclude entry's comment.",
+      from: {
+        path: "^packages/(create|create-alias)/",
+      },
+      to: {
+        path: "^packages/",
+        pathNot: "^packages/(create|create-alias)/",
+      },
+    },
+    {
       name: "dag-billing-imports-config-db",
       severity: "error",
       comment:
@@ -483,7 +508,18 @@ module.exports = {
       path: "node_modules",
     },
     exclude: {
-      path: "(^|/)(\\.next|coverage|migrations/meta)(/|$)",
+      // packages/create/templates: ephemeral compose output (spec §5) — nested copies of
+      // every workspace package with paths that no longer match the DAG regexes above
+      // (they'd all start with "packages/create/templates/<preset>/packages/...", not
+      // "packages/<name>/..."), crawling them would be both wrong and slow.
+      // packages/create/dist: tsup's bundled build output, not source to boundary-check.
+      // packages/create-alias/bin.js: its single edge — `import("fabulous-factory/dist/
+      // cli.js")` — only resolves once `pnpm build` has produced packages/create/dist/,
+      // which `pnpm boundaries` must pass without requiring; excluded wholesale rather
+      // than special-cased per rule (the dag-create-imports-no-workspace-package rule
+      // above intentionally can't see this one file as a result — its 3-line, single-
+      // import contents make that an acceptable, documented trade-off).
+      path: "(^|/)(\\.next|coverage|migrations/meta|packages/create/templates|packages/create/dist|packages/create-alias/bin\\.js)(/|$)",
     },
     tsPreCompilationDeps: true,
     tsConfig: {

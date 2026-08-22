@@ -1,16 +1,12 @@
+# Adopter variant maintained in payload/variants/ — keep in sync with the factory original (see docs/superpowers/specs/2026-08-22-npx-installer-design.md §5)
 name: CI
 
 on:
   pull_request:
   push:
-    branches: [master]
-    # Release triggers for scaffold-and-check below (design spec §8.3/§9/§11 M4) — a
-    # tag push doesn't fan the other jobs' `if:` guards open, but the ones below with no
-    # `if:` at all (quality, minimal-boot, docker, full-profile, security) do also run on
-    # a tag push or manual dispatch; that's accepted as a free extra confidence check
-    # before a release, not just cost paid for scaffold-and-check.
-    tags: ["v*"]
-  workflow_dispatch:
+    # The installer's `git init` produces a `main` default branch, not `master` — without
+    # `main` here, adopter CI would never fire on a push to their own default branch.
+    branches: [main, master]
 
 jobs:
   pr-title:
@@ -127,7 +123,7 @@ jobs:
       - name: Boot standalone server and poll /api/health
         run: |
           set -e
-          PORT=3100 HOSTNAME=127.0.0.1 node apps/demo/.next/standalone/apps/demo/server.js &
+          PORT=3100 HOSTNAME=127.0.0.1 node apps/web/.next/standalone/apps/web/server.js &
           SERVER_PID=$!
 
           status=1
@@ -341,7 +337,7 @@ jobs:
           SENTRY_DSN: https://abc@o0.ingest.sentry.io/0
         run: |
           set -e
-          PORT=3100 HOSTNAME=127.0.0.1 node apps/demo/.next/standalone/apps/demo/server.js &
+          PORT=3100 HOSTNAME=127.0.0.1 node apps/web/.next/standalone/apps/web/server.js &
           SERVER_PID=$!
 
           status=1
@@ -446,7 +442,7 @@ jobs:
           # (M3). Three-dot diffs HEAD against the merge-base of BASE and HEAD, showing
           # only what this branch actually changed since it diverged.
           CHANGED=$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA" -- \
-            packages/auth packages/core packages/billing apps/demo/middleware.ts packages/db/migrations)
+            packages/auth packages/core packages/billing apps/web/middleware.ts packages/db/migrations)
 
           if [ -z "$CHANGED" ]; then
             echo "No guarded-zone paths touched — nothing to check."
@@ -461,103 +457,5 @@ jobs:
             exit 0
           fi
 
-          echo "::error::This PR touches a guarded zone (packages/auth, packages/core, packages/billing, apps/demo/middleware.ts, or packages/db/migrations) but its description is missing the completed security checklist. Fill in the checklist from .github/PULL_REQUEST_TEMPLATE.md and check the '- [x] security-checklist' line."
+          echo "::error::This PR touches a guarded zone (packages/auth, packages/core, packages/billing, apps/web/middleware.ts, or packages/db/migrations) but its description is missing the completed security checklist. Fill in the checklist from .github/PULL_REQUEST_TEMPLATE.md and check the '- [x] security-checklist' line."
           exit 1
-
-  # M4 publish-pipeline validation (design spec §8.3, §9, §11): composes the demo preset,
-  # scaffolds it through the *actual installer CLI*, and runs the output's own gates and
-  # boot check — this validates what adopters actually receive, distinct from the
-  # factory's own `quality`/`minimal-boot` jobs above. Release triggers only (tag pushes,
-  # manual dispatch), never PRs: a full second cold `pnpm install` plus `pnpm check` plus
-  # a build/boot cycle is too expensive to pay on every PR (design spec §9). The captured
-  # lockfile artifact is committed into presets/demo/pnpm-lock.captured.yaml by a later
-  # release step (design spec §5, "Lockfile"), so shipped installs reproduce exactly what
-  # this job validated.
-  scaffold-and-check:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
-      # Job-level, mirroring minimal-boot above: the scaffold's own `pnpm build` reads
-      # this at module scope during page-data collection, before any boot step.
-      BETTER_AUTH_SECRET: ci-dummy-better-auth-secret-do-not-use-in-prod
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Compose the demo preset template (packages/create/templates/demo)
-        run: pnpm compose --preset demo
-
-      - name: Scaffold the demo preset through the installer CLI
-        run: pnpm exec tsx packages/create/src/cli.ts install --yes --no-install --no-git --dir ${{ runner.temp }}/scaffold --preset demo
-
-      # From here on, everything runs inside the scaffold — a standalone pnpm workspace
-      # with no relation to the factory's own lockfile or node_modules.
-      - name: Install the scaffold's dependencies (first resolution, not frozen)
-        working-directory: ${{ runner.temp }}/scaffold
-        run: pnpm install
-
-      - name: Run the scaffold's own gates
-        working-directory: ${{ runner.temp }}/scaffold
-        run: pnpm check
-
-      - name: Migrate the scaffold's database
-        working-directory: ${{ runner.temp }}/scaffold
-        run: pnpm db:migrate
-
-      - name: Build the scaffold
-        working-directory: ${{ runner.temp }}/scaffold
-        run: pnpm build
-
-      - name: Boot the scaffold's standalone server and poll /api/health
-        working-directory: ${{ runner.temp }}/scaffold
-        run: |
-          set -e
-          PORT=3100 HOSTNAME=127.0.0.1 node apps/web/.next/standalone/apps/web/server.js &
-          SERVER_PID=$!
-
-          status=1
-          for _ in $(seq 1 30); do
-            if body=$(curl -fsS http://127.0.0.1:3100/api/health 2>/dev/null); then
-              if echo "$body" | grep -q '"status":"ok"'; then
-                echo "Health check passed: $body"
-                status=0
-                break
-              fi
-            fi
-            sleep 1
-          done
-
-          kill "$SERVER_PID" 2>/dev/null || true
-          exit $status
-
-      # Captured here, not regenerated at publish time (design spec §5, "Lockfile"): a
-      # later release step commits this into presets/demo/pnpm-lock.captured.yaml so the
-      # shipped install is exactly what this job just validated, not a fresh resolution.
-      - name: Upload the captured lockfile
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: captured-lockfile-demo
-          path: ${{ runner.temp }}/scaffold/pnpm-lock.yaml
