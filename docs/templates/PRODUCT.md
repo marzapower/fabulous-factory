@@ -8,7 +8,7 @@ This is the human's document — plain language, no code. Agents read it to deri
 The product in one sentence. Someone who has never heard of it should know what it does
 and who it's for.
 
-> e.g. "A page monitor that tells you the moment a competitor changes their pricing."
+> e.g. "A brain-dump tool that turns a wall of messy notes into a triaged task list."
 
 ## Persona
 

@@ -26,7 +26,7 @@ to activate — either alone leaves billing `disabled`. Confirm with `pnpm facto
 Edit `packages/config/src/plans.ts` — the single source of truth `PLANS` catalog reads
 from. For each paid plan, replace the placeholder `providerRefs.stripe` (ships as
 `"price_REPLACE_ME"`) with a real Stripe Price ID from your Dashboard. Keep `id`,
-`monitorLimit` (or your product's equivalent), and `priceUsdMonthly` in sync with what
+`runsPerDay` (or your product's equivalent), and `priceUsdMonthly` in sync with what
 you actually charge — `PRODUCT.md`'s pricing table should mirror this file, not the other
 way around.
 

@@ -40,7 +40,7 @@ place; nothing else in the app references a font family directly.
 
 ## Phase 3 — Email copy
 
-`packages/email/src/templates/{verify-email,magic-link,change-digest}.tsx` are
+`packages/email/src/templates/{verify-email,magic-link,daily-plan}.tsx` are
 hand-authored plain-JSX email templates (deliberately no `react-email`/
 `@react-email/components` dependency, though `@react-email/render` does the actual
 rendering) with the template's own placeholder copy — deliberately unstyled, plain

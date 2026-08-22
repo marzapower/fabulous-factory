@@ -47,7 +47,7 @@ export async function POST(req: Request) { ... }
 // ✅ This is the only way to declare a handler — and it MAKES you decide:
 export const POST = defineHandler({
   auth: 'required',            // ← mandatory. No default. No forgetting.
-  input: createMonitorSchema,  // ← zod-validated before your code runs
+  input: createCaptureSchema,  // ← zod-validated before your code runs
   rateLimit: { windowSeconds: 60, max: 20 },
   handler: async ({ session, input }) => { ... },
 });
@@ -96,16 +96,16 @@ later via env vars — nothing above is required to get running.
 
 ## 🧩 What's in the box
 
-|                      |                                             |                                                                 |                                                                  |
-| -------------------- | ------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------- |
-| 🔐 **Auth**          | Better Auth on your Postgres                | email/password always; magic links + OAuth auto-enable          | [`/features/auth`](apps/web/app/features/auth)                   |
-| 💳 **Billing**       | `BillingProvider` seam + Stripe             | webhook-cached subscriptions; free mode when disabled           | [`/features/billing`](apps/web/app/features/billing)             |
-| 🤖 **LLM gateway**   | Vercel AI SDK                               | local (Ollama) / OpenRouter / direct; quality tiers + cost caps | [`/features/llm`](apps/web/app/features/llm)                     |
-| ⏰ **Jobs & cron**   | Inngest, in-app                             | step functions; manual fallback when disabled                   | [`/features/jobs`](apps/web/app/features/jobs)                   |
-| ✉️ **Email**         | Resend + hand-authored templates            | console transport in dev                                        | [`/features/email`](apps/web/app/features/email)                 |
-| 📊 **Observability** | PostHog analytics + Sentry/OpenTelemetry    | events, feature flags, tracing; no-op fallback for either       | [`/features/observability`](apps/web/app/features/observability) |
-| 🐳 **Deploy**        | Vercel **and** Docker, both first-class     | standalone output, compose profiles, migrate image              | —                                                                |
-| 🏭 **Factory layer** | Agent skills, spec/ADR templates, scaffolds | the repo _is_ your agents' memory                               | —                                                                |
+|                      |                                             |                                                                                                     |                                                                  |
+| -------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 🔐 **Auth**          | Better Auth on your Postgres                | email/password always; magic links + OAuth auto-enable                                              | [`/features/auth`](apps/web/app/features/auth)                   |
+| 💳 **Billing**       | `BillingProvider` seam + Stripe             | webhook-cached subscriptions; free mode when disabled                                               | [`/features/billing`](apps/web/app/features/billing)             |
+| 🤖 **LLM gateway**   | Vercel AI SDK                               | local (Ollama) / OpenRouter / direct; quality tiers + cost caps                                     | [`/features/llm`](apps/web/app/features/llm)                     |
+| ⏰ **Jobs & cron**   | Inngest, in-app                             | domain-agnostic run engine + step functions; interactive runs stay inline, unaffected when disabled | [`/features/jobs`](apps/web/app/features/jobs)                   |
+| ✉️ **Email**         | Resend + hand-authored templates            | console transport in dev                                                                            | [`/features/email`](apps/web/app/features/email)                 |
+| 📊 **Observability** | PostHog analytics + Sentry/OpenTelemetry    | events, feature flags, tracing; no-op fallback for either                                           | [`/features/observability`](apps/web/app/features/observability) |
+| 🐳 **Deploy**        | Vercel **and** Docker, both first-class     | standalone output, compose profiles, migrate image                                                  | —                                                                |
+| 🏭 **Factory layer** | Agent skills, spec/ADR templates, scaffolds | the repo _is_ your agents' memory                                                                   | —                                                                |
 
 Frozen stack, on purpose: Next.js 15 (App Router) · TypeScript strict · Postgres ·
 Drizzle · Tailwind + shadcn/ui · pnpm workspaces. No variant matrix to maintain — every
@@ -124,9 +124,9 @@ actually run with. Unset a var, the feature politely steps aside:
 | Missing service          | What happens                                                                   |
 | ------------------------ | ------------------------------------------------------------------------------ |
 | 💳 billing               | unlimited free mode, checkout UI hidden                                        |
-| 🤖 llm                   | raw text diffs instead of AI summaries                                         |
+| 🤖 llm                   | heuristic extraction/triage instead of AI, same steps and timings              |
 | ✉️ email                 | in-app feed only; auth runs without verification (flagged by `factory:doctor`) |
-| ⏰ jobs                  | a manual "check now" button replaces the cron                                  |
+| ⏰ jobs                  | no scheduled daily digest; interactive runs are unaffected (always inline)     |
 | 📊 analytics / 🚨 errors | silent no-op                                                                   |
 
 `pnpm factory:doctor` prints your capability map and the exact env vars that would
@@ -154,16 +154,21 @@ nothing" stays honest by machine, not by memory.
 - **Definition of done is machine-checkable**: `pnpm check` green. You judge the running
   product; the repo judges the code.
 
-## 🔍 The demo is a real product
+## 🔍 The demo is a keepable base, not a throwaway
 
-The template ships as a working **page monitor**: sign up → watch a URL → cron fetches
-and hash-diffs it → the LLM (cheap tier) summarizes real changes → digest email + in-app
-feed. It exercises every package, shows cost discipline as example code (_no LLM call
-when the hash didn't change_), and degrades live — run it with nothing configured and the
-dashboard's capability panel tells you exactly what's off and why.
+The template ships as a working AI workspace, **Untangle**: paste a wall of messy text
+(or a URL) → a streaming, multi-step run extracts tasks, triages them by priority/effort/
+due date, and decomposes the vague ones into subtasks. It exercises every package, shows
+cost discipline as example code (_every step reports its model, tokens, and cost; the
+heuristic fallback needs no LLM call at all_), and degrades live — run it with nothing
+configured and you still get a fully usable, heuristically-triaged list.
 
-When you adopt, the `make-it-yours` skill (installed to `.claude/skills/` by
-`pnpm factory:init`) tells you exactly what to delete and what to keep.
+The domain-agnostic half — the run engine (`packages/jobs/src/runs/`), its schema, the
+SSE transport, and the run-history page — is meant to be **inherited, not deleted**:
+anything AI-shaped you build next rides on it unchanged. Only the Untangle-specific half
+(`packages/jobs/src/tasks/`, its schema, the workspace UI) is yours to rename to your own
+product. When you adopt, the `make-it-yours` skill (installed to `.claude/skills/` by
+`pnpm factory:init`) walks you through exactly that split.
 
 ## 🚀 Deploy anywhere that runs Node or containers
 
