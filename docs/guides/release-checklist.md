@@ -60,41 +60,41 @@ link once it's up.
       `postgres`) so the repo is discoverable.
 - [ ] Repo visibility is public.
 
-## 6. Tag, capture the lockfile, then publish via the Release workflow
+## 6. Tag — the tag is the release
 
 Both packages publish together, in lockstep — this is the distribution door the rest of
 this checklist builds toward (see
 `docs/superpowers/specs/2026-08-22-npx-installer-design.md` §6–§8). Publishing happens
-**only** via the Release workflow (`.github/workflows/release.yml`) — there is no local
-`npm publish` step in this checklist.
+**only** via the Release workflow (`.github/workflows/release.yml`), triggered by the tag
+push — there is no local `npm publish` step in this checklist.
 
 - [ ] `packages/create/package.json` (published as `fabulous-factory`) and the
       `create-fabulous-factory` alias package carry the **same version number**. Bump
-      both together — never publish one without the other.
+      both together and commit — never publish one without the other. The Release
+      workflow fails if either disagrees with the tag.
+- [ ] Optional rehearsal: dispatch the **Release** workflow manually with `dry_run` at its
+      default (`true`). It runs the full gate and packs both tarballs without writing to
+      the registry — use it to confirm that pnpm rewrites `create-fabulous-factory`'s
+      `workspace:*` dependency to the concrete version. A dry run does **not** exercise
+      registry authentication, so it cannot prove Trusted Publishing is wired correctly.
 - [ ] `git tag vX.Y.Z && git push origin vX.Y.Z`, where `X.Y.Z` matches the version just
-      bumped above. The tag push triggers the `scaffold-and-check` CI job: it runs the
-      installer CLI with `--yes` into a temp dir, `pnpm install`s the output, then runs
-      the _output's own_ `pnpm check` and the minimal boot (migrate + `/api/health`) —
-      this is what validates what adopters actually receive. Confirm it's green before
-      continuing.
-- [ ] **Manually** download that run's `captured-lockfile-demo` artifact and commit it as
-      `presets/demo/pnpm-lock.captured.yaml`. Nothing automates this step — the Release
-      workflow's `verify` job only warns (doesn't fail) when this file is missing, so it's
-      easy to skip by accident. Skipping it means the published templates ship with no
-      lockfile.
-- [ ] `prepack` runs the compose step and regenerates `templates/<preset>/` fresh into
-      each package's tarball (`templates/` is gitignored and never hand-edited) — this
-      runs automatically as part of the Release workflow's publish job, not as a separate
-      manual step.
-- [ ] Dispatch the **Release** workflow with `dry_run` left at its default (`true`)
-      first. Use the dry run to verify that pnpm has rewritten
-      `create-fabulous-factory`'s `workspace:*` dependency on `fabulous-factory` to the
-      concrete version being published — that's the one thing a dry run can catch that a
-      later real publish can't undo. Once it looks right, dispatch again with
-      `dry_run: false` for the real publish.
+      bumped. That push is the release: it runs the `gate` (installer CLI with `--yes`
+      into a temp dir, `pnpm install`, the _output's own_ `pnpm check`, and the minimal
+      boot — migrate + `/api/health`), then publishes both packages if the gate is green.
+- [ ] Approve the `npm-publish` environment in the Actions UI if a required reviewer is
+      configured on it, then confirm both versions are live:
+      `npm view fabulous-factory version && npm view create-fabulous-factory version`.
 
-**(account)** Requires npm publish access to both package names (the workflow publishes
-using a repo-level `NPM_TOKEN` secret).
+The lockfile needs no manual step: the `gate` job uploads the `captured-lockfile-demo`
+artifact and the publish job stages it as `presets/demo/pnpm-lock.captured.yaml` before
+packing, so shipped templates always carry the lockfile that run validated. `prepack`
+regenerates `templates/<preset>/` fresh into each tarball (`templates/` is gitignored and
+never hand-edited).
+
+**(account)** Requires npm publish access to both package names. Authentication is
+Trusted Publishing (OIDC) — there is no `NPM_TOKEN` secret; instead each package on
+npmjs.com registers this repository and the `release.yml` workflow filename as its trusted
+publisher. Renaming that file breaks publishing.
 
 ## 7. Announce
 

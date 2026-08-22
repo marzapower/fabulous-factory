@@ -12,3 +12,8 @@ coverage/
 packages/create/templates/
 # tsup's bundled build output for the installer CLI — the only package with a build step.
 packages/create/dist/
+# Local `pnpm pack` / `pnpm publish --dry-run` output, kept out of the tree.
+*.tgz
+# Captured by the release run's gate job and staged by its publish job (release.yml);
+# committing one would only shadow what CI just validated.
+presets/*/pnpm-lock.captured.yaml

@@ -61,27 +61,33 @@ docker compose up --build
 `db` → `migrate` → `app` boot in order; `curl localhost:3000/api/health` returns
 `{"status":"ok"}`.
 
-## Phase 4 — Tag, capture the lockfile, then publish
+## Phase 4 — Bump, then tag: the tag publishes
 
-Both npm packages publish together, in lockstep, and only after the CI-captured lockfile
-is committed — publishing before that step ships templates with no lockfile:
+Pushing a `vX.Y.Z` tag runs `.github/workflows/release.yml`, which gates on a full
+scaffold-and-check and then publishes both packages. That workflow is the only supported
+way to publish; there is no local `npm publish` path.
 
 - `fabulous-factory` (the installer CLI, `packages/create`) and
   `create-fabulous-factory` (the thin `npm create`/`pnpm create` alias) carry the **same
-  version number** — bump both `package.json`s together, never one alone.
-- `git tag vX.Y.Z` and `git push origin vX.Y.Z`, where `X.Y.Z` is the version about to be
-  published — the tag push is what triggers `scaffold-and-check` in `ci.yml`.
-- Once that run is green, **manually** download its `captured-lockfile-demo` artifact and
-  commit it as `presets/demo/pnpm-lock.captured.yaml`. Nothing automates this step. The
-  Release workflow's `verify` job only warns (`::warning`, not a failure) when this file
-  is absent, so skipping it is easy to miss — but it means the published templates ship
-  with no lockfile.
-- Only then dispatch the **Release** workflow (`.github/workflows/release.yml`) with
-  `dry_run` left at its default (`true`) first. The dry run is also where you verify that
-  pnpm has rewritten `create-fabulous-factory`'s `workspace:*` dependency on
-  `fabulous-factory` to the concrete version being published. Once the dry run looks
-  right, dispatch again with `dry_run: false` for the real publish — this workflow is the
-  only supported way to publish; there is no local `npm publish` path.
+  version number** — bump both `package.json`s together, never one alone. The workflow's
+  `verify` job fails the release if either disagrees with the tag.
+- Rehearse if you want: dispatch the workflow manually with `dry_run` at its default
+  (`true`). It runs the whole gate and packs both tarballs without touching the registry —
+  use it to confirm pnpm rewrites `create-fabulous-factory`'s `workspace:*` dependency on
+  `fabulous-factory` to the concrete version. A dry run does **not** authenticate, so it
+  cannot prove Trusted Publishing is wired correctly; only a real run does.
+- `git tag vX.Y.Z && git push origin vX.Y.Z`. That push _is_ the release — the `gate` job
+  (the reusable `scaffold-and-check.yml`) must be green before anything is published, and
+  its `captured-lockfile-demo` artifact is staged as
+  `presets/demo/pnpm-lock.captured.yaml` by the publish job. No manual lockfile step, and
+  the shipped templates always carry the lockfile that run validated.
+- Publishing authenticates via **Trusted Publishing (OIDC)**, not a token: the publish job
+  requests `id-token: write` and npm exchanges that short-lived identity for publish
+  rights. Both packages register this repo and the `release.yml` **filename** as their
+  trusted publisher on npmjs.com — renaming the workflow file breaks publishing, and
+  there is no `NPM_TOKEN` secret to rotate.
+- The publish job runs in the `npm-publish` environment; if a required reviewer is
+  configured there, the release waits for approval in the Actions UI.
 - `prepack` runs the compose step and regenerates `templates/<preset>/` fresh into each
   package's tarball — never publish from a stale or hand-edited `templates/` dir.
 - The GitHub template-repository checkbox stays **off** (turned off at first publish,
