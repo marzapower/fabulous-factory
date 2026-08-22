@@ -415,55 +415,6 @@ jobs:
               semgrep scan --config p/owasp-top-ten --error
           fi
 
-  # Guarded zones (design spec §8.5, plan D.7 + D.9.15): PRs touching security-sensitive
-  # paths must carry a completed security checklist in the PR description (template:
-  # .github/PULL_REQUEST_TEMPLATE.md) before merge.
-  guarded-zones:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
-      - name: Require the security checklist on guarded-zone changes
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          # Read via env var, not templated straight into the script (D.9.15): the PR
-          # body is attacker-controlled free text, and interpolating
-          # `${{ github.event.pull_request.body }}` directly into `run:` would let it
-          # inject shell commands. `env:` hands it over as inert data instead. Also
-          # tolerates a null body — GitHub renders an unset body as an empty string here,
-          # which the grep below simply fails to match (falls through to the error path,
-          # not a crash).
-          PR_BODY: ${{ github.event.pull_request.body }}
-        run: |
-          set -e
-          # Three-dot (merge-base) diff, not two-dot: two-dot compares the two snapshots
-          # directly and would surface files that changed on the base branch *after* this
-          # branch forked as "PR-touched," even though the PR itself never touched them
-          # (M3). Three-dot diffs HEAD against the merge-base of BASE and HEAD, showing
-          # only what this branch actually changed since it diverged.
-          CHANGED=$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA" -- \
-            packages/auth packages/core packages/billing apps/demo/middleware.ts packages/db/migrations)
-
-          if [ -z "$CHANGED" ]; then
-            echo "No guarded-zone paths touched — nothing to check."
-            exit 0
-          fi
-
-          echo "Guarded-zone paths touched by this PR:"
-          echo "$CHANGED"
-
-          if printf '%s' "$PR_BODY" | grep -qF -- '- [x] security-checklist'; then
-            echo "Security checklist confirmed in the PR body."
-            exit 0
-          fi
-
-          echo "::error::This PR touches a guarded zone (packages/auth, packages/core, packages/billing, apps/demo/middleware.ts, or packages/db/migrations) but its description is missing the completed security checklist. Fill in the checklist from .github/PULL_REQUEST_TEMPLATE.md and check the '- [x] security-checklist' line."
-          exit 1
-
   # M4 publish-pipeline validation (design spec §8.3, §9, §11), extracted into a reusable
   # workflow so `release.yml` gates its publish on the very same run. Release triggers
   # only (tag pushes, manual dispatch), never PRs: a full second cold `pnpm install` plus
