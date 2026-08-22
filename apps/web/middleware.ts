@@ -50,6 +50,11 @@ const EXACT_ALLOWLIST = new Set([
   "/api/inngest",
   // Public template feature-explainer pages index.
   "/features",
+  // Live examples backing the /features docs pages (K.15.3/K.16 T12) — exact, not
+  // prefix, for the same reason documented above: neither route has sub-paths of its
+  // own, and a prefix entry would allowlist any same-prefix sibling added later for free.
+  "/api/demo/kernel-echo",
+  "/api/demo/security-check",
 ]);
 // Trailing slash required (H.10-style review fix): a bare "/features" prefix would also
 // match "/features-secret", the exact same-prefix-sibling failure mode this file's own

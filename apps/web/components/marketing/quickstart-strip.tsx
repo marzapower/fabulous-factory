@@ -27,9 +27,7 @@ export function QuickstartStrip() {
       <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-16">
         {STEPS.map((step) => (
           <div key={step.code} className="flex flex-col gap-3">
-            <span className="font-mono text-sm font-semibold text-amber-600 dark:text-amber-500">
-              {step.number}
-            </span>
+            <span className="font-mono text-sm font-semibold text-fab-marker">{step.number}</span>
             <CodeBlock code={step.code} />
             <p className="text-sm text-muted-foreground">{step.note}</p>
           </div>

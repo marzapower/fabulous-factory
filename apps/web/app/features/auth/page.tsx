@@ -1,6 +1,7 @@
 // Built with Fabulous Factory — https://github.com/marzapower/fabulous-factory
 // This credit line is free to keep and gives the project a hand. Thank you!
 
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { deriveAuthOptions } from "@factory/auth";
@@ -10,6 +11,11 @@ import { CodeBlock } from "@/components/marketing/code-block";
 import { EnvTable } from "@/components/marketing/env-table";
 import { FeaturePageShell } from "@/components/marketing/feature-page-shell";
 import { FEATURES } from "@/components/marketing/features-meta";
+
+export const metadata: Metadata = {
+  title: FEATURES.auth.title,
+  description: FEATURES.auth.blurb,
+};
 
 // OAuth button visibility (and the status row below) is a runtime, server-side fact —
 // never guessed client-side (design spec §5.1), same reason the login page itself is
@@ -54,15 +60,17 @@ function AuthStatus() {
   );
 }
 
-const authActionSnippet = `export const createMonitorAction = defineAction({
+const authActionSnippet = `export const toggleTaskAction = defineAction({
   auth: "required",
-  input: createMonitorInput,
-  rateLimit: { name: "create-monitor", windowSeconds: 60, max: 10 },
+  input: taskIdInput.extend({ status: z.enum(["open", "done"]) }),
   action: async ({ session, input }) => {
     // session.user is already resolved — defineAction rejected the request before
     // this body ever ran if there wasn't one.
-    // entitlement check elided — see the real file
-    return createMonitorRow({ userId: session.user.id, ...input });
+    const updated = await setTaskStatus(input.id, session.user.id, input.status);
+    if (!updated) {
+      throw new ApiError(404, "task_not_found", "That task is gone already.");
+    }
+    return { id: input.id, status: input.status } as const;
   },
 });`;
 
@@ -72,33 +80,35 @@ export default function AuthFeaturePage() {
   return (
     <FeaturePageShell feature={FEATURES.auth} statusSlot={<AuthStatus />}>
       <section>
-        <h2 className="text-xl font-semibold">What you get</h2>
+        <h2 className="text-xl font-semibold">What it does</h2>
         <p className="mt-2 text-muted-foreground">
-          Better Auth, running on your own Postgres — no third-party auth vendor to trust or pay
-          for. Email and password work the moment the app boots. Add OAuth client credentials or
-          leave email enabled and Google, GitHub, or a magic link turn themselves on, no code change
-          required. Every session-gated route and server action enforces this the same way, so there
-          is exactly one place auth can be wrong.
+          From the caller&rsquo;s side: every session-gated route and server action gets a resolved,
+          real <code className="font-mono">session.user</code> handed to it, or it never runs at all
+          — there is no in-between state to handle.
         </p>
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold">How it works here</h2>
+        <h2 className="text-xl font-semibold">The rule it enforces</h2>
         <p className="mt-2 text-muted-foreground">
-          Every server action goes through <code className="font-mono">defineAction</code>, which
-          requires an explicit auth mode. Set{" "}
-          <code className="font-mono">auth: &quot;required&quot;</code> and the action never runs
-          without a resolved session — no manual check to forget, and nothing to review for a
-          missing one.
+          Auth mode is mandatory, with no default. Every{" "}
+          <code className="font-mono">defineAction</code> call states{" "}
+          <code className="font-mono">auth: &quot;required&quot;</code> or{" "}
+          <code className="font-mono">&quot;public&quot;</code> explicitly — there is nowhere to
+          omit the decision, so a public action can never accidentally ship without one.
         </p>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold">Real source</h2>
         <CodeBlock
           code={authActionSnippet}
-          caption="Simplified from apps/web/app/dashboard/actions.ts — createMonitorAction"
+          caption="apps/web/app/dashboard/actions.ts — toggleTaskAction"
         />
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold">Turn it on</h2>
+        <h2 className="text-xl font-semibold">A working example</h2>
         <p className="mt-2 text-muted-foreground">
           Auth is the one baseline that isn&rsquo;t optional — set{" "}
           <code className="font-mono">BETTER_AUTH_SECRET</code> and email/password sign-in works
@@ -107,11 +117,7 @@ export default function AuthFeaturePage() {
         <div className="mt-4">
           <EnvTable vars={vars} />
         </div>
-      </section>
-
-      <section>
-        <h2 className="text-xl font-semibold">Try it</h2>
-        <p className="mt-2 text-muted-foreground">
+        <p className="mt-4 text-muted-foreground">
           <Link href="/signup" className="font-medium text-foreground underline underline-offset-4">
             Create an account
           </Link>

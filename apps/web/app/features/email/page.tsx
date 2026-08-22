@@ -1,6 +1,8 @@
 // Built with Fabulous Factory — https://github.com/marzapower/fabulous-factory
 // This credit line is free to keep and gives the project a hand. Thank you!
 
+import type { Metadata } from "next";
+
 import { getClientConfig, getEnvDocsForGroup } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
 
@@ -8,12 +10,22 @@ import { CodeBlock } from "@/components/marketing/code-block";
 import { EnvTable } from "@/components/marketing/env-table";
 import { FeaturePageShell } from "@/components/marketing/feature-page-shell";
 import { FEATURES } from "@/components/marketing/features-meta";
+import { LiveExample } from "@/components/marketing/live-example";
 import { StatusLight } from "@/components/marketing/status-light";
+
+export const metadata: Metadata = {
+  title: FEATURES.email.title,
+  description: FEATURES.email.blurb,
+};
 
 // Capability-conditional UI (design spec §5.1) — the status light below reads a runtime
 // fact, never baked into a static build.
 export const dynamic = "force-dynamic";
 
+// N2 (K.16): this page is Static, not Live — `apps/web` has no `@factory/email`
+// dependency at all, and reaching for `@react-email/render` from here directly would
+// breach vendor confinement (only `packages/email` may import it). Source + the
+// `SUBJECTS` map are shown as excerpts instead of a rendered preview.
 const sendSnippet = `export async function send<T extends TemplateName>(
   template: T,
   to: string,
@@ -36,10 +48,15 @@ const sendSnippet = `export async function send<T extends TemplateName>(
   }
 
   // capabilities.email === "resend" from here on — the ONLY branch that loads the SDK.
-  const env = getEnv();
   const resend = await getResendClient(env.RESEND_API_KEY ?? "");
   ...
 }`;
+
+const subjectsSnippet = `const SUBJECTS: Record<TemplateName, string> = {
+  "verify-email": "Verify your email address",
+  "magic-link": "Your sign-in link",
+  "daily-plan": "Your plan for today",
+};`;
 
 export default function EmailFeaturePage() {
   const config = getClientConfig();
@@ -49,47 +66,56 @@ export default function EmailFeaturePage() {
     <ClientConfigProvider config={config}>
       <FeaturePageShell feature={FEATURES.email} statusSlot={<StatusLight service="email" />}>
         <section>
-          <h2 className="text-xl font-semibold">What you get</h2>
+          <h2 className="text-xl font-semibold">What it does</h2>
           <p className="mt-2 text-muted-foreground">
-            One <code className="font-mono">send()</code> function backed by Resend, with three
-            hand-authored templates ready to go: email verification, magic-link sign-in, and the
-            demo&rsquo;s change-digest notification. In development without an API key it prints to
-            the console instead of failing; in production without one it simply reports itself
-            undelivered — a signup never hangs waiting on a provider that isn&rsquo;t configured.
+            From a caller&rsquo;s side: one <code className="font-mono">send()</code> call, naming a
+            template and its typed props, works the same whether Resend is configured, missing, or
+            you&rsquo;re in local dev — the caller never branches on which.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold">How it works here</h2>
+          <h2 className="text-xl font-semibold">The rule it enforces</h2>
           <p className="mt-2 text-muted-foreground">
             <code className="font-mono">send()</code> reads the email capability once and picks
             exactly one path — disabled, console, or Resend — and the Resend SDK is only ever
-            imported on that last branch, never loaded into memory otherwise.
+            imported on that last branch. A signup can never hang waiting on a provider that
+            isn&rsquo;t configured; without one, it just quietly reports itself undelivered instead.
           </p>
-          <CodeBlock code={sendSnippet} caption="Simplified from packages/email/src/send.ts" />
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold">Turn it on</h2>
-          <p className="mt-2 text-muted-foreground">
-            Set <code className="font-mono">RESEND_API_KEY</code> (and{" "}
-            <code className="font-mono">EMAIL_FROM</code>) and delivery goes live. Leave it unset:
-            in development you get a console-logged copy of every email; in production, email is off
-            entirely and auth runs without a verification step — sign-up just skips it rather than
-            blocking.
+          <h2 className="text-xl font-semibold">Real source</h2>
+          <CodeBlock code={sendSnippet} caption="Simplified from packages/email/src/send.ts" />
+          <p className="mt-4 text-muted-foreground">
+            The subject line for every template lives in one map, never scattered across call sites:
           </p>
-          <div className="mt-4">
-            <EnvTable vars={vars} />
+          <div className="mt-2">
+            <CodeBlock code={subjectsSnippet} caption="packages/email/src/send.ts — SUBJECTS" />
           </div>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold">Try it</h2>
+          <h2 className="text-xl font-semibold">A working example</h2>
           <p className="mt-2 text-muted-foreground">
-            Sign up with email configured and a verification mail arrives; with the console
-            transport, watch your terminal print the rendered text instead. Either way, the in-app
-            feed keeps working without it.
+            No preview is rendered here — <code className="font-mono">apps/web</code> deliberately
+            carries no dependency on <code className="font-mono">@factory/email</code>, so nothing
+            outside the adapter package it belongs to can import the vendor renderer.
           </p>
+          <div className="mt-4">
+            <LiveExample kind="static" title="Turn it on">
+              <p className="text-sm text-muted-foreground">
+                Set <code className="font-mono">RESEND_API_KEY</code> (and{" "}
+                <code className="font-mono">EMAIL_FROM</code>) and delivery goes live. Leave it
+                unset: in development every email prints to the console instead; in production,
+                email is off entirely and sign-up just skips the verification step rather than
+                blocking on it.
+              </p>
+              <div className="mt-2">
+                <EnvTable vars={vars} />
+              </div>
+            </LiveExample>
+          </div>
         </section>
       </FeaturePageShell>
     </ClientConfigProvider>
