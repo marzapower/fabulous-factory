@@ -27,9 +27,9 @@ describe("PLANS — invariants (H.2.2)", () => {
     }
   });
 
-  it("monitorLimit is null or a positive number for every plan", () => {
+  it("runsPerDay is null or a positive number for every plan", () => {
     for (const plan of Object.values(PLANS)) {
-      expect(plan.monitorLimit === null || plan.monitorLimit > 0).toBe(true);
+      expect(plan.runsPerDay === null || plan.runsPerDay > 0).toBe(true);
     }
   });
 

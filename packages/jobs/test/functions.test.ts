@@ -2,13 +2,13 @@ import { InngestTestEngine } from "@inngest/test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // --- module-scope side-effect isolation --------------------------------------------
-// Importing `../src/demo/monitor-cron` / `../src/demo/monitor-worker` transitively pulls
-// in `../src/client` (which builds the module-scope `inngest` client from `getEnv()`)
-// and `../src/demo/check-monitor` (which imports `@factory/core`'s barrel — dragging in
-// `defineAction`/`defineHandler` and, through them, `@factory/auth`'s module-scope
-// `betterAuth({...})` instantiation). None of that is exercised by these tests, which
-// only care about the cron/worker orchestration — mocked the same way as
-// `check-monitor.test.ts`.
+// Importing `../src/cron/daily-plan-cron` / `../src/cron/daily-plan-worker`
+// transitively pulls in `../src/client` (which builds the module-scope `inngest`
+// client from `getEnv()`), `../src/runs/*` and `../src/tasks/*` (which import
+// `@factory/db`, `@factory/llm`, `@factory/email`) — dragging in far more than these
+// tests, which only care about the cron/worker orchestration, need to exercise. None of
+// that is exercised here; it's all mocked, the same way `check-monitor.test.ts` (now
+// retired) mocked the demo pipeline's dependencies.
 vi.mock("drizzle-orm", () => ({
   eq: (a: unknown, b: unknown) => ({ __op: "eq", a, b }),
   and: (...args: unknown[]) => ({ __op: "and", args }),
@@ -31,15 +31,26 @@ vi.mock("@factory/config", () => ({
   isEnabled: vi.fn(() => false),
 }));
 
-const fakeMonitorRows: Array<{ id: string }> = [];
+const fakeOpenTaskUserIds: Array<{ userId: string }> = [];
 
 vi.mock("@factory/db", () => ({
   getDb: () => ({
+    selectDistinct: () => ({
+      from: () => ({
+        where: () => Promise.resolve(fakeOpenTaskUserIds),
+      }),
+    }),
     select: () => ({
-      from: () => Promise.resolve(fakeMonitorRows),
+      from: () => ({
+        where: () => ({
+          orderBy: () => ({
+            limit: () => Promise.resolve([]),
+          }),
+        }),
+      }),
     }),
   }),
-  schema: { monitors: {}, monitorEvents: {}, user: {} },
+  schema: { tasks: {}, runs: {}, runSteps: {}, user: {} },
 }));
 
 vi.mock("@factory/llm", () => ({ generate: vi.fn() }));
@@ -47,21 +58,32 @@ vi.mock("@factory/email", () => ({ send: vi.fn() }));
 vi.mock("@factory/analytics", () => ({ track: vi.fn() }));
 vi.mock("@factory/observability", () => ({ captureException: vi.fn() }));
 
-import { checkMonitor } from "../src/demo/check-monitor";
-import { chunk, monitorCron } from "../src/demo/monitor-cron";
-import { monitorWorker } from "../src/demo/monitor-worker";
-import { MONITOR_CHECK_EVENT } from "../src/events";
+vi.mock("../src/runs/queries", () => ({
+  createRun: vi.fn(() => Promise.resolve({ id: "run-1" })),
+  finishRun: vi.fn(() => Promise.resolve(undefined)),
+}));
 
-vi.mock("../src/demo/check-monitor", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/demo/check-monitor")>();
-  return { ...actual, checkMonitor: vi.fn() };
-});
+vi.mock("../src/runs/drivers", () => ({
+  durableDriver:
+    () =>
+    async <T>(_key: string, fn: () => Promise<T>) =>
+      fn(),
+}));
 
-const mockedCheckMonitor = vi.mocked(checkMonitor);
+vi.mock("../src/tasks/daily-plan", () => ({
+  dailyPlanPipeline: [],
+}));
+
+import { chunk, dailyPlanCron } from "../src/cron/daily-plan-cron";
+import { dailyPlanWorker } from "../src/cron/daily-plan-worker";
+import { DAILY_PLAN_EVENT } from "../src/events";
+import { createRun } from "../src/runs/queries";
+
+const mockedCreateRun = vi.mocked(createRun);
 
 beforeEach(() => {
-  fakeMonitorRows.length = 0;
-  mockedCheckMonitor.mockReset();
+  fakeOpenTaskUserIds.length = 0;
+  mockedCreateRun.mockClear();
 });
 
 describe("chunk", () => {
@@ -91,14 +113,14 @@ describe("chunk", () => {
   });
 });
 
-describe("monitorCron", () => {
-  it("fans out one MONITOR_CHECK_EVENT per monitor id via a single sendEvent call", async () => {
+describe("dailyPlanCron", () => {
+  it("fans out one DAILY_PLAN_EVENT per user id via a single sendEvent call", async () => {
     const t = new InngestTestEngine({
-      function: monitorCron,
+      function: dailyPlanCron,
       steps: [
         {
-          id: "list-monitors",
-          handler: () => ["monitor-1", "monitor-2"],
+          id: "list-users",
+          handler: () => ["user-1", "user-2"],
         },
       ],
     });
@@ -106,16 +128,16 @@ describe("monitorCron", () => {
     const { ctx } = await t.execute();
 
     expect(ctx.step.sendEvent).toHaveBeenCalledTimes(1);
-    expect(ctx.step.sendEvent).toHaveBeenCalledWith("fan-out-checks-0", [
-      { name: MONITOR_CHECK_EVENT, data: { monitorId: "monitor-1" } },
-      { name: MONITOR_CHECK_EVENT, data: { monitorId: "monitor-2" } },
+    expect(ctx.step.sendEvent).toHaveBeenCalledWith("fan-out-plans-0", [
+      { name: DAILY_PLAN_EVENT, data: { userId: "user-1" } },
+      { name: DAILY_PLAN_EVENT, data: { userId: "user-2" } },
     ]);
   });
 
-  it("sends no event when there are no monitors", async () => {
+  it("sends no event when there are no users with open tasks", async () => {
     const t = new InngestTestEngine({
-      function: monitorCron,
-      steps: [{ id: "list-monitors", handler: () => [] }],
+      function: dailyPlanCron,
+      steps: [{ id: "list-users", handler: () => [] }],
     });
 
     const { ctx } = await t.execute();
@@ -123,19 +145,19 @@ describe("monitorCron", () => {
     expect(ctx.step.sendEvent).not.toHaveBeenCalled();
   });
 
-  it("splits large monitor counts across chunked sendEvent calls (500/500/200)", async () => {
-    const monitorIds = Array.from({ length: 1200 }, (_, i) => `monitor-${i}`);
+  it("splits large user counts across chunked sendEvent calls (500/500/200)", async () => {
+    const userIds = Array.from({ length: 1200 }, (_, i) => `user-${i}`);
     const t = new InngestTestEngine({
-      function: monitorCron,
+      function: dailyPlanCron,
       steps: [
-        { id: "list-monitors", handler: () => monitorIds },
-        // Explicit mocks for every fan-out chunk (mirroring "list-monitors" above) — the
+        { id: "list-users", handler: () => userIds },
+        // Explicit mocks for every fan-out chunk (mirroring "list-users" above) — the
         // engine's default step-tool spy calls through to the REAL `step.sendEvent`,
         // which would otherwise attempt a real network send per chunk. Memoizing each
         // chunk's step id here keeps every replay resolved locally, so all 3 sends run.
-        { id: "fan-out-checks-0", handler: () => ({ ids: [] }) },
-        { id: "fan-out-checks-1", handler: () => ({ ids: [] }) },
-        { id: "fan-out-checks-2", handler: () => ({ ids: [] }) },
+        { id: "fan-out-plans-0", handler: () => ({ ids: [] }) },
+        { id: "fan-out-plans-1", handler: () => ({ ids: [] }) },
+        { id: "fan-out-plans-2", handler: () => ({ ids: [] }) },
       ],
     });
 
@@ -143,46 +165,30 @@ describe("monitorCron", () => {
 
     expect(ctx.step.sendEvent).toHaveBeenCalledTimes(3);
     const calls = vi.mocked(ctx.step.sendEvent).mock.calls;
-    expect(calls[0][0]).toBe("fan-out-checks-0");
-    expect(calls[1][0]).toBe("fan-out-checks-1");
-    expect(calls[2][0]).toBe("fan-out-checks-2");
+    expect(calls[0][0]).toBe("fan-out-plans-0");
+    expect(calls[1][0]).toBe("fan-out-plans-1");
+    expect(calls[2][0]).toBe("fan-out-plans-2");
     expect(calls[0][1]).toHaveLength(500);
     expect(calls[1][1]).toHaveLength(500);
     expect(calls[2][1]).toHaveLength(200);
   });
 });
 
-describe("monitorWorker", () => {
-  it("invokes the checkMonitor pipeline with the triggering event's monitorId", async () => {
-    mockedCheckMonitor.mockResolvedValue({ status: "unchanged" });
-
+describe("dailyPlanWorker", () => {
+  it("creates a run for the triggering event's userId via the memoized create-run step", async () => {
     const t = new InngestTestEngine({
-      function: monitorWorker,
-      events: [{ name: MONITOR_CHECK_EVENT, data: { monitorId: "monitor-1" } }],
+      function: dailyPlanWorker,
+      events: [{ name: DAILY_PLAN_EVENT, data: { userId: "user-1" } }],
     });
 
-    const { result } = await t.execute();
+    await t.execute();
 
-    expect(mockedCheckMonitor).toHaveBeenCalledWith("monitor-1");
-    expect(result).toEqual({ status: "unchanged" });
-  });
-
-  it("maps a MONITOR_NOT_FOUND failure to NonRetriableError", async () => {
-    const notFound = new Error("monitor not found") as Error & { code: string };
-    notFound.code = "MONITOR_NOT_FOUND";
-    mockedCheckMonitor.mockRejectedValue(notFound);
-
-    const t = new InngestTestEngine({
-      function: monitorWorker,
-      events: [{ name: MONITOR_CHECK_EVENT, data: { monitorId: "missing" } }],
+    expect(mockedCreateRun).toHaveBeenCalledWith({
+      userId: "user-1",
+      kind: "daily-plan",
+      driver: "durable",
+      runsPerDay: null,
+      enforceLimit: false,
     });
-
-    const { error } = await t.execute();
-
-    // The test engine reconstructs the error from Inngest's over-the-wire JSON error
-    // format (`name`/`message`), so this asserts on the reconstructed shape rather than
-    // `instanceof NonRetriableError` — the important behavior is that the run stopped
-    // as non-retriable, not the exact runtime class identity.
-    expect(error).toMatchObject({ name: "NonRetriableError", message: "monitor not found" });
   });
 });

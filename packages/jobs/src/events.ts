@@ -1,10 +1,10 @@
 /**
- * Demo event name + payload (plan G.4). Fired by the cron fan-out
- * (`demo/monitor-cron.ts`) and consumed by the per-monitor worker
- * (`demo/monitor-worker.ts`).
+ * Daily-plan event name + payload (milestone 11, plan K.6). Fired by the cron fan-out
+ * (`cron/daily-plan-cron.ts`) and consumed by the per-user worker
+ * (`cron/daily-plan-worker.ts`).
  */
-export const MONITOR_CHECK_EVENT = "demo/monitor.check.requested" as const;
+export const DAILY_PLAN_EVENT = "untangle/daily-plan.requested" as const;
 
-export interface MonitorCheckEventData {
-  monitorId: string;
+export interface DailyPlanEventData {
+  userId: string;
 }

@@ -1,7 +1,7 @@
 /**
  * `getEntitlement()` — the degradation matrix (plan H.2.3, corrected by H.10.5/6).
- * Billing DISABLED → the free plan, `monitorLimit: null` (unlimited — spec §6 verbatim,
- * H.10.16; the abuse ceiling lives in packages/jobs as `MONITOR_HARD_CEILING`, out of
+ * Billing DISABLED → the free plan, `runsPerDay: null` (unlimited — spec §6 verbatim,
+ * H.10.16; the abuse ceiling lives in packages/jobs as `RUN_HARD_CEILING_PER_DAY`, out of
  * this package's scope). Billing enabled reads ONLY the Postgres `subscriptions` CACHE
  * (spec hot-path rule) — never the provider API — picking the best `ENTITLED_STATUSES`
  * row for the user, tie-broken by `current_period_end desc NULLS LAST` (H.10.5: a
@@ -25,7 +25,7 @@ export const ENTITLED_STATUSES: readonly string[] = ["active", "trialing", "past
 
 export interface Entitlement {
   planId: PlanId | "unknown";
-  monitorLimit: number | null;
+  runsPerDay: number | null;
   source: "disabled" | "free" | "subscription";
   pastDue: boolean;
 }
@@ -34,7 +34,7 @@ function freeEntitlement(source: "disabled" | "free"): Entitlement {
   const freePlan = PLANS[FREE_PLAN_ID];
   return {
     planId: FREE_PLAN_ID,
-    monitorLimit: source === "disabled" ? null : freePlan.monitorLimit,
+    runsPerDay: source === "disabled" ? null : freePlan.runsPerDay,
     source,
     pastDue: false,
   };
@@ -76,14 +76,14 @@ export async function getEntitlement(userId: string): Promise<Entitlement> {
   if (plan) {
     return {
       planId: winner.planId as PlanId,
-      monitorLimit: plan.monitorLimit,
+      runsPerDay: plan.runsPerDay,
       source: "subscription",
       pastDue,
     };
   }
   return {
     planId: "unknown",
-    monitorLimit: PLANS[FREE_PLAN_ID].monitorLimit,
+    runsPerDay: PLANS[FREE_PLAN_ID].runsPerDay,
     source: "subscription",
     pastDue,
   };

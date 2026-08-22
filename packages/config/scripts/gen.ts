@@ -93,7 +93,7 @@ function renderPageTemplate(name: string): string {
 /**
  * `packages/jobs/src/functions/<name>.ts` — event-triggered Inngest function. Event
  * name is `app/<name>.requested` (opt-18: matches the `namespace/entity.action.state`
- * idiom of `demo/monitor.check.requested`, packages/jobs/src/events.ts), with the
+ * idiom of `untangle/daily-plan.requested`, packages/jobs/src/events.ts), with the
  * const defined right here rather than in the shared `events.ts` (that file is the
  * demo namespace's own registry, plan §J.12.10). Imports only `../client` — jobs may
  * never import `@factory/auth` (depcruise: dag-jobs-imports-config-db-core-llm-email-

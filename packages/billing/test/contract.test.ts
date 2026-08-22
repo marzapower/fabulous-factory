@@ -39,11 +39,11 @@ vi.mock("@factory/db", async () => {
 });
 
 const TEST_PLANS = {
-  free: { id: "free", name: "Free", monitorLimit: 3, priceUsdMonthly: null, providerRefs: {} },
+  free: { id: "free", name: "Free", runsPerDay: 5, priceUsdMonthly: null, providerRefs: {} },
   pro: {
     id: "pro",
     name: "Pro",
-    monitorLimit: 25,
+    runsPerDay: 200,
     priceUsdMonthly: 9,
     providerRefs: { stripe: "price_pro_real" },
   },
