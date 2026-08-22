@@ -87,8 +87,28 @@ function checkWebhookContentLength(req: NextRequest): Response | undefined {
   return undefined;
 }
 
+/**
+ * The second argument Next hands a route handler.
+ *
+ * A route with dynamic segments (`app/api/auth/[...all]/route.ts`) gets a real promise
+ * of its params. A route WITHOUT them (`app/api/runs/route.ts`) gets the `params` key
+ * with `undefined` as its value — verified against Next 15.5 by probing a live request,
+ * and `await undefined` is `undefined`, so the awaited result is what actually differs.
+ *
+ * Next's own generated route types (`.next/types/**`) declare `params` as a
+ * non-optional `Promise<any>` regardless, so this interface cannot be widened to
+ * `params?:` without failing typecheck against the framework's declaration. Modelling
+ * the nullability on the RESOLVED value is both accurate about what `await` yields and
+ * assignable to `Promise<any>`.
+ *
+ * Getting this wrong is what shipped the defect: the old type promised a total
+ * `Record`, so `Object.entries(params)` inside `deriveRouteName` looked safe, and every
+ * rate-limited route with no dynamic segments — `/api/runs` and both `/api/demo/*`
+ * examples, i.e. the whole interactive surface — answered 500. `HandlerCtx.params`
+ * stays non-optional: the wrapper substitutes `{}`, so handlers never see the seam.
+ */
 export interface NextRouteContext {
-  params: Promise<Record<string, string | string[] | undefined>>;
+  params: Promise<Record<string, string | string[] | undefined> | undefined>;
 }
 
 const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -173,7 +193,25 @@ export function defineHandler<S extends z.ZodTypeAny | "none">(
       // pathname. This is not a security-ordering step — awaiting params has no auth/
       // rate-limit/origin/input semantics of its own — so pulling it earlier does not
       // change the session→ratelimit→auth→origin→input order plan D.4/D.9.2 mandates.
-      const params = await routeCtx.params;
+      // `?? {}` is load-bearing, not defensive padding: see `NextRouteContext`. A route
+      // with no dynamic segments gets `params: undefined` from Next, and every consumer
+      // below (`deriveRouteName`, `HandlerCtx.params`) is typed as receiving an object.
+      //
+      // Substituting `{}` cannot reintroduce B2's unbounded-bucket bug: `deriveRouteName`
+      // only rewrites segments that MATCH a param value, so with no params it returns the
+      // pathname unchanged — and the only routes that reach here with no params are the
+      // ones that have no dynamic segments. Verified against Next 15.5's own matcher: a
+      // dynamic matcher always produces a params object (an optional catch-all at its
+      // base yields a truthy `{}`), so `undefined` is reachable only on the static branch.
+      //
+      // The remaining assumption is that a static route's pathname IS its bucket, and
+      // that one is NOT framework-guaranteed: `req.nextUrl.pathname` is the PRE-rewrite
+      // URL. Nothing in this repo rewrites (`apps/web/middleware.ts` only calls
+      // `next()`/`redirect()`, and `next.config.ts` declares no `rewrites()`), but an
+      // adopter who adds a rewrite from a VARIABLE source path onto a rate-limited static
+      // route would mint one bucket per source path. If you add rewrites, derive the
+      // bucket from the destination, not from `nextUrl.pathname`.
+      const params = (await routeCtx.params) ?? {};
 
       // (2) Rate limit.
       if (opts.rateLimit && opts.rateLimit !== "none") {
@@ -235,6 +273,15 @@ export function defineHandler<S extends z.ZodTypeAny | "none">(
  * bucket), never finer — it cannot reintroduce the unbounded-cardinality bug this fix
  * exists to close, so it's accepted rather than solved with full route-pattern
  * metadata Next.js doesn't expose to a request handler.
+ *
+ * SECOND KNOWN LIMITATION (same accepted trade-off): `params` values arrive DECODED,
+ * while `pathname` segments do not — so `/api/items/a%62c` yields `id: "abc"`, matches
+ * no raw segment, and gets a bucket of its own. Same shape as the bug above but in the
+ * other direction: it makes buckets finer, so it is a real (if awkward to reach) way to
+ * multiply buckets on a dynamic route. Not reachable in this repo — the only dynamic
+ * route, `apps/web/app/api/auth/[...all]/route.ts`, is a webhook-style passthrough that
+ * never goes through the rate-limit arm. Decode each segment before comparing if you add
+ * a rate-limited dynamic route.
  */
 export function deriveRouteName(
   method: string,
