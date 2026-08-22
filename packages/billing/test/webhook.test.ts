@@ -42,11 +42,11 @@ vi.mock("@factory/db", async () => {
 // A controlled catalog (real PLANS ships "pro" wired to the "price_REPLACE_ME"
 // placeholder, per H.2.2) so "known vs. unknown price" tests mean what their names say.
 const TEST_PLANS = {
-  free: { id: "free", name: "Free", monitorLimit: 3, priceUsdMonthly: null, providerRefs: {} },
+  free: { id: "free", name: "Free", runsPerDay: 5, priceUsdMonthly: null, providerRefs: {} },
   pro: {
     id: "pro",
     name: "Pro",
-    monitorLimit: 25,
+    runsPerDay: 200,
     priceUsdMonthly: 9,
     providerRefs: { stripe: "price_pro_test" },
   },

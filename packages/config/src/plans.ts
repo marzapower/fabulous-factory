@@ -1,7 +1,7 @@
 /**
  * Plan catalog (spec §5.3, H.2.2). Pure data — NO imports, DAG-root safe: `packages/db`
  * (subscriptions cache), `packages/billing` (entitlement resolution, checkout price
- * lookup), and `packages/jobs` (monitor cap) all read this without creating an edge back
+ * lookup), and `packages/jobs` (run cap) all read this without creating an edge back
  * to anything else.
  *
  * This is a PLACEHOLDER catalog for the template — one free plan, one paid plan wired to
@@ -19,9 +19,9 @@ export interface Plan {
   // bought at the type level anyway.
   id: string;
   name: string;
-  /** Monitors allowed on this plan. `null` = unlimited (subject to the separate
-   * `MONITOR_HARD_CEILING` abuse ceiling in packages/jobs, enforced in every profile). */
-  monitorLimit: number | null;
+  /** Runs per day allowed on this plan. `null` = unlimited (subject to the separate
+   * `RUN_HARD_CEILING_PER_DAY` abuse ceiling in packages/jobs, enforced in every profile). */
+  runsPerDay: number | null;
   /** `null` for the free plan — it is never purchased. */
   priceUsdMonthly: number | null;
   /** Provider-specific identifiers this plan maps to. Empty for the free plan (never
@@ -35,14 +35,14 @@ export const PLANS = {
   free: {
     id: "free",
     name: "Free",
-    monitorLimit: 3,
+    runsPerDay: 5,
     priceUsdMonthly: null,
     providerRefs: {},
   },
   pro: {
     id: "pro",
     name: "Pro",
-    monitorLimit: 25,
+    runsPerDay: 200,
     priceUsdMonthly: 9,
     providerRefs: { stripe: "price_REPLACE_ME" },
   },

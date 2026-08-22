@@ -36,6 +36,24 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* --- Workspace tokens (m11-untangle-workspace.md K.9) ---------------------------
+   * Chroma belongs to work in flight and drains when it lands: `--fab-live` /
+   * `--fab-live-soft` are the ONLY accent this page ever spends, reserved for the
+   * active step, the streaming region's hairline, and the pulse on the Untangle
+   * button while a run executes. Everything else stays achromatic — priority is
+   * carried by ink density (`now`/`next`/`later`), never a second hue.
+   * `--fab-paper` is the cool, faintly blue-grey slab the pasted dump sits on.
+   * `--fab-marker` replaces the raw `text-amber-600` hard-coded across marketing
+   * components (T10/T11) — a different hue on purpose: it is the marketing page's
+   * existing highlighter-pen accent, not the workspace's live-run accent, and the
+   * two must never be confused for one another. Defined for both schemes; T11/T12
+   * consume these verbatim and must not define their own. */
+  --fab-live: oklch(0.58 0.19 255);
+  --fab-live-soft: oklch(0.94 0.035 255);
+  --fab-paper: oklch(0.985 0.006 255);
+  --fab-marker: oklch(0.72 0.16 70);
+  --font-serif: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
 }
 
 .dark {
@@ -70,6 +88,11 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  --fab-live: oklch(0.75 0.16 255);
+  --fab-live-soft: oklch(0.32 0.05 255);
+  --fab-paper: oklch(0.24 0.012 255);
+  --fab-marker: oklch(0.78 0.14 70);
 }
 
 @theme inline {
@@ -106,10 +129,15 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-serif: var(--font-serif);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-fab-live: var(--fab-live);
+  --color-fab-live-soft: var(--fab-live-soft);
+  --color-fab-paper: var(--fab-paper);
+  --color-fab-marker: var(--fab-marker);
 }
 
 @layer base {
@@ -118,5 +146,44 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* --- Workspace motion (K.9 "Motion") -------------------------------------------------
+ * Nothing animates on page load; the run itself is the only motion. Cards enter with a
+ * 120ms fade + 2px rise as `RunEvent`s arrive over the wire — the stagger is a property
+ * of the network, never a faked delay (no `animation-delay` ladder here). The tint drain
+ * on run completion is a plain 600ms color transition, not a keyframe, so it composes
+ * with whatever background color a step/card is already animating toward.
+ * `prefers-reduced-motion: reduce` collapses both to instant state changes — a quality
+ * floor, not a feature, so it is unconditional, not gated behind a per-component prop. */
+@keyframes fab-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fab-enter {
+  animation: fab-card-enter 120ms ease-out both;
+}
+
+.fab-tint {
+  transition:
+    background-color 600ms ease,
+    border-color 600ms ease,
+    color 600ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab-enter {
+    animation: none;
+  }
+  .fab-tint {
+    transition: none;
   }
 }

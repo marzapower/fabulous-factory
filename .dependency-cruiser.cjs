@@ -115,9 +115,10 @@ module.exports = {
       comment:
         "The bare `drizzle-orm` entry (query-expression builders — `sql`, `eq`, `lt`, " +
         "etc.) is confined to packages/db, packages/core (plan D.4: the rate limiter's " +
-        "atomic upsert), packages/jobs (M6: the demo pipeline's queries and the " +
-        "per-monitor pg_advisory_xact_lock need the operators against `getDb()` — same " +
-        "rationale as core), and packages/billing (M7/H.10.4: drizzle-orm is a RUNTIME " +
+        "atomic upsert), packages/jobs (M11: the run engine's and task domain's queries " +
+        "and the per-user pg_advisory_xact_lock(hashtext('run-cap:' || userId)) need the " +
+        "operators against `getDb()` — same rationale as core), and packages/billing " +
+        "(M7/H.10.4: drizzle-orm is a RUNTIME " +
         "dep of billing — the webhook transaction's dedupe insert and guarded " +
         "subscriptions upsert need the operators against `getDb()`) plus test fixtures. " +
         "Everywhere else — including apps/web and packages/auth — must go through " +
@@ -426,21 +427,6 @@ module.exports = {
       },
     },
     {
-      name: "diff-only-in-jobs",
-      severity: "error",
-      comment:
-        "diff (the diffLines LLM-disabled-fallback excerpt, plan G.2.5/G.10.3/G.10.7) is " +
-        "confined to packages/jobs — checkMonitor is its only consumer, and it is a " +
-        "packages/jobs dependency per G.10.3 (superseding the earlier apps/web placement " +
-        "in G.3.4).",
-      from: {
-        pathNot: "^packages/jobs/",
-      },
-      to: {
-        path: "(^|/)node_modules/diff(/|$)",
-      },
-    },
-    {
       name: "dag-llm-imports-config-db-core-observability",
       severity: "error",
       comment:
@@ -459,11 +445,12 @@ module.exports = {
       name: "dag-jobs-imports-config-db-core-llm-email-analytics-observability",
       severity: "error",
       comment:
-        "packages/jobs (M6) may depend on packages/config, packages/db (monitors/" +
-        "monitor_events), packages/core (safeFetch/untrusted), packages/llm (change " +
-        "summaries), packages/email (change-digest), packages/analytics (track), and " +
-        "packages/observability (captureException) — plan G.2.1. Must NOT import auth — " +
-        "nothing above jobs in the DAG except apps/web.",
+        "packages/jobs (M11) may depend on packages/config, packages/db (runs/run_steps/" +
+        "captures/tasks), packages/core (safeFetch/untrusted), packages/llm (task " +
+        "extraction/triage/decomposition, daily-plan focus), packages/email " +
+        "(daily-plan), packages/analytics (track), and packages/observability " +
+        "(captureException) — plan G.2.1/K.6. Must NOT import auth — nothing above jobs " +
+        "in the DAG except apps/web.",
       from: {
         path: "^packages/jobs/",
       },

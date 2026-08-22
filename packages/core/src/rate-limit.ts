@@ -15,7 +15,7 @@ export interface RateLimitPolicy {
  * of plan D.4's literal pseudocode; see the implementation report for the justification.
  */
 export interface NamedRateLimitPolicy extends RateLimitPolicy {
-  /** Caller-chosen, stable identifier for this action's rate-limit bucket, e.g. `"create-monitor"`. */
+  /** Caller-chosen, stable identifier for this action's rate-limit bucket, e.g. `"create-manual-task"`. */
   name: string;
 }
 

@@ -72,12 +72,12 @@ async function getEntitlement(userId: string) {
 }
 
 describe("getEntitlement — degradation matrix", () => {
-  it("billing disabled → free plan, unlimited (monitorLimit null)", async () => {
+  it("billing disabled → free plan, unlimited (runsPerDay null)", async () => {
     capabilitiesHolder.billing = "disabled";
     const result = await getEntitlement("user_1");
     expect(result).toEqual({
       planId: "free",
-      monitorLimit: null,
+      runsPerDay: null,
       source: "disabled",
       pastDue: false,
     });
@@ -85,7 +85,7 @@ describe("getEntitlement — degradation matrix", () => {
 
   it("billing enabled, no rows → free plan with its catalog limit", async () => {
     const result = await getEntitlement("user_1");
-    expect(result).toEqual({ planId: "free", monitorLimit: 3, source: "free", pastDue: false });
+    expect(result).toEqual({ planId: "free", runsPerDay: 5, source: "free", pastDue: false });
   });
 
   it.each(["active", "trialing", "past_due"])(
@@ -95,7 +95,7 @@ describe("getEntitlement — degradation matrix", () => {
       const result = await getEntitlement("user_1");
       expect(result).toEqual({
         planId: "pro",
-        monitorLimit: 25,
+        runsPerDay: 200,
         source: "subscription",
         pastDue: status === "past_due",
       });
@@ -107,7 +107,7 @@ describe("getEntitlement — degradation matrix", () => {
     async (status) => {
       seedSubscription({ providerSubscriptionId: "sub_1", status });
       const result = await getEntitlement("user_1");
-      expect(result).toEqual({ planId: "free", monitorLimit: 3, source: "free", pastDue: false });
+      expect(result).toEqual({ planId: "free", runsPerDay: 5, source: "free", pastDue: false });
     },
   );
 
@@ -116,7 +116,7 @@ describe("getEntitlement — degradation matrix", () => {
     const result = await getEntitlement("user_1");
     expect(result).toEqual({
       planId: "unknown",
-      monitorLimit: 3,
+      runsPerDay: 5,
       source: "subscription",
       pastDue: false,
     });
@@ -127,7 +127,7 @@ describe("getEntitlement — degradation matrix", () => {
     const result = await getEntitlement("user_1");
     expect(result).toEqual({
       planId: "pro",
-      monitorLimit: 25,
+      runsPerDay: 200,
       source: "subscription",
       pastDue: true,
     });
@@ -181,7 +181,7 @@ describe("getEntitlement — degradation matrix", () => {
     const result = await getEntitlement("user_1");
     expect(result).toEqual({
       planId: "pro",
-      monitorLimit: 25,
+      runsPerDay: 200,
       source: "subscription",
       pastDue: false,
     });

@@ -11,18 +11,21 @@ export interface BillingCardProps {
   // structural duplicate of it could silently drift out of sync (an added `source`
   // variant, a renamed field) without either side's compiler ever catching it.
   entitlement: Entitlement;
-  monitorCount: number;
+  /** The day's run count so far (`countRunsToday`), not a monitor count — the metered
+   * unit changed from monitors to runs (m11-untangle-workspace.md K.7). */
+  runCount: number;
 }
 
 /**
- * Dashboard billing card (m7-billing.md H.10.12) — mounted by the dashboard page ONLY
- * when `isEnabled("billing")` (the milestone's exit criterion: zero billing UI when
- * billing is off). Reads the same mono-chip / grayscale vocabulary as `MonitorsCard`
- * and `FeedCard` (rounded-full `bg-muted` chips, `font-mono` numerics) and extends it
- * with one new element for this card specifically — a thin usage meter — since this is
- * the one card in the dashboard representing a paid-product moment, not boilerplate.
+ * Dashboard billing card (m7-billing.md H.10.12, metered unit renamed to runs by
+ * m11-untangle-workspace.md K.7) — mounted by the dashboard page ONLY when
+ * `isEnabled("billing")` (zero billing UI when billing is off). Reads the same
+ * mono-chip / grayscale vocabulary as the rest of the workspace (rounded-full `bg-muted`
+ * chips, `font-mono` numerics) and extends it with one element specific to this card —
+ * a thin usage meter — since this is the one card in the dashboard representing a
+ * paid-product moment, not boilerplate.
  */
-export function BillingCard({ entitlement, monitorCount }: BillingCardProps) {
+export function BillingCard({ entitlement, runCount }: BillingCardProps) {
   const isSubscribed = entitlement.source === "subscription";
 
   if (entitlement.planId === "unknown") {
@@ -53,12 +56,12 @@ export function BillingCard({ entitlement, monitorCount }: BillingCardProps) {
   }
 
   const plan = PLANS[entitlement.planId];
-  const limit = entitlement.monitorLimit;
+  const limit = entitlement.runsPerDay;
   const uncapped = limit === null;
-  const overLimit = limit !== null && monitorCount > limit;
+  const overLimit = limit !== null && runCount > limit;
   const fillPercent = uncapped
     ? 0
-    : Math.min(100, Math.round((monitorCount / Math.max(limit, 1)) * 100));
+    : Math.min(100, Math.round((runCount / Math.max(limit, 1)) * 100));
 
   const upgradeTarget = Object.values(PLANS).find((candidate) => candidate.id !== FREE_PLAN_ID);
 
@@ -74,7 +77,7 @@ export function BillingCard({ entitlement, monitorCount }: BillingCardProps) {
             <CardDescription>You&apos;re on the {plan.name} plan.</CardDescription>
           </div>
           <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 font-mono text-xs text-muted-foreground">
-            {monitorCount}/{uncapped ? <span aria-label="unlimited">&#8734;</span> : limit}
+            {runCount}/{uncapped ? <span aria-label="unlimited">&#8734;</span> : limit}
           </span>
         </div>
       </CardHeader>
@@ -109,8 +112,8 @@ export function BillingCard({ entitlement, monitorCount }: BillingCardProps) {
             </div>
             {overLimit && (
               <p className="text-xs text-muted-foreground">
-                You&apos;re over the {plan.name} plan&apos;s {limit}-monitor limit. Existing
-                monitors keep running — remove one or upgrade to add another.
+                You&apos;re over the {plan.name} plan&apos;s {limit}-run daily limit. More free
+                tomorrow — upgrade for headroom today.
               </p>
             )}
           </div>
