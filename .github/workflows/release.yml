@@ -122,8 +122,26 @@ jobs:
       - name: Stage the captured lockfile for the compose step
         run: |
           set -e
-          cp "${{ runner.temp }}/captured/pnpm-lock.yaml" presets/demo/pnpm-lock.captured.yaml
+          cp "$RUNNER_TEMP/captured/pnpm-lock.yaml" presets/demo/pnpm-lock.captured.yaml
           echo "Staged $(wc -l < presets/demo/pnpm-lock.captured.yaml) lines into presets/demo/pnpm-lock.captured.yaml."
+
+      # Resolved once, into the environment, rather than interpolated into each `run:`
+      # body: `${{ ... }}` inside a shell script is a code-injection shape (semgrep's
+      # run-shell-injection rule blocks it), and `env:` hands the value over as inert
+      # data. Empty on a tag push, where `inputs.dry_run` is unset — that's a real
+      # publish.
+      - name: Resolve the publish flags
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -e
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "PUBLISH_FLAGS=--dry-run" >> "$GITHUB_ENV"
+            echo "Dry run: nothing will be written to the registry."
+          else
+            echo "PUBLISH_FLAGS=" >> "$GITHUB_ENV"
+            echo "Real publish."
+          fi
 
       # No explicit compose step here: each package's `prepack` hook recomposes
       # `templates/<preset>/` fresh at publish time, so a separate compose step would
@@ -132,11 +150,13 @@ jobs:
       # Order matters: create-fabulous-factory depends on fabulous-factory via
       # `workspace:*`, which pnpm rewrites to the concrete version at pack time. The alias
       # must go second so it never points at a version that isn't on the registry yet.
+      # $PUBLISH_FLAGS is deliberately unquoted: it holds either `--dry-run` or nothing,
+      # and quoting an empty value would pass an empty argument to pnpm.
       - name: Publish fabulous-factory
-        run: pnpm --filter fabulous-factory publish --access public --no-git-checks ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: pnpm --filter fabulous-factory publish --access public --no-git-checks $PUBLISH_FLAGS
 
       - name: Publish create-fabulous-factory
-        run: pnpm --filter create-fabulous-factory publish --access public --no-git-checks ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: pnpm --filter create-fabulous-factory publish --access public --no-git-checks $PUBLISH_FLAGS
 
       - name: Post-publish reminder
         if: ${{ !inputs.dry_run }}
