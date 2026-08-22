@@ -5,7 +5,10 @@ import type { Metadata } from "next";
 // plain server component, matching apps/web/app/page.tsx's container/typography classes.
 // Placeholder content only — the `make-it-yours` skill covers replacing it (M9, §J.6).
 export const metadata: Metadata = {
-  title: "Terms of Service — Fabulous Factory",
+  // Bare page name: the root layout's "%s · Untangle" template supplies the
+  // product name, so hardcoding one here would double it — and hardcoding the
+  // TEMPLATE's name on the product's own legal page was simply wrong.
+  title: "Terms of Service",
 };
 
 export default function TermsPage() {

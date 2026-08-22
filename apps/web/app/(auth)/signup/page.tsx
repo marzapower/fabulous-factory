@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getCapabilities, getEnv } from "@factory/config";
@@ -5,6 +6,11 @@ import { deriveAuthOptions } from "@factory/auth";
 import { SignupForm } from "@/components/auth/signup-form";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+export const metadata: Metadata = {
+  title: "Create your account",
+  description: "Create an Untangle account and paste your first mess.",
+};
 
 // OAuth button visibility is a runtime, server-side fact (which providers have both
 // client id + secret configured) — never guessed client-side (design spec §5.1).

@@ -31,10 +31,19 @@ const plexMono = localFont({
   display: "swap",
 });
 
+/**
+ * The PRODUCT's metadata, not the template's — `/` is Untangle's landing page and the
+ * browser tab has to agree with it, or the demo stops being a demo. The template gets
+ * its own title on `/features`, and `make-it-yours` points an adopter here as one of the
+ * strings to rename.
+ */
 export const metadata: Metadata = {
-  title: "Fabulous Factory",
+  title: {
+    default: "Untangle — paste the mess, get the list",
+    template: "%s · Untangle",
+  },
   description:
-    "An opinionated Next.js template for solo founders shipping micro-SaaS with AI agents — auth, billing, jobs, email and observability wired in, guarded by a kernel your agents can't bypass.",
+    "Paste an unsorted brain dump and get back a task list: what's actually a task, when each one matters, and the big ones split into steps you can start. The sample product that ships with Fabulous Factory.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

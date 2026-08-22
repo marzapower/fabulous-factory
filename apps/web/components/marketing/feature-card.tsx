@@ -12,7 +12,7 @@ export function FeatureCard({ feature, children }: { feature: FeatureMeta; child
 
   return (
     <div className="fab-card flex flex-col gap-3 rounded-xl border border-border bg-card p-6">
-      <Icon aria-hidden="true" className="size-7 text-amber-600" />
+      <Icon aria-hidden="true" className="size-7 text-fab-marker" />
       <h3 className="text-lg font-semibold text-foreground">{feature.title}</h3>
       <p className="text-sm text-muted-foreground">{feature.blurb}</p>
       {children ? <div className="mt-1">{children}</div> : null}

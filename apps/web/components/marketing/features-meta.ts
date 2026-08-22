@@ -7,10 +7,33 @@
 import type { ServiceGroup, ServiceName } from "@factory/config";
 // lucide-react is a client-safe icon library — importing its types/components here
 // doesn't change this module's importability from client components.
-import { Activity, Bot, Clock, CreditCard, KeyRound, Mail } from "lucide-react";
+import {
+  Activity,
+  Bot,
+  Clock,
+  CreditCard,
+  KeyRound,
+  Mail,
+  ShieldCheck,
+  SlidersHorizontal,
+  SquareCode,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-export type FeatureKey = "auth" | "billing" | "llm" | "jobs" | "email" | "observability";
+// Frozen set, nine entries, in grid order (m11-untangle-workspace.md K.16 N4 — BINDING,
+// T12 builds `/features/*` pages against this identical list). `auth`, `kernel`,
+// `config`, `security` carry `services: []` — they're baseline structure, not a runtime
+// capability toggle, exactly like `auth` today.
+export type FeatureKey =
+  | "auth"
+  | "kernel"
+  | "config"
+  | "llm"
+  | "jobs"
+  | "security"
+  | "email"
+  | "billing"
+  | "observability";
 
 export interface FeatureMeta {
   key: FeatureKey;
@@ -42,6 +65,26 @@ export const FEATURES: Record<FeatureKey, FeatureMeta> = {
     services: [],
     groups: ["auth"],
   },
+  kernel: {
+    key: "kernel",
+    title: "A handler shape you can't get wrong",
+    blurb:
+      "Every route and action declares its auth mode, its input schema, its rate limit — a raw handler fails lint by construction.",
+    href: "/features/kernel",
+    icon: SquareCode,
+    services: [],
+    groups: ["core"],
+  },
+  config: {
+    key: "config",
+    title: "One registry, not a scattered process.env",
+    blurb:
+      "Every env var is declared once — required, secret, what it enables — and the doctor, the docs, and the code can never disagree.",
+    href: "/features/config",
+    icon: SlidersHorizontal,
+    services: [],
+    groups: ["core"],
+  },
   billing: {
     key: "billing",
     title: "Payments that unlock things",
@@ -66,11 +109,21 @@ export const FEATURES: Record<FeatureKey, FeatureMeta> = {
     key: "jobs",
     title: "Cron your agent can trust",
     blurb:
-      'Background jobs and step functions, with a manual "check now" fallback when they\'re off.',
+      "Cron, fan-out and per-step retries when they're on — and every on-demand run works exactly the same when they're off.",
     href: "/features/jobs",
     icon: Clock,
     services: ["jobs"],
     groups: ["jobs"],
+  },
+  security: {
+    key: "security",
+    title: "SSRF guarded, not just documented",
+    blurb:
+      "A fetch of a user-supplied URL is scheme-checked, range-blocked, and re-validated after connect — see the refusal happen, not just read about it.",
+    href: "/features/security",
+    icon: ShieldCheck,
+    services: [],
+    groups: ["core"],
   },
   email: {
     key: "email",
@@ -94,12 +147,15 @@ export const FEATURES: Record<FeatureKey, FeatureMeta> = {
   },
 };
 
-/** Stable order for the grid. */
+/** Stable order for the grid — the frozen nine-key order (K.16 N4). */
 export const FEATURE_LIST: FeatureMeta[] = [
   FEATURES.auth,
-  FEATURES.billing,
+  FEATURES.kernel,
+  FEATURES.config,
   FEATURES.llm,
   FEATURES.jobs,
+  FEATURES.security,
   FEATURES.email,
+  FEATURES.billing,
   FEATURES.observability,
 ];
