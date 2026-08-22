@@ -6,16 +6,12 @@
  * docs/superpowers/specs/2026-08-21-launch-checklist-design.md §2).
  *
  * `evaluatePreflight` is pure: no `process.env` reads inside, `env` arrives as a plain
- * object so tests can pass fixtures directly. The CLI wrapper calls it with
- * `{ ...readMergedEnv(), FACTORY_DEV: process.env.FACTORY_DEV }` — `readMergedEnv()` is
- * registry-filtered and would silently drop `FACTORY_DEV`, so it's threaded in explicitly.
+ * object so tests can pass fixtures directly.
  *
  * `stage: "prototype"` never fails — everything a production ship would block is reported
  * as a warning instead, so the human sees it coming. `stage: "production"` turns the same
  * checks into failures. Non-blocking warnings (email capability disabled) print at both
- * stages. `FACTORY_DEV` never suppresses the production-stage handoff-present failure
- * (§J.12.13) — a repo that still carries `.factory/handoff/` is by definition not a product
- * repo, dev override or not; it only silences the advisory nag printed alongside the report.
+ * stages.
  */
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -24,7 +20,7 @@ import { fileURLToPath } from "node:url";
 import { deriveCapabilities } from "../src/capabilities";
 import { readMergedEnv } from "../src/env-file";
 import type { RawEnv } from "../src/registry";
-import { HANDOFF_NAG, isHandoffPresent, loadStage } from "./factory-stage";
+import { loadStage } from "./factory-stage";
 
 const POINTER_FILES = ["CLAUDE.md", "AGENTS.md"];
 const POINTER_TARGET = "docs/agents/conventions.md";
@@ -35,8 +31,7 @@ function pointerCheckMessage(file: string): string {
 
 /**
  * Pure evaluation — `rootDir` is never `realpath`'d (opt-23), threaded verbatim. `env` is a
- * plain string/undefined map (not `RawEnv`): it also carries `FACTORY_DEV`, which is outside
- * the registry.
+ * plain string/undefined map (not `RawEnv`).
  */
 export function evaluatePreflight(
   rootDir: string,
@@ -46,14 +41,10 @@ export function evaluatePreflight(
   const warnings: string[] = [];
 
   const stage = loadStage(rootDir);
-  const handoffPresent = isHandoffPresent(rootDir);
   const stripeKey = env.STRIPE_SECRET_KEY;
   const stripeIsTestKey = Boolean(stripeKey && stripeKey.startsWith("sk_test_"));
 
   const productionBlockers: string[] = [];
-  if (handoffPresent) {
-    productionBlockers.push(".factory/handoff/ still exists — run pnpm factory:init");
-  }
   if (stripeIsTestKey) {
     productionBlockers.push(
       "STRIPE_SECRET_KEY starts with sk_test_ — a live key is required in production",
@@ -91,17 +82,9 @@ export function evaluatePreflight(
 
 function main(): void {
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-  // §J.12.4: readMergedEnv() is registry-filtered and would silently drop FACTORY_DEV, so
-  // it's threaded in explicitly, exactly as the plan pins.
-  const env: Record<string, string | undefined> = {
-    ...readMergedEnv(),
-    FACTORY_DEV: process.env.FACTORY_DEV,
-  };
+  const env: Record<string, string | undefined> = readMergedEnv();
 
   console.log(`stage: ${loadStage(repoRoot)}`);
-  if (isHandoffPresent(repoRoot) && !env.FACTORY_DEV) {
-    console.log(HANDOFF_NAG);
-  }
   console.log("");
 
   const { failures, warnings } = evaluatePreflight(repoRoot, env);

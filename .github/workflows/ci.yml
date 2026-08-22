@@ -120,7 +120,7 @@ jobs:
       - name: Boot standalone server and poll /api/health
         run: |
           set -e
-          PORT=3100 HOSTNAME=127.0.0.1 node apps/web/.next/standalone/apps/web/server.js &
+          PORT=3100 HOSTNAME=127.0.0.1 node apps/demo/.next/standalone/apps/demo/server.js &
           SERVER_PID=$!
 
           status=1
@@ -334,7 +334,7 @@ jobs:
           SENTRY_DSN: https://abc@o0.ingest.sentry.io/0
         run: |
           set -e
-          PORT=3100 HOSTNAME=127.0.0.1 node apps/web/.next/standalone/apps/web/server.js &
+          PORT=3100 HOSTNAME=127.0.0.1 node apps/demo/.next/standalone/apps/demo/server.js &
           SERVER_PID=$!
 
           status=1
@@ -439,7 +439,7 @@ jobs:
           # (M3). Three-dot diffs HEAD against the merge-base of BASE and HEAD, showing
           # only what this branch actually changed since it diverged.
           CHANGED=$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA" -- \
-            packages/auth packages/core packages/billing apps/web/middleware.ts packages/db/migrations)
+            packages/auth packages/core packages/billing apps/demo/middleware.ts packages/db/migrations)
 
           if [ -z "$CHANGED" ]; then
             echo "No guarded-zone paths touched — nothing to check."
@@ -454,5 +454,5 @@ jobs:
             exit 0
           fi
 
-          echo "::error::This PR touches a guarded zone (packages/auth, packages/core, packages/billing, apps/web/middleware.ts, or packages/db/migrations) but its description is missing the completed security checklist. Fill in the checklist from .github/PULL_REQUEST_TEMPLATE.md and check the '- [x] security-checklist' line."
+          echo "::error::This PR touches a guarded zone (packages/auth, packages/core, packages/billing, apps/demo/middleware.ts, or packages/db/migrations) but its description is missing the completed security checklist. Fill in the checklist from .github/PULL_REQUEST_TEMPLATE.md and check the '- [x] security-checklist' line."
           exit 1

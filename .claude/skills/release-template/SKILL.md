@@ -18,16 +18,25 @@ Green in the default (minimal, `DATABASE_URL` + `BETTER_AUTH_SECRET` only) profi
 confirm the full-profile CI job (all services mocked) is green on the branch you're
 releasing — don't tag on a red or skipped full-profile run.
 
-## Phase 2 — Quickstart, re-verified on a clean clone
+## Phase 2 — Scaffold-and-check
 
-Clone the repo fresh (not your working tree — an actual `git clone`, or an rsync minus
-`node_modules`/`.next`/`.git`), and run the README's quickstart exactly as written:
-`cp .env.example .env`, set `DATABASE_URL` + `BETTER_AUTH_SECRET`, `pnpm install`,
-`pnpm dev`. It must boot with zero other service signups. Then `pnpm factory:init` on
-that same clone and confirm it promotes the adopter instruction set correctly (root
-`CLAUDE.md` becomes the adopter version, `LAUNCH.md` lands at the repo root,
-`.factory/handoff/` is gone, factory-dev-only skills are gone, `fabulous-feature`/
-`add-a-job` remain).
+The real check is `packages/create`'s scaffold-and-check job: run the installer CLI with
+`--yes` into a temp dir, `pnpm install`, then run the _output's own_ `pnpm check` plus the
+minimal boot (`migrate` + `/api/health`) — this validates what adopters actually receive.
+That CLI lands in M3; until then, verify the two things it will assemble:
+
+- `pnpm check` is green in the default (minimal, `DATABASE_URL` + `BETTER_AUTH_SECRET`
+  only) profile, re-run on a clean clone (not your working tree — an actual `git clone`,
+  or an rsync minus `node_modules`/`.next`/`.git`). It must boot with zero other service
+  signups (`cp .env.example .env`, set the two required vars, `pnpm install`, `pnpm dev`).
+- The payload golden surface is intact: `payload/CLAUDE.md`/`AGENTS.md` carry the literal
+  pointer `docs/agents/conventions.md` and stay within their line caps
+  (`packages/config/test/factory-docs.test.ts`), `payload/agents/` has its 4 files and
+  `payload/skills/` its 7 dirs, `payload/LAUNCH.md`'s `<!-- preset:items -->` marker
+  composes with `presets/demo/overlay/launch-items.md` to the pinned 9-item order
+  (`packages/config/test/launch-checklist-drift.test.ts`), and no factory-dev skill/agent
+  (`add-integration-package`, `write-adr`, `release-template`, `fab-forge`, `fab-steward`)
+  appears anywhere under `payload/`.
 
 ## Phase 3 — Docker quickstart
 
@@ -42,9 +51,11 @@ docker compose up --build
 
 ## Phase 4 — Tag and publish
 
-Tag the release (`git tag vX.Y.Z`), push it, and confirm the GitHub template repository
-setting is still enabled on the repo (Settings → Template repository) so "Use this
-template" keeps working for new adopters.
+Tag the release (`git tag vX.Y.Z`) and push it. npm publishing itself (both
+`fabulous-factory` and `create-fabulous-factory`, lockstep versioning, lockfile capture
+from the scaffold-and-check job) lands in M4 — until then this phase is the git tag only.
+The GitHub template-repository checkbox is turned off at first publish (the installer is
+the only supported door); do not re-enable it.
 
 For the first public release specifically, work through `docs/guides/release-checklist.md`
 too — it covers what this phase assumes is already done (LICENSE/CONTRIBUTING, live demo,

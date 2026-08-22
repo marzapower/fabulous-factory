@@ -36,16 +36,14 @@ function writePointerFiles(includePointer: boolean): void {
 }
 
 describe("evaluatePreflight — prototype stage", () => {
-  it("reports handoff presence and a test Stripe key as advisory only", () => {
+  it("reports a test Stripe key as advisory only", () => {
     writeConfig({ stage: "prototype" });
     writePointerFiles(true);
-    mkdirSync(path.join(rootDir, ".factory", "handoff"), { recursive: true });
 
     const { failures, warnings } = evaluatePreflight(rootDir, {
       STRIPE_SECRET_KEY: "sk_test_abc123",
     });
     expect(failures).toEqual([]);
-    expect(warnings.some((w) => w.includes(".factory/handoff"))).toBe(true);
     expect(warnings.some((w) => w.includes("sk_test_"))).toBe(true);
   });
 
@@ -59,44 +57,19 @@ describe("evaluatePreflight — prototype stage", () => {
     expect(warnings.some((w) => w.includes("AGENTS.md"))).toBe(true);
   });
 
-  it("never fails, even with .factory/handoff/ present", () => {
+  it("never fails, given a test Stripe key", () => {
     writeConfig({ stage: "prototype" });
     writePointerFiles(true);
-    mkdirSync(path.join(rootDir, ".factory", "handoff"), { recursive: true });
 
-    const { failures, warnings } = evaluatePreflight(rootDir, {});
+    const { failures, warnings } = evaluatePreflight(rootDir, {
+      STRIPE_SECRET_KEY: "sk_test_abc123",
+    });
     expect(failures).toEqual([]);
     expect(warnings.some((w) => w.includes("would block production"))).toBe(true);
   });
 });
 
 describe("evaluatePreflight — production stage", () => {
-  it("fails when .factory/handoff/ is present", () => {
-    writeConfig({ stage: "production" });
-    writePointerFiles(true);
-    mkdirSync(path.join(rootDir, ".factory", "handoff"), { recursive: true });
-
-    const { failures } = evaluatePreflight(rootDir, {});
-    expect(failures.some((f) => f.includes(".factory/handoff"))).toBe(true);
-  });
-
-  it("does not fail when .factory/handoff/ is absent", () => {
-    writeConfig({ stage: "production" });
-    writePointerFiles(true);
-
-    const { failures } = evaluatePreflight(rootDir, {});
-    expect(failures.some((f) => f.includes(".factory/handoff"))).toBe(false);
-  });
-
-  it("FACTORY_DEV=1 does NOT suppress the handoff blocker (§J.12.13)", () => {
-    writeConfig({ stage: "production" });
-    writePointerFiles(true);
-    mkdirSync(path.join(rootDir, ".factory", "handoff"), { recursive: true });
-
-    const { failures } = evaluatePreflight(rootDir, { FACTORY_DEV: "1" });
-    expect(failures.some((f) => f.includes(".factory/handoff"))).toBe(true);
-  });
-
   it("fails on a Stripe key that starts with sk_test_", () => {
     writeConfig({ stage: "production" });
     writePointerFiles(true);

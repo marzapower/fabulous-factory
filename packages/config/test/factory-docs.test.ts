@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -43,33 +43,28 @@ describe("root CLAUDE.md / AGENTS.md — mirror staleness", () => {
   });
 });
 
-// Skip-clean when .factory/handoff/ doesn't exist yet (e.g. right after `factory:init`, or
-// before Worker C's handoff content has landed) — same assertions apply to the adopter
-// copies while the handoff dir is present.
-const handoffDir = path.join(REPO_ROOT, ".factory", "handoff");
-const handoffExists = existsSync(handoffDir);
-const describeHandoff = handoffExists ? describe : describe.skip;
+// payload/ is permanent (the adopter surface composed into every scaffolded repo, spec §5) —
+// unlike the old `.factory/handoff/` this is never conditionally absent, so no skip-guard.
+describe("payload CLAUDE.md / AGENTS.md — mirror staleness", () => {
+  const claudePath = path.join(REPO_ROOT, "payload", "CLAUDE.md");
+  const agentsPath = path.join(REPO_ROOT, "payload", "AGENTS.md");
 
-describeHandoff("handoff CLAUDE.md / AGENTS.md — mirror staleness", () => {
-  const claudePath = path.join(handoffDir, "CLAUDE.md");
-  const agentsPath = path.join(handoffDir, "AGENTS.md");
-
-  it("handoff/CLAUDE.md contains the literal pointer to docs/agents/conventions.md", () => {
+  it("payload/CLAUDE.md contains the literal pointer to docs/agents/conventions.md", () => {
     const content = readFileSync(claudePath, "utf8");
     expect(content).toContain(POINTER_TARGET);
   });
 
-  it("handoff/AGENTS.md contains the literal pointer to docs/agents/conventions.md", () => {
+  it("payload/AGENTS.md contains the literal pointer to docs/agents/conventions.md", () => {
     const content = readFileSync(agentsPath, "utf8");
     expect(content).toContain(POINTER_TARGET);
   });
 
-  it("handoff/CLAUDE.md is under 60 lines", () => {
+  it("payload/CLAUDE.md is under 60 lines", () => {
     const content = readFileSync(claudePath, "utf8");
     expect(countLines(content)).toBeLessThan(60);
   });
 
-  it("handoff/AGENTS.md is 15 lines or fewer", () => {
+  it("payload/AGENTS.md is 15 lines or fewer", () => {
     const content = readFileSync(agentsPath, "utf8");
     expect(countLines(content)).toBeLessThanOrEqual(15);
   });

@@ -44,15 +44,20 @@ function isRouteFile(filename) {
  * read this table.
  */
 const FRAMEWORK_MOUNTS = [
-  // Better Auth catch-all: `export const { GET, POST } = toNextJsHandler(auth)`.
-  { fileSuffix: "apps/web/app/api/auth/[...all]/route.ts", callee: "toNextJsHandler" },
+  // Better Auth catch-all: `export const { GET, POST } = toNextJsHandler(auth)`. The
+  // pattern anchors the mount to the app root (apps/<name>/(src/)app/api/...) so a nested
+  // app/api/... segment elsewhere in the tree can't claim the exemption.
+  {
+    pattern: /\/apps\/[^/]+\/(?:src\/)?app\/api\/auth\/\[\.\.\.all\]\/route\.ts$/,
+    callee: "toNextJsHandler",
+  },
   // Inngest serve mount: `export const { GET, POST, PUT } = serve({ client, functions })`.
-  { fileSuffix: "apps/web/app/api/inngest/route.ts", callee: "serve" },
+  { pattern: /\/apps\/[^/]+\/(?:src\/)?app\/api\/inngest\/route\.ts$/, callee: "serve" },
 ];
 
 function frameworkMountFor(filename) {
   const normalized = normalize(filename);
-  return FRAMEWORK_MOUNTS.find((mount) => normalized.endsWith(mount.fileSuffix)) ?? null;
+  return FRAMEWORK_MOUNTS.find((mount) => mount.pattern.test(normalized)) ?? null;
 }
 
 /**

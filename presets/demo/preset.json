@@ -1,0 +1,8 @@
+{
+  "id": "demo",
+  "label": "Untangle demo",
+  "description": "Full working micro-SaaS: capture → normalize → daily plan",
+  "appDir": "apps/demo",
+  "status": "available",
+  "packages": null
+}

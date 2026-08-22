@@ -1,9 +1,11 @@
 # CLAUDE.md — Fabulous Factory (factory-dev mode)
 
-This is the **fabulous-factory template repo**, not a product. Everything here gets
-cloned by every adopter, so work here is factory work, not feature work. Adopters run
-`pnpm factory:init` to turn their clone into a product repo — that promotes the
-instruction set staged in `.factory/handoff/` over this file.
+This is the **fabulous-factory factory repo**, not a product — a runnable multi-preset
+workspace, not something adopted directly. Work here is factory work, not feature work.
+`apps/*` are preset apps (`apps/demo` first); the adopter instruction set lives in
+`payload/` + `presets/`, composed into a product repo by the npx installer at publish
+time, not promoted here (see
+`docs/superpowers/specs/2026-08-22-npx-installer-design.md`).
 
 **Stack (frozen):** Next.js 15 (App Router), TypeScript strict, Postgres + Drizzle,
 Tailwind + shadcn/ui, pnpm workspaces. Billing (Stripe/disabled) and LLM
@@ -43,9 +45,9 @@ Factory-dev skills (this repo only — not shipped to adopters): `add-integratio
 
 `.claude/agents/` — delegate rather than doing everything in one context. Factory-dev:
 `fab-forge` (template packages, kernel, adapters, registry), `fab-steward` (adoption
-surface — handoff mirrors, tiering, ADRs). Shared with adopters:
+surface — payload mirrors, presets, tiering, ADRs). Shared with adopters:
 `fab-warden` (conventions and quality review), `fab-bastion` (security review),
-`fab-medic` (systematic debugging). The adopter agents are staged in
-`.factory/handoff/agents/` and install on `pnpm factory:init` — they are not loaded here.
+`fab-medic` (systematic debugging). The adopter agents are staged in `payload/agents/`
+and composed into the product repo by the installer — they are not loaded here.
 `AGENTS.md` deliberately says nothing about them: `.claude/agents/` is Claude-specific,
 and that file is the pointer for every other agent runtime.

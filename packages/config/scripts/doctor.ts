@@ -30,7 +30,7 @@ import {
 } from "../src/llm-routing";
 import { PLANS, type Plan } from "../src/plans";
 import { type AppMode, type EnvVarName, type RawEnv } from "../src/registry";
-import { HANDOFF_NAG, isHandoffPresent, loadStage } from "./factory-stage";
+import { loadStage } from "./factory-stage";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -331,16 +331,13 @@ function printServiceLine(
 }
 
 /**
- * Doctor's factory section: stage display + advisory handoff nag. Deliberately terser than
- * `factory:status`'s full per-item `LAUNCH.md` report (opt-24) — `loadStage`/
- * `isHandoffPresent` never throw, so no try/catch is needed here.
+ * Doctor's factory section: stage display only. Deliberately terser than `factory:status`'s
+ * full per-item `LAUNCH.md` report (opt-24) — `loadStage` never throws, so no try/catch is
+ * needed here.
  */
 function printFactorySection(): void {
   console.log("factory:");
   console.log(`    stage: ${loadStage(REPO_ROOT)}`);
-  if (isHandoffPresent(REPO_ROOT) && !process.env.FACTORY_DEV) {
-    console.log(`    ${HANDOFF_NAG}`);
-  }
   console.log("");
 }
 

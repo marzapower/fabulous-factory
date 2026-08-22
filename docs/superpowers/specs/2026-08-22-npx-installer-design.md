@@ -119,10 +119,10 @@ dependency-cruised with regexes that no longer match.
   `create`), root configs (eslint, dependency-cruiser, tsconfig, vitest, prettier,
   commitlint, pnpm-workspace.yaml incl. supply-chain policy), `.husky/`,
   `.github/PULL_REQUEST_TEMPLATE.md` (load-bearing for the guarded-zones CI job),
-  `LICENSE`, `.gitattributes`, `.devcontainer/`, `docs/agents/conventions.md` + guides
-  + templates, shared skills (`fabulous-feature`, `add-a-job`), shared agents
-  (`fab-warden`, `fab-bastion`, `fab-medic`), `.env.example`, `gitignore` (stored
-  undotted — npm strips `.gitignore` from tarballs — and re-dotted on install).
+  `LICENSE`, `.gitattributes`, `.devcontainer/`, `docs/agents/conventions.md`, the
+  guides and doc templates, shared skills (`fabulous-feature`, `add-a-job`), shared
+  agents (`fab-warden`, `fab-bastion`, `fab-medic`), `.env.example`, `gitignore`
+  (stored undotted — npm strips `.gitignore` from tarballs — and re-dotted on install).
 - **Payload (adopter surface + maintained adopter variants):** adopter
   `CLAUDE.md`/`AGENTS.md`/`LAUNCH.md` at root, the 4 adopter agents into
   `.claude/agents/`, the 7 adopter skills into `.claude/skills/`. Plus the root files
@@ -146,7 +146,8 @@ dependency-cruised with regexes that no longer match.
 **LAUNCH.md merge rule:** `payload/LAUNCH.md` carries the shape-generic items plus an
 explicit insertion marker (`<!-- preset:items -->`); each preset overlay provides a
 fragment inserted there at compose time (the demo's fragment holds "Demo logic" and
-"Template showcase"). The drift test re-pins the *composed demo output* at 9 items.
+"Template showcase"). The drift test re-pins the _composed demo output_ at 9 items.
+
 - **Never shipped:** factory-dev skills (`add-integration-package`, `write-adr`,
   `release-template`), factory agents (`fab-forge`, `fab-steward`), `payload/`,
   `presets/`, `packages/create/`, `docs/superpowers/`, research dumps, `.factory/`.
@@ -205,7 +206,7 @@ $ npx fabulous-factory@latest install
 - **Constraints:** `packages/create` must satisfy the workspace rules — no
   `process.env` outside allowed paths (add `packages/create/src/**` to
   `PROCESS_ENV_EXCEPTIONS` only if genuinely needed) and no imports from `apps/*`.
-  Note the dependency-cruiser DAG rules only constrain *existing* packages' `from`
+  Note the dependency-cruiser DAG rules only constrain _existing_ packages' `from`
   paths — nothing would stop a new package's own imports by default — so M3 adds a
   proactive `dag-create-imports-no-workspace-package` rule enforcing the v1 target
   that `packages/create` imports no workspace package (it manipulates files, not
@@ -256,7 +257,7 @@ only supported door).
    pointer intact in both CLAUDE.md and AGENTS.md, `gitignore` undotted in the template
    and re-dotted by install.
 3. **Scaffold-and-check** (release CI job, per preset): run the CLI with `--yes` into a
-   temp dir, `pnpm install`, then run the *output's own* `pnpm check` and the minimal
+   temp dir, `pnpm install`, then run the _output's own_ `pnpm check` and the minimal
    boot (migrate + `/api/health`). This validates what adopters actually receive. The
    `pnpm-lock.yaml` this job produces is captured into the preset's template (§5).
 4. Publish: `prepack` runs compose into the ephemeral `templates/` (§5); git tag

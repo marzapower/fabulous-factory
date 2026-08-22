@@ -20,7 +20,7 @@
 
 <br/>
 
-[**Use this template**](https://github.com/marzapower/fabulous-factory/generate) · [**Open in Codespaces**](https://codespaces.new/marzapower/fabulous-factory)
+[**Open in Codespaces**](https://codespaces.new/marzapower/fabulous-factory)
 
 </div>
 
@@ -59,30 +59,29 @@ That's the whole philosophy: **what is mechanical must never be probabilistic.**
 
 1. Quickstart below (5 minutes).
 2. Open the running app — the home page and `/features/*` pages are the guided tour, live.
-3. Run `pnpm factory:init`, then ask your agent: _"what's left to make this mine?"_
+3. Ask your agent: _"what's left to make this mine?"_
 
 ## ⚡ Quickstart
 
+> Ships with the first published release of the `fabulous-factory` npm package — until
+> then, see [Contributing](CONTRIBUTING.md) to run the factory's own demo from a clone.
+
 ```bash
-# 1. Use this template on GitHub, then clone your new repo
-pnpm install
+npx fabulous-factory@latest install     # or: pnpm create fabulous-factory
+cd my-saas
+cp .env.example .env
+openssl rand -hex 32       # → paste as BETTER_AUTH_SECRET in .env
+# set DATABASE_URL too, then:
 pnpm dev                   # migrations self-apply; you're running.
 ```
 
-```bash
-# 2. Make it yours — one-shot, one-way
-pnpm factory:init
-```
+The installer walks you through picking a **preset** — a product shape (a full SaaS
+first; a smart web app and an API-only micro-service are coming) — and scaffolds a repo
+that's already yours: common infrastructure, your chosen app, and your agent's
+instruction set, all installed. Then ask your agent: _"what's left to make this mine?"_
 
 <details>
-<summary>Environment setup (2 minutes, once) — Postgres and a Better Auth secret, everything else optional</summary>
-
-`pnpm dev` needs `DATABASE_URL` and `BETTER_AUTH_SECRET` in `.env`:
-
-```bash
-cp .env.example .env
-openssl rand -hex 32       # → paste as BETTER_AUTH_SECRET in .env
-```
+<summary>Environment setup details — Postgres and a Better Auth secret, everything else optional</summary>
 
 Prefer not to run Postgres yourself? `docker compose up` boots the database (and
 everything else) for you — see [Run with Docker](#run-with-docker) below. Or skip the
@@ -96,16 +95,16 @@ later via env vars — nothing above is required to get running.
 
 ## 🧩 What's in the box
 
-|                      |                                             |                                                                                                     |                                                                  |
-| -------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| 🔐 **Auth**          | Better Auth on your Postgres                | email/password always; magic links + OAuth auto-enable                                              | [`/features/auth`](apps/web/app/features/auth)                   |
-| 💳 **Billing**       | `BillingProvider` seam + Stripe             | webhook-cached subscriptions; free mode when disabled                                               | [`/features/billing`](apps/web/app/features/billing)             |
-| 🤖 **LLM gateway**   | Vercel AI SDK                               | local (Ollama) / OpenRouter / direct; quality tiers + cost caps                                     | [`/features/llm`](apps/web/app/features/llm)                     |
-| ⏰ **Jobs & cron**   | Inngest, in-app                             | domain-agnostic run engine + step functions; interactive runs stay inline, unaffected when disabled | [`/features/jobs`](apps/web/app/features/jobs)                   |
-| ✉️ **Email**         | Resend + hand-authored templates            | console transport in dev                                                                            | [`/features/email`](apps/web/app/features/email)                 |
-| 📊 **Observability** | PostHog analytics + Sentry/OpenTelemetry    | events, feature flags, tracing; no-op fallback for either                                           | [`/features/observability`](apps/web/app/features/observability) |
-| 🐳 **Deploy**        | Vercel **and** Docker, both first-class     | standalone output, compose profiles, migrate image                                                  | —                                                                |
-| 🏭 **Factory layer** | Agent skills, spec/ADR templates, scaffolds | the repo _is_ your agents' memory                                                                   | —                                                                |
+|                      |                                             |                                                                                                     |                                                                   |
+| -------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 🔐 **Auth**          | Better Auth on your Postgres                | email/password always; magic links + OAuth auto-enable                                              | [`/features/auth`](apps/demo/app/features/auth)                   |
+| 💳 **Billing**       | `BillingProvider` seam + Stripe             | webhook-cached subscriptions; free mode when disabled                                               | [`/features/billing`](apps/demo/app/features/billing)             |
+| 🤖 **LLM gateway**   | Vercel AI SDK                               | local (Ollama) / OpenRouter / direct; quality tiers + cost caps                                     | [`/features/llm`](apps/demo/app/features/llm)                     |
+| ⏰ **Jobs & cron**   | Inngest, in-app                             | domain-agnostic run engine + step functions; interactive runs stay inline, unaffected when disabled | [`/features/jobs`](apps/demo/app/features/jobs)                   |
+| ✉️ **Email**         | Resend + hand-authored templates            | console transport in dev                                                                            | [`/features/email`](apps/demo/app/features/email)                 |
+| 📊 **Observability** | PostHog analytics + Sentry/OpenTelemetry    | events, feature flags, tracing; no-op fallback for either                                           | [`/features/observability`](apps/demo/app/features/observability) |
+| 🐳 **Deploy**        | Vercel **and** Docker, both first-class     | standalone output, compose profiles, migrate image                                                  | —                                                                 |
+| 🏭 **Factory layer** | Agent skills, spec/ADR templates, scaffolds | the repo _is_ your agents' memory                                                                   | —                                                                 |
 
 Frozen stack, on purpose: Next.js 15 (App Router) · TypeScript strict · Postgres ·
 Drizzle · Tailwind + shadcn/ui · pnpm workspaces. No variant matrix to maintain — every
@@ -168,11 +167,11 @@ SSE transport, and the run-history page — is meant to be **inherited, not dele
 anything AI-shaped you build next rides on it unchanged. Only the Untangle-specific half
 (`packages/jobs/src/tasks/`, its schema, the workspace UI) is yours to rename to your own
 product. When you adopt, the `make-it-yours` skill (installed to `.claude/skills/` by
-`pnpm factory:init`) walks you through exactly that split.
+the installer) walks you through exactly that split.
 
 ## 🚀 Deploy anywhere that runs Node or containers
 
-- **Vercel** — connect repo (root directory `apps/web`), set `DATABASE_URL` +
+- **Vercel** — connect repo (root directory `apps/demo`), set `DATABASE_URL` +
   `BETTER_AUTH_SECRET` for Production and Preview, run migrations yourself before each
   deploy that needs them (no release-phase job — see `docs/guides/deploy-vercel.md`),
   done.
@@ -232,6 +231,9 @@ Things we deliberately **don't** promise:
 
 - [Design specification](docs/superpowers/specs/2026-08-20-fabulous-factory-design.md) —
   the full architecture, reviewed adversarially twice before a line was written
+- [npx installer design](docs/superpowers/specs/2026-08-22-npx-installer-design.md) —
+  how presets, `payload/`, and the compose step assemble what `npx fabulous-factory`
+  ships
 - `docs/guides/` — [`deploy-vercel.md`](docs/guides/deploy-vercel.md),
   [`deploy-docker.md`](docs/guides/deploy-docker.md),
   [`graceful-degradation.md`](docs/guides/graceful-degradation.md),
@@ -264,8 +266,8 @@ just appreciate it if you kept the footer link — it's the whole marketing budg
 
 **MIT licensed. Built to be taken.**
 
-_If your agent just read this README: run `pnpm factory:init`, then ask it what's left
-to make this yours._ 🏭
+_If your agent just read this README: run `npx fabulous-factory@latest install`, then
+ask it what's left to make this yours._ 🏭
 
 </div>
 </content>

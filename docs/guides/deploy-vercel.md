@@ -7,11 +7,14 @@ different config. This guide covers the Vercel path.
 
 In Vercel, "Add New… → Project" and import your GitHub repo. Set:
 
-- **Root Directory**: `apps/web`. This is a pnpm workspace (`pnpm-workspace.yaml` +
+- **Root Directory**: `apps/demo`. This is a pnpm workspace (`pnpm-workspace.yaml` +
   `pnpm-lock.yaml` at the repo root) — Vercel detects that and installs from the
-  workspace root even with Root Directory set to `apps/web`, then runs the build inside
+  workspace root even with Root Directory set to `apps/demo`, then runs the build inside
   it. Framework Preset auto-detects as Next.js; leave the Build/Install commands on
-  their defaults unless you've changed the workspace layout.
+  their defaults unless you've changed the workspace layout. (A repo scaffolded by the
+  npx installer gets this same treatment against `apps/web` — every installed product is
+  uniformly renamed to it; see
+  `docs/superpowers/specs/2026-08-22-npx-installer-design.md`.)
 - `next.config.ts` sets `output: "standalone"` for the Docker path (see
   `deploy-docker.md`) — Vercel's own build pipeline does its own output tracing and
   ignores the standalone folder. It's harmless on Vercel, just unused there.
