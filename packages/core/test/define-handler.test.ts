@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getSession } from "@factory/auth";
 import { getEnv } from "@factory/config";
 
-import { defineHandler, deriveRouteName } from "../src/define-handler";
+import { defineHandler, deriveRouteName, type NextRouteContext } from "../src/define-handler";
 import { checkRateLimit } from "../src/rate-limit";
 
 vi.mock("@factory/auth", () => ({
@@ -36,8 +36,25 @@ async function readJson(res: Response): Promise<JsonErrorBody> {
   return res.json() as Promise<JsonErrorBody>;
 }
 
-function emptyParams() {
-  return { params: Promise.resolve({}) };
+/**
+ * What Next 15 hands a handler for a route with NO dynamic segments — `params` present
+ * as a key, `undefined` as a value. This helper used to return
+ * `{ params: Promise.resolve({}) }`, which no real non-dynamic route ever produces; the
+ * whole suite passed while every rate-limited non-dynamic route 500'd in production on
+ * `Object.entries(undefined)`. Use `dynamicParams()` for a route that really has
+ * segments.
+ */
+function emptyParams(): NextRouteContext {
+  // `as unknown as` is the point of the test, not a shortcut around it: at runtime Next
+  // gives a non-dynamic route `params: undefined` — no promise at all — while its own
+  // generated route types insist the key is a `Promise`. This cast writes the true
+  // runtime shape against the framework's inaccurate declaration.
+  return { params: undefined } as unknown as NextRouteContext;
+}
+
+/** What Next hands a handler for a route WITH dynamic segments. */
+function dynamicParams(params: Record<string, string | string[] | undefined>): NextRouteContext {
+  return { params: Promise.resolve(params) };
 }
 
 beforeEach(() => {
@@ -311,12 +328,8 @@ describe("defineHandler — rate limiting", () => {
       handler: async () => ({}),
     });
 
-    await handle(new NextRequest("http://localhost/api/items/111"), {
-      params: Promise.resolve({ id: "111" }),
-    });
-    await handle(new NextRequest("http://localhost/api/items/222"), {
-      params: Promise.resolve({ id: "222" }),
-    });
+    await handle(new NextRequest("http://localhost/api/items/111"), dynamicParams({ id: "111" }));
+    await handle(new NextRequest("http://localhost/api/items/222"), dynamicParams({ id: "222" }));
 
     expect(mockCheckRateLimit).toHaveBeenNthCalledWith(
       1,
@@ -325,6 +338,30 @@ describe("defineHandler — rate limiting", () => {
     expect(mockCheckRateLimit).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ name: "GET /api/items/:id" }),
+    );
+  });
+
+  // Regression: Next hands a NON-dynamic route `params: undefined`, not a promise of
+  // `{}`. `deriveRouteName` reached `Object.entries(undefined)` and threw, so EVERY
+  // rate-limited route without dynamic segments answered 500 — `/api/runs` and both
+  // `/api/demo/*` examples, i.e. the entire interactive surface of the app. The suite
+  // stayed green because its own fixture supplied a promise the framework never sends.
+  it("a rate-limited route with NO dynamic segments still derives a bucket and runs", async () => {
+    const handle = defineHandler({
+      auth: "public",
+      input: "none",
+      rateLimit: { windowSeconds: 60, max: 5 },
+      handler: async (ctx) => ({ params: ctx.params }),
+    });
+
+    const res = await handle(new NextRequest("http://localhost/api/runs"), emptyParams());
+
+    expect(res.status).toBe(200);
+    // The handler still sees an object, never `undefined` — `HandlerCtx.params` is
+    // declared non-optional and the wrapper is what makes that true.
+    expect(await res.json()).toEqual({ params: {} });
+    expect(mockCheckRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "GET /api/runs" }),
     );
   });
 });
@@ -561,9 +598,10 @@ describe("defineHandler — handler return + error shaping", () => {
       rateLimit: "none",
       handler: async (ctx) => ctx.params,
     });
-    const res = await handle(new NextRequest("http://localhost/api/x/1"), {
-      params: Promise.resolve({ id: "1", tags: ["a", "b"] }),
-    });
+    const res = await handle(
+      new NextRequest("http://localhost/api/x/1"),
+      dynamicParams({ id: "1", tags: ["a", "b"] }),
+    );
     expect(await res.json()).toEqual({ id: "1", tags: ["a", "b"] });
   });
 });
