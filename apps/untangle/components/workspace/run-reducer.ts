@@ -4,7 +4,7 @@
  * stream `POST /api/runs` writes (engine events plus the tasks domain's `TaskEvent`
  * riding inside `{ type: "data" }`) into a `WorkspaceState` a component can render
  * directly. Unit-tested (`apps/web/test/run-reducer.test.ts`) against duplicate and
- * out-of-order deliveries — a real risk here since the SSE frame parser (`@/lib/sse`)
+ * out-of-order deliveries — a real risk here since the SSE frame parser (`@factory/ui/sse`)
  * hands frames to this reducer one at a time over an ordinary chunked HTTP body, and a
  * proxy or a retried fetch could in principle re-deliver or reorder them.
  *

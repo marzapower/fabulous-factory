@@ -7,7 +7,7 @@ import { useState } from "react";
 
 import type { RunEvent } from "@factory/untangle";
 
-import { LiveExample } from "@/components/marketing/live-example";
+import { LiveExample } from "@factory/ui/marketing";
 // Shared with the live workspace's RunStrip on purpose: this replay renders the same
 // RunEvents the real run does, so a hand-rolled formatter here would show one duration
 // ("1240ms") where the workspace shows another ("1.2s") for the identical event.

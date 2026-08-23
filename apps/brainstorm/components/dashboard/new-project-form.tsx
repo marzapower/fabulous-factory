@@ -4,9 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { createProjectAction } from "@/app/dashboard/actions";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button, Input, Label } from "@factory/ui/primitives";
 
 const NAME_MAX_CHARS = 80;
 const PITCH_MAX_CHARS = 200;

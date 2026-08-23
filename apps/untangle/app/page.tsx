@@ -6,8 +6,7 @@ import { DemoTeaser } from "@/components/marketing/demo-teaser";
 import { FeaturesLink } from "@/components/marketing/features-link";
 import { Hero } from "@/components/marketing/hero";
 import { NothingDisappears } from "@/components/marketing/nothing-disappears";
-import { SiteFooter } from "@/components/marketing/site-footer";
-import { SiteHeader } from "@/components/marketing/site-header";
+import { SiteFooter, SiteHeader } from "@factory/ui/marketing";
 import { ThreePasses } from "@/components/marketing/three-passes";
 
 /**
@@ -27,7 +26,7 @@ import { ThreePasses } from "@/components/marketing/three-passes";
 export default function HomePage() {
   return (
     <div className="fab-shell flex min-h-svh flex-col">
-      <SiteHeader />
+      <SiteHeader brand="Fabulous Untangle" emoji="🧶" />
 
       <main className="flex-1">
         <Hero />

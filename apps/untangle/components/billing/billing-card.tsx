@@ -2,7 +2,7 @@ import { CreditCard, TriangleAlert } from "lucide-react";
 
 import type { Entitlement } from "@factory/billing";
 import { FREE_PLAN_ID, PLANS } from "@factory/config";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@factory/ui/primitives";
 import { cn } from "@/lib/utils";
 import { ManageSubscriptionButton, UpgradeButton } from "@/components/billing/billing-actions";
 

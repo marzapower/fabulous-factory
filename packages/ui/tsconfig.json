@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Every component here is a Next.js "use client" component (or imported only by
+    // one) reading window/document indirectly — copy-button.tsx's `navigator.clipboard`
+    // being the clearest case — so DOM lib is added here, same as packages/config and
+    // packages/analytics (the root base config targets server code only, lib: ["es2022"]).
+    "types": ["node"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src", "test"]
+}

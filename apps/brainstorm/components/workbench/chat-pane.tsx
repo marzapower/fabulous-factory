@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import type { ProjectItem, ProjectMessage } from "@factory/brainstorm";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@factory/ui/primitives";
 
 import { MessageBubble } from "./message-bubble";
 import { ProposalCard } from "./proposal-card";

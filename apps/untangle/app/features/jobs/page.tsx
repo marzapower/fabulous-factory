@@ -6,12 +6,14 @@ import type { Metadata } from "next";
 import { getClientConfig, getEnvDocsForGroup } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
 
-import { CodeBlock } from "@/components/marketing/code-block";
-import { EnvTable } from "@/components/marketing/env-table";
-import { FeaturePageShell } from "@/components/marketing/feature-page-shell";
-import { FEATURES } from "@/components/marketing/features-meta";
+import {
+  CodeBlock,
+  EnvTable,
+  FeaturePageShell,
+  FEATURES,
+  StatusLight,
+} from "@factory/ui/marketing";
 import { RECORDED_RUN } from "@/components/marketing/recorded-run";
-import { StatusLight } from "@/components/marketing/status-light";
 
 import { RunReplay } from "../run-replay";
 
@@ -52,7 +54,12 @@ export default function JobsFeaturePage() {
 
   return (
     <ClientConfigProvider config={config}>
-      <FeaturePageShell feature={FEATURES.jobs} statusSlot={<StatusLight service="jobs" />}>
+      <FeaturePageShell
+        feature={FEATURES.jobs}
+        brand="Fabulous Untangle"
+        emoji="🧶"
+        statusSlot={<StatusLight service="jobs" />}
+      >
         <section>
           <h2 className="text-xl font-semibold">What it does</h2>
           <p className="mt-2 text-muted-foreground">

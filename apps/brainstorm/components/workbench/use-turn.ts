@@ -4,7 +4,7 @@ import { useCallback, useReducer, useRef, useState } from "react";
 
 import type { TurnEvent } from "@factory/brainstorm";
 
-import { createSseFrameParser } from "@/lib/sse";
+import { createSseFrameParser } from "@factory/ui/sse";
 
 import { initialTurnState, turnReducer, type TurnState } from "./turn-reducer";
 
@@ -30,7 +30,7 @@ export interface UseTurnResult {
  * Owns the `fetch` + manual stream read for `POST /api/chat` — mirrors
  * `apps/untangle/components/workspace/use-run.ts` exactly (SSE consumed with `fetch` and a
  * manual frame reader, not `EventSource`, since this route is a POST). Frames are parsed
- * by `createSseFrameParser` (`@/lib/sse`) and folded into view state by the pure
+ * by `createSseFrameParser` (`@factory/ui/sse`) and folded into view state by the pure
  * `turnReducer`; this hook's only job is wiring the two together.
  */
 export function useTurn(projectId: string): UseTurnResult {

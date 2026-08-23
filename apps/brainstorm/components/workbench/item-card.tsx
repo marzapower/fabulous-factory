@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import type { ProjectItem } from "@factory/brainstorm";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@factory/ui/primitives";
 
 const DETAIL_MAX_CHARS = 2000;
 const TITLE_MAX_CHARS = 120;

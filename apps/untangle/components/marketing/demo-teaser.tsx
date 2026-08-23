@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@factory/ui/primitives";
 import { cn } from "@/lib/utils";
 
 export function DemoTeaser() {

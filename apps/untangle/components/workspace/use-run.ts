@@ -4,7 +4,7 @@ import { useCallback, useReducer, useRef, useState } from "react";
 
 import type { RunEvent } from "@factory/untangle";
 
-import { createSseFrameParser } from "@/lib/sse";
+import { createSseFrameParser } from "@factory/ui/sse";
 
 import { initialWorkspaceState, runReducer, type WorkspaceState } from "./run-reducer";
 
@@ -27,7 +27,7 @@ export interface UseRunResult {
  * Owns the `fetch` + manual stream read for `POST /api/runs` (plan K.8.1/K.8.4) — SSE
  * consumed with `fetch` and a manual frame reader rather than `EventSource`, since
  * `EventSource` is GET-only and this route is a POST that both creates and streams the
- * run on one response (K.1.5). Frames are parsed by `createSseFrameParser` (`@/lib/sse`)
+ * run on one response (K.1.5). Frames are parsed by `createSseFrameParser` (`@factory/ui/sse`)
  * and folded into view state by the pure `runReducer`; this hook's only job is wiring
  * the two together and tracking in-flight/error state for the component layer.
  */

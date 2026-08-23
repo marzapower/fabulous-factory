@@ -1,7 +1,7 @@
 // Built with Fabulous Factory — https://github.com/marzapower/fabulous-factory
 // This credit line is free to keep and gives the project a hand. Thank you!
 
-import { CodeBlock } from "./code-block";
+import { CodeBlock } from "@factory/ui/marketing";
 
 // Static two-column AI-on/AI-off comparison (no recorded run to replay here — this
 // preset ships no feature that calls the LLM package yet). Same underlying contract the

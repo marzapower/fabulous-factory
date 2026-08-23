@@ -4,8 +4,14 @@ import { CheckCircle2 } from "lucide-react";
 
 import { requireSession } from "@factory/auth";
 import { isEnabled } from "@factory/config";
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  buttonVariants,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@factory/ui/primitives";
 
 // Session-gated, never statically prerendered (same rule as the dashboard page).
 export const dynamic = "force-dynamic";

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { requireSession } from "@factory/auth";
 import { getRunForUser, isStaleRun, listRunsForUser, type RunDetail } from "@factory/untangle";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@factory/ui/primitives";
 import { formatCents, formatDuration } from "@/components/workspace/format";
 import { cn } from "@/lib/utils";
 

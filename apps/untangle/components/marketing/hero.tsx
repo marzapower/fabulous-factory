@@ -8,7 +8,7 @@ import Link from "next/link";
 
 import type { RunEvent } from "@factory/untangle";
 
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@factory/ui/primitives";
 import { DumpPanel } from "@/components/workspace/dump-panel";
 import { PriorityChip } from "@/components/workspace/priority-chip";
 import {

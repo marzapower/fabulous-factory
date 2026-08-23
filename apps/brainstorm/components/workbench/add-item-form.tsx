@@ -4,8 +4,7 @@ import { useState, type FormEvent } from "react";
 
 import type { ItemKind } from "@factory/brainstorm";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button, Input } from "@factory/ui/primitives";
 
 const TITLE_MAX_CHARS = 120;
 const DETAIL_MAX_CHARS = 2000;

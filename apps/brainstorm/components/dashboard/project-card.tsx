@@ -6,8 +6,14 @@ import Link from "next/link";
 import type { ProjectSummary } from "@factory/brainstorm";
 
 import { deleteProjectAction } from "@/app/dashboard/actions";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@factory/ui/primitives";
 
 function formatDate(date: Date): string {
   return new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric" });

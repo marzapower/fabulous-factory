@@ -1,8 +1,6 @@
 import Link from "next/link";
 
-import { CodeBlock } from "@/components/marketing/code-block";
-import { SiteFooter } from "@/components/marketing/site-footer";
-import { SiteHeader } from "@/components/marketing/site-header";
+import { CodeBlock, SiteFooter, SiteHeader } from "@factory/ui/marketing";
 
 // Static prose page (design spec shell idiom): no capability reads, no client state — a
 // plain server component. The blank-slate homepage has nothing to render dynamically;
@@ -11,7 +9,7 @@ import { SiteHeader } from "@/components/marketing/site-header";
 export default function HomePage() {
   return (
     <div className="fab-shell flex min-h-svh flex-col">
-      <SiteHeader />
+      <SiteHeader brand="Fabulous Nothing" />
 
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 py-24">
         <p className="font-mono text-sm text-fab-marker">// fabulous nothing</p>

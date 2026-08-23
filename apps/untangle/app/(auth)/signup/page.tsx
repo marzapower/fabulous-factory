@@ -3,9 +3,9 @@ import Link from "next/link";
 
 import { getCapabilities, getEnv } from "@factory/config";
 import { deriveAuthOptions } from "@factory/auth";
-import { SignupForm } from "@/components/auth/signup-form";
-import { SiteFooter } from "@/components/marketing/site-footer";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SignupForm } from "@factory/ui/auth";
+import { SiteFooter } from "@factory/ui/marketing";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@factory/ui/primitives";
 
 export const metadata: Metadata = {
   title: "Create your account",

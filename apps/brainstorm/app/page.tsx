@@ -3,9 +3,8 @@
 
 import Link from "next/link";
 
-import { SiteFooter } from "@/components/marketing/site-footer";
-import { SiteHeader } from "@/components/marketing/site-header";
-import { buttonVariants } from "@/components/ui/button";
+import { SiteFooter, SiteHeader } from "@factory/ui/marketing";
+import { buttonVariants } from "@factory/ui/primitives";
 import { cn } from "@/lib/utils";
 
 const STEPS: ReadonlyArray<{ label: string; body: string }> = [
@@ -33,7 +32,7 @@ const STEPS: ReadonlyArray<{ label: string; body: string }> = [
 export default function HomePage() {
   return (
     <div className="fab-shell flex min-h-svh flex-col">
-      <SiteHeader />
+      <SiteHeader brand="Fabulous Brainstorm Chat" emoji="💭" />
 
       <main className="flex-1">
         <section className="mx-auto grid max-w-6xl gap-12 px-6 py-20 lg:grid-cols-2 lg:items-center">

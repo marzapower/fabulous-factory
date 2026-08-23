@@ -25,14 +25,16 @@ module.exports = {
       comment:
         "better-auth may only be imported directly in packages/auth. Two narrower " +
         "exceptions are carved out below: the framework-mount route (better-auth/next-js " +
-        "only) and middleware.ts (better-auth/cookies only, D.9.14 — edge middleware needs " +
-        "the lightweight cookie-presence check directly; it cannot depend on packages/auth's " +
-        "full session resolution, which hits the database).",
+        "only) and packages/ui/src/middleware.ts (better-auth/cookies only, D.9.14 — the " +
+        "shared proxy allowlist needs the lightweight cookie-presence check directly; it " +
+        "cannot depend on packages/auth's full session resolution, which hits the database. " +
+        "Every preset app's proxy.ts delegates here via @factory/ui/middleware and imports " +
+        "no better-auth itself; same subpath-only exception below).",
       from: {
         pathNot: [
           "^packages/auth/",
           "^apps/[^/]+/app/api/auth/\\[\\.\\.\\.all\\]/route\\.ts$",
-          "^apps/[^/]+/middleware\\.ts$",
+          "^packages/ui/src/middleware\\.ts$",
         ],
       },
       to: {
@@ -62,11 +64,13 @@ module.exports = {
       name: "middleware-better-auth-cookies-subpath-only",
       severity: "error",
       comment:
-        "middleware.ts may import better-auth, but only the better-auth/cookies subpath " +
-        "(getSessionCookie) — anything else would pull real session/DB logic into edge " +
-        "middleware, defeating the point of the optimistic-only layer (spec §8.5).",
+        "packages/ui/src/middleware.ts (the shared @factory/ui/middleware implementation " +
+        "every preset app's proxy.ts delegates to) may import better-auth, but only the " +
+        "better-auth/cookies subpath (getSessionCookie) — anything else would pull real " +
+        "session/DB logic into the request proxy, defeating the point of the " +
+        "optimistic-only layer (spec §8.5).",
       from: {
-        path: "^apps/[^/]+/middleware\\.ts$",
+        path: "^packages/ui/src/middleware\\.ts$",
       },
       to: {
         path: "(^|/)node_modules/better-auth(/|$)",
@@ -244,6 +248,27 @@ module.exports = {
       },
       to: {
         path: "(^|/)node_modules/undici(/|$)",
+      },
+    },
+    {
+      name: "dag-ui-imports-config-auth",
+      severity: "error",
+      comment:
+        "packages/ui (the shared component layer extracted from the three preset apps — " +
+        "primitives, auth forms, marketing/docs components, the capability panel, plus " +
+        "T5's middleware/SSE/theme seams) may depend on packages/config (ServiceName/" +
+        "EnvVarSpec types, useClientConfig) and packages/auth (authClient, better-auth/" +
+        "cookies in middleware.ts — see the narrow subpath exceptions above). It has no " +
+        "runtime dependency on packages/core today (kernel-code.tsx's `defineHandler` " +
+        "import is a string literal inside an illustrative code sample, not a real " +
+        "import) or packages/db — narrower than a preset app's own allowlist (every " +
+        "preset app may import anything).",
+      from: {
+        path: "^packages/ui/",
+      },
+      to: {
+        path: "^packages/",
+        pathNot: "^packages/(config|auth|ui)/",
       },
     },
     {
@@ -501,13 +526,14 @@ module.exports = {
       comment:
         "packages/create (the npm-published `fabulous-factory` installer CLI) and " +
         "packages/create-alias (the `create-fabulous-factory` bin shim) manipulate files, " +
-        "not factory code — they must not import any of the 11 @factory/* packages, even " +
+        "not factory code — they must not import any of the 13 @factory/* packages, even " +
         "though both live under packages/ (npx-installer design spec §6/§11 M3). This " +
         "rule's `to.pathNot` allowlists `^packages/(create|create-alias)/` itself, so it " +
         "does NOT ban create↔create-alias imports (there happen to be none today — " +
         "create-alias/bin.js's one edge is a dynamic `import()` of the built dist, not a " +
         "workspace-package import); it only closes the deny-by-default gap (G.3.1) for " +
-        "these two newest packages against the OTHER 10. packages/create-alias/bin.js is " +
+        "these two newest packages against the OTHER 12 (13 counting create/create-alias " +
+        "as the one being checked). packages/create-alias/bin.js is " +
         "excluded from the whole cruise (options.exclude below) for an unrelated, purely " +
         'mechanical reason: its one edge (`import("fabulous-factory/dist/cli.js")`) only ' +
         "resolves AFTER `pnpm build` has produced packages/create/dist/, which `pnpm " +

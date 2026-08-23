@@ -5,7 +5,7 @@ import { ArrowUpRight, ExternalLink } from "lucide-react";
 
 import type { PlanId } from "@factory/config";
 import { createCheckoutAction, openPortalAction } from "@/app/dashboard/actions";
-import { Button } from "@/components/ui/button";
+import { Button } from "@factory/ui/primitives";
 
 /**
  * Free → paid. Redirects to Stripe Checkout on success (`window.location.assign` — the

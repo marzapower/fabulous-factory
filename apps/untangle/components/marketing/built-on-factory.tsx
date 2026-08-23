@@ -1,7 +1,7 @@
 // Built with Fabulous Factory — https://github.com/marzapower/fabulous-factory
 // This credit line is free to keep and gives the project a hand. Thank you!
 
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@factory/ui/primitives";
 import { cn } from "@/lib/utils";
 
 /**
