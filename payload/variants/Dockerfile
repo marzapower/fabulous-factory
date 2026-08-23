@@ -1,19 +1,20 @@
 # syntax=docker/dockerfile:1
 #
-# Adopter variant maintained in payload/variants/ — keep in sync with the factory original (see docs/superpowers/specs/2026-08-22-npx-installer-design.md §5)
-#
-# Multi-stage build for the Fabulous Factory monorepo.
+# Multi-stage build for this repo: a pnpm workspace with one app (apps/web) and its
+# supporting packages. Two images come out of this one file, selected by --target:
 #
 #   docker build .                               -> runtime image (default/last stage)
 #   docker build --target runner .                -> runtime image (explicit)
 #   docker build --target migrate .                -> one-shot migrator image
 #
-# See docs/superpowers/plans/milestones/m8-docker-deploy.md §I.4 for the contract.
+# `runner` serves the app; `migrate` is a small, separate image whose only job is to run
+# pending database migrations (e.g. as a release step or a one-shot job) without shipping
+# the app's build toolchain or dependencies into that image.
 
 # ---------------------------------------------------------------------------
 # base: shared toolchain layer for both the app build and the migrate build.
 # ---------------------------------------------------------------------------
-FROM node:22.23.2-alpine3.23@sha256:46825fbbd4e996a78b7a2cdc08d75e38a5a505bdab95dcda55605359bf124bc6 AS base
+FROM node:24.19.0-alpine3.24@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS base
 
 RUN corepack enable && corepack prepare pnpm@11.22.0 --activate
 
@@ -45,6 +46,7 @@ COPY packages/email/package.json packages/email/package.json
 COPY packages/jobs/package.json packages/jobs/package.json
 COPY packages/llm/package.json packages/llm/package.json
 COPY packages/observability/package.json packages/observability/package.json
+COPY packages/ui/package.json packages/ui/package.json
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else pnpm install; fi
@@ -83,7 +85,7 @@ RUN pnpm deploy --legacy --filter @factory/db --prod /prod/db
 # ---------------------------------------------------------------------------
 # migrate: one-shot migrator image. Non-root, no dev toolchain beyond tsx.
 # ---------------------------------------------------------------------------
-FROM node:22.23.2-alpine3.23@sha256:46825fbbd4e996a78b7a2cdc08d75e38a5a505bdab95dcda55605359bf124bc6 AS migrate
+FROM node:24.19.0-alpine3.24@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS migrate
 
 ENV NODE_ENV=production
 WORKDIR /app

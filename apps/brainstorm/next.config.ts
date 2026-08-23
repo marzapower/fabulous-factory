@@ -16,24 +16,27 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     "@factory/config",
     "@factory/auth",
-    "@factory/db",
     "@factory/core",
-    "@factory/email",
-    "@factory/analytics",
-    "@factory/observability",
-    // M6: the jobs package (and the llm package it pulls in as TS source — an M5 gap
-    // that never surfaced because nothing imported @factory/llm from the app yet).
-    "@factory/llm",
-    "@factory/jobs",
-    // M7: billing (stripe SDK confined behind a guarded dynamic import inside the
-    // package, per boundary rule stripe-only-in-billing).
-    "@factory/billing",
+    // The shared UI layer (primitives, auth forms, marketing components) extracted from
+    // the three preset apps — TS source, same as every other workspace package here.
+    "@factory/ui",
     // Brainstorm preset: the domain package this app is actually built on
     // (`@factory/brainstorm`, itself pulling in `@factory/db`/`@factory/llm` as TS
-    // source, same reason `@factory/jobs` needed this list above).
+    // source — Turbopack transpiles those transitively, so they don't need their own
+    // entries here).
     "@factory/brainstorm",
+    // db/email/analytics/observability/llm/jobs/billing are deliberately absent: this
+    // preset's package.json doesn't declare them directly, and Turbopack transpiles
+    // workspace packages this app DOES depend on (including transitively, e.g. db/llm
+    // via @factory/brainstorm above) automatically — listing them here was stale
+    // copy-paste from untangle.
   ],
   outputFileTracingRoot: path.join(__dirname, "../../"),
+
+  // Next 16 auto-generates AGENTS.md/CLAUDE.md on `next dev` when it detects an AI
+  // coding agent (server/lib/generate-agent-files.ts) — this repo's own CLAUDE.md/
+  // AGENTS.md are hand-authored and checked in, so that generator must never run here.
+  agentRules: false,
 
   // @sentry/node (packages/observability's guarded dynamic import, see errors.ts) pulls
   // in @opentelemetry/instrumentation, which uses require-in-the-middle — a Node-only

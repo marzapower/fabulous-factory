@@ -18,13 +18,13 @@
     "@factory/db": "workspace:*",
     "@factory/observability": "workspace:*",
     "@openrouter/ai-sdk-provider": "3.0.0",
-    "ai": "7.0.68",
+    "ai": "7.0.77",
     "server-only": "^0.0.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@ai-sdk/provider": "4.0.7",
-    "@types/node": "^22.20.1",
+    "@types/node": "^24.13.3",
     "@types/pg": "^8.23.1",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.23.0",

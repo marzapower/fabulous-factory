@@ -21,9 +21,8 @@ allowBuilds:
 minimumReleaseAge: 1440 # nosemgrep: package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
-# undici-types 6.x is the exact pin of @types/node 22.x (our Node floor); its old
-# releases predate npm provenance, tripping no-downgrade. Scoped exclusion, not a
-# policy drop.
+# Old undici-types releases still get resolved by transitive @types/node ranges and
+# predate npm provenance, tripping no-downgrade. Scoped exclusion, not a policy drop.
 trustPolicyExclude:
   - undici-types
   # resend 6.20.0 (current `latest`) was published by a different, legitimate Resend
@@ -31,6 +30,11 @@ trustPolicyExclude:
   # not a takeover. Scoped exclusion so the official email SDK installs; revisit if
   # resend restores provenance attestation.
   - resend
+  # chokidar 4.0.2/4.0.3 dropped the provenance attestation that 4.0.0/4.0.1 carried,
+  # tripping no-downgrade for every tsup >=8.4.0 (which pins chokidar ^4). Build-time
+  # file watcher for the installer CLI bundle only, never a runtime dep. Added
+  # 2026-08-23 to unblock tsup 8.5.1; revisit if chokidar restores provenance.
+  - chokidar
 minimumReleaseAgeExclude:
   - lucide-react@1.33.0
 # Security overrides for high-severity advisories reaching us transitively

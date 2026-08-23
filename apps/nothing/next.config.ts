@@ -16,20 +16,21 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     "@factory/config",
     "@factory/auth",
-    "@factory/db",
     "@factory/core",
-    "@factory/email",
-    "@factory/analytics",
-    "@factory/observability",
-    // M6: the jobs package (and the llm package it pulls in as TS source — an M5 gap
-    // that never surfaced because nothing imported @factory/llm from the app yet).
-    "@factory/llm",
-    "@factory/jobs",
-    // M7: billing (stripe SDK confined behind a guarded dynamic import inside the
-    // package, per boundary rule stripe-only-in-billing).
-    "@factory/billing",
+    // The shared UI layer (primitives, auth forms, marketing components) extracted from
+    // the three preset apps — TS source, same as every other workspace package here.
+    "@factory/ui",
+    // db/email/analytics/observability/llm/jobs/billing are deliberately absent: this
+    // preset's package.json doesn't declare them (it has no db-backed or paid-feature
+    // pages), and Turbopack transpiles workspace packages this app DOES depend on
+    // automatically — listing undeclared ones here was stale copy-paste from untangle.
   ],
   outputFileTracingRoot: path.join(__dirname, "../../"),
+
+  // Next 16 auto-generates AGENTS.md/CLAUDE.md on `next dev` when it detects an AI
+  // coding agent (server/lib/generate-agent-files.ts) — this repo's own CLAUDE.md/
+  // AGENTS.md are hand-authored and checked in, so that generator must never run here.
+  agentRules: false,
 
   // Security headers (design spec §8.4/§8.5, plan D.6). Deliberately NO Content-Security-
   // Policy in M3: a safe default CSP needs to know the app's actual asset/script origins

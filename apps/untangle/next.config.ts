@@ -31,8 +31,16 @@ const nextConfig: NextConfig = {
     // M7: billing (stripe SDK confined behind a guarded dynamic import inside the
     // package, per boundary rule stripe-only-in-billing).
     "@factory/billing",
+    // The shared UI layer (primitives, auth forms, marketing components) extracted from
+    // the three preset apps — TS source, same as every other workspace package here.
+    "@factory/ui",
   ],
   outputFileTracingRoot: path.join(__dirname, "../../"),
+
+  // Next 16 auto-generates AGENTS.md/CLAUDE.md on `next dev` when it detects an AI
+  // coding agent (server/lib/generate-agent-files.ts) — this repo's own CLAUDE.md/
+  // AGENTS.md are hand-authored and checked in, so that generator must never run here.
+  agentRules: false,
 
   // @sentry/node (packages/observability's guarded dynamic import, see errors.ts) pulls
   // in @opentelemetry/instrumentation, which uses require-in-the-middle — a Node-only

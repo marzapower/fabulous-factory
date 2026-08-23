@@ -11,7 +11,7 @@
 # ---------------------------------------------------------------------------
 # base: shared toolchain layer for both the app build and the migrate build.
 # ---------------------------------------------------------------------------
-FROM node:22.23.2-alpine3.23@sha256:46825fbbd4e996a78b7a2cdc08d75e38a5a505bdab95dcda55605359bf124bc6 AS base
+FROM node:24.19.0-alpine3.24@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS base
 
 RUN corepack enable && corepack prepare pnpm@11.22.0 --activate
 
@@ -47,6 +47,7 @@ COPY packages/email/package.json packages/email/package.json
 COPY packages/jobs/package.json packages/jobs/package.json
 COPY packages/llm/package.json packages/llm/package.json
 COPY packages/observability/package.json packages/observability/package.json
+COPY packages/ui/package.json packages/ui/package.json
 COPY packages/untangle/package.json packages/untangle/package.json
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
@@ -86,7 +87,7 @@ RUN pnpm deploy --legacy --filter @factory/db --prod /prod/db
 # ---------------------------------------------------------------------------
 # migrate: one-shot migrator image. Non-root, no dev toolchain beyond tsx.
 # ---------------------------------------------------------------------------
-FROM node:22.23.2-alpine3.23@sha256:46825fbbd4e996a78b7a2cdc08d75e38a5a505bdab95dcda55605359bf124bc6 AS migrate
+FROM node:24.19.0-alpine3.24@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS migrate
 
 ENV NODE_ENV=production
 WORKDIR /app

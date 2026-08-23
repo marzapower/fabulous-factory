@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -58,7 +58,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -118,7 +118,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -304,7 +304,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -412,7 +412,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -444,15 +444,60 @@ jobs:
               semgrep scan --config p/owasp-top-ten --error
           fi
 
+  # Cost-controlled path gate for scaffold-and-check on PRs: only computes whether any
+  # scaffold-relevant path changed, so the (skippable) matrix job below can stay cheap on
+  # PRs that don't touch template inputs. Same three-dot-diff convention as
+  # guarded-zones.yml. Runs unconditionally (cheap) so `needs:` below never blocks on a
+  # skipped job for non-PR triggers.
+  scaffold-and-check-paths:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check for scaffold-relevant path changes
+        id: check
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -e
+          CHANGED=$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA" -- \
+            packages payload presets apps pnpm-lock.yaml \
+            eslint.config.mjs eslint.factory-rules.mjs eslint.factory-rules.d.mts \
+            .dependency-cruiser.cjs tsconfig.base.json vitest.config.ts \
+            pnpm-workspace.yaml docker-compose.yml Dockerfile)
+          if [ -n "$CHANGED" ]; then
+            echo "Scaffold-relevant paths touched by this PR:"
+            echo "$CHANGED"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No scaffold-relevant paths touched — skipping scaffold-and-check."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # M4 publish-pipeline validation (design spec §8.3, §9, §11), extracted into a reusable
-  # workflow so `release.yml` gates its publish on the very same run. Release triggers
-  # only (tag pushes, manual dispatch), never PRs: a full second cold `pnpm install` plus
-  # `pnpm check` plus a build/boot cycle is too expensive to pay on every PR (§9).
+  # workflow so `release.yml` gates its publish on the very same run. Full 3-preset matrix
+  # on release triggers (tag pushes, manual dispatch) and on master pushes. On PRs
+  # (cost-controlled, §9) restricted to a single preset (untangle) and gated on the paths
+  # filter above — a full second cold `pnpm install` plus `pnpm check` plus a build/boot
+  # cycle per preset is too expensive to pay on every PR regardless of what it touches.
   scaffold-and-check:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+    needs: [scaffold-and-check-paths]
+    if: |
+      always() && (
+        github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/master')) ||
+        (github.event_name == 'pull_request' && needs.scaffold-and-check-paths.result == 'success' && needs.scaffold-and-check-paths.outputs.changed == 'true') ||
+        (github.event_name == 'pull_request' && needs.scaffold-and-check-paths.result == 'failure')
+      )
     strategy:
       matrix:
-        preset: [untangle, nothing, brainstorm]
+        preset: ${{ fromJSON(github.event_name == 'pull_request' && '["untangle"]' || '["untangle","nothing","brainstorm"]') }}
     uses: ./.github/workflows/scaffold-and-check.yml
     with:
       preset: ${{ matrix.preset }}
