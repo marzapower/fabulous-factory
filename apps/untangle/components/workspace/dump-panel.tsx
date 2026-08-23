@@ -50,15 +50,20 @@ export function DumpPanel({
         className="whitespace-pre-wrap font-serif text-base leading-relaxed text-foreground"
         style={{ fontFamily: "var(--font-serif)" }}
       >
-        {segments.map((segment, i) => {
+        {segments.map((segment) => {
           const raw = text.slice(segment.start, segment.end);
+          // `segment.start` is a stable, unique key on its own: `buildSegments` returns
+          // non-overlapping segments in ascending order, so no two segments in this array
+          // ever share a start offset — unlike the array index, it doesn't shift when the
+          // segment list is recomputed for a different (but overlapping) span set.
+          const segmentKey = segment.start;
 
           if (segment.taskId !== null) {
             const isHovered = hoveredTaskId === segment.taskId;
             const title = titleById.get(segment.taskId) ?? "a task";
             return (
               <span
-                key={i}
+                key={segmentKey}
                 id={`source-${segment.taskId}`}
                 className="fab-tint rounded-sm"
                 style={{
@@ -75,7 +80,7 @@ export function DumpPanel({
           }
 
           if (raw.trim().length === 0) {
-            return <span key={i}>{raw}</span>;
+            return <span key={segmentKey}>{raw}</span>;
           }
 
           if (!onCreateFromLeftover) {
@@ -84,20 +89,26 @@ export function DumpPanel({
             // themselves — which a screen reader already reads. The consumed/leftover
             // distinction stays carried by the consumed spans' own labels plus the
             // caption below.
-            return <Fragment key={i}>{raw}</Fragment>;
+            return <Fragment key={segmentKey}>{raw}</Fragment>;
           }
 
           return (
-            <Fragment key={i}>
+            <Fragment key={segmentKey}>
               {splitLeftover(raw, segment.start).map((piece, p) => {
+                // A clickable piece already carries its own absolute offset
+                // (`piece.span.start`), unique within this leftover — reuse it as the key
+                // instead of the array index. A non-clickable piece (pure whitespace,
+                // between/around clickable words) has no offset in `LeftoverPiece`, so it
+                // falls back to its position among ITS OWN piece array, namespaced so it
+                // can never collide with a numeric offset key from a sibling piece.
                 if (!piece.span) {
-                  return <Fragment key={p}>{piece.text}</Fragment>;
+                  return <Fragment key={`ws-${p}`}>{piece.text}</Fragment>;
                 }
                 const isCreating =
                   creatingSpan?.start === piece.span.start && creatingSpan.end === piece.span.end;
                 return (
                   <button
-                    key={p}
+                    key={piece.span.start}
                     type="button"
                     disabled={isCreating}
                     className="fab-tint rounded-sm text-left underline decoration-dotted decoration-muted-foreground/50 underline-offset-4 hover:bg-fab-live-soft disabled:opacity-60"

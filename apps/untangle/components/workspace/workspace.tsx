@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { TaskTree } from "@factory/untangle";
 
 import { createManualTaskAction } from "@/app/dashboard/actions";
-import { Button } from "@/components/ui/button";
+import { Button } from "@factory/ui/primitives";
 import { cn } from "@/lib/utils";
 
 import { DumpPanel } from "./dump-panel";
@@ -81,9 +81,27 @@ export interface WorkspaceProps {
  * produced a given row; a delete/toggle overlay (`hiddenIds`/`statusOverride`) covers
  * both without a page reload.
  */
+type CaptureMode = "text" | "url";
+
+/** Basic client-side shape check only — protocol plus a non-empty host. The server owns
+ * real validation (`POST /api/runs`'s zod schema, then `safeFetch` itself): this exists
+ * only to catch an obviously-not-a-URL paste before spending a network round trip and a
+ * run-cap slot on it. */
+function isCaptureUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return (parsed.protocol === "http:" || parsed.protocol === "https:") && parsed.host !== "";
+  } catch {
+    return false;
+  }
+}
+
 export function Workspace({ initialTasks, runsToday, runsPerDay }: WorkspaceProps) {
   const { state, isRunning, error, start } = useRun();
+  const [mode, setMode] = useState<CaptureMode>("text");
   const [dumpText, setDumpText] = useState("");
+  const [urlText, setUrlText] = useState("");
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [submittedText, setSubmittedText] = useState<string | null>(null);
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const [hiddenIds, setHiddenIds] = useState<ReadonlySet<string>>(new Set());
@@ -128,8 +146,31 @@ export function Workspace({ initialTasks, runsToday, runsPerDay }: WorkspaceProp
   );
 
   async function handleSubmit() {
+    if (isRunning) return;
+
+    if (mode === "url") {
+      const trimmedUrl = urlText.trim();
+      if (!trimmedUrl) return;
+      if (!isCaptureUrl(trimmedUrl)) {
+        setUrlError(
+          "That doesn't look like a link. Try a full URL, like https://example.com/article.",
+        );
+        return;
+      }
+      setUrlError(null);
+      // A URL run has no client-known text for "the consuming dump" to highlight (the
+      // page is fetched server-side) — leaving `submittedText` alone (it's already null
+      // unless a previous text run set it) keeps `DumpPanel` unmounted for this run,
+      // rather than showing it wired to stale text from an earlier paste.
+      setSubmittedText(null);
+      setHiddenIds(new Set());
+      setStatusOverride(new Map());
+      await start({ url: trimmedUrl });
+      return;
+    }
+
     const trimmed = dumpText.trim();
-    if (!trimmed || isRunning) return;
+    if (!trimmed) return;
     setSubmittedText(trimmed);
     setHiddenIds(new Set());
     setStatusOverride(new Map());
@@ -169,29 +210,92 @@ export function Workspace({ initialTasks, runsToday, runsPerDay }: WorkspaceProp
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Paste your mess</h2>
+          <h2 className="text-sm font-semibold">
+            {mode === "text" ? "Paste your mess" : "Untangle a link"}
+          </h2>
           <Link href="/runs" className="font-mono text-xs text-muted-foreground hover:underline">
             View all runs →
           </Link>
         </div>
-        <textarea
-          value={dumpText}
-          onChange={(e) => setDumpText(e.target.value)}
-          disabled={isRunning}
-          rows={5}
-          placeholder="Everything on your mind, unsorted. Untangle will do the rest."
-          className="w-full resize-y rounded-md border bg-background p-3 font-serif text-sm leading-relaxed disabled:opacity-60"
-          style={{ fontFamily: "var(--font-serif)" }}
-        />
+        <div
+          role="group"
+          aria-label="Capture mode"
+          className="flex w-fit items-center gap-1 rounded-md border bg-background p-0.5"
+        >
+          <button
+            type="button"
+            aria-pressed={mode === "text"}
+            disabled={isRunning}
+            onClick={() => setMode("text")}
+            className={cn(
+              "rounded-sm px-2.5 py-1 font-mono text-xs uppercase tracking-wide transition-colors disabled:pointer-events-none disabled:opacity-60",
+              mode === "text"
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Paste
+          </button>
+          <button
+            type="button"
+            aria-pressed={mode === "url"}
+            disabled={isRunning}
+            onClick={() => setMode("url")}
+            className={cn(
+              "rounded-sm px-2.5 py-1 font-mono text-xs uppercase tracking-wide transition-colors disabled:pointer-events-none disabled:opacity-60",
+              mode === "url"
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            From a link
+          </button>
+        </div>
+        {mode === "text" ? (
+          <textarea
+            value={dumpText}
+            onChange={(e) => setDumpText(e.target.value)}
+            disabled={isRunning}
+            rows={5}
+            placeholder="Everything on your mind, unsorted. Untangle will do the rest."
+            className="w-full resize-y rounded-md border bg-background p-3 font-serif text-sm leading-relaxed disabled:opacity-60"
+            style={{ fontFamily: "var(--font-serif)" }}
+          />
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <input
+              type="url"
+              inputMode="url"
+              value={urlText}
+              onChange={(e) => {
+                setUrlText(e.target.value);
+                setUrlError(null);
+              }}
+              disabled={isRunning}
+              placeholder="https://example.com/the-page-you-need-to-untangle"
+              className="w-full rounded-md border bg-background p-3 font-mono text-sm disabled:opacity-60"
+            />
+            <p className="text-xs text-muted-foreground">
+              We&apos;ll fetch the page and untangle its text. No login walls, no PDFs.
+            </p>
+            {urlError && (
+              <p className="text-xs text-destructive" role="alert">
+                {urlError}
+              </p>
+            )}
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={isRunning || atCeiling || !dumpText.trim()}
+            disabled={
+              isRunning || atCeiling || (mode === "text" ? !dumpText.trim() : !urlText.trim())
+            }
           >
             {isRunning ? "Untangling…" : "Untangle"}
           </Button>
-          {isEmpty && (
+          {isEmpty && mode === "text" && (
             <Button type="button" variant="outline" onClick={() => setDumpText(SAMPLE_DUMP)}>
               Try this one
             </Button>
@@ -253,7 +357,7 @@ export function Workspace({ initialTasks, runsToday, runsPerDay }: WorkspaceProp
               <TaskCard
                 key={task.id}
                 task={task}
-                hovered={hoveredTaskId === task.id}
+                hoveredTaskId={hoveredTaskId}
                 onHover={setHoveredTaskId}
                 onDeleted={(id) => setHiddenIds((prev) => new Set(prev).add(id))}
                 onStatusChanged={(id, status) =>

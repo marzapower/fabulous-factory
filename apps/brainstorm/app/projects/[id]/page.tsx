@@ -9,8 +9,9 @@ import {
 import { getClientConfig, isEnabled } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
 
+import { ProjectHeader } from "@/components/workbench/project-header";
 import { Workbench } from "@/components/workbench/workbench";
-import { SiteFooter } from "@/components/marketing/site-footer";
+import { SiteFooter } from "@factory/ui/marketing";
 
 // Capability-conditional UI must render dynamically (design spec §5.1), and this page's
 // contents are gated on a live session + ownership lookup besides — never statically
@@ -36,12 +37,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     <ClientConfigProvider config={config}>
       <div className="flex min-h-svh flex-col">
         <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-6">
-          <header className="flex flex-col gap-1">
-            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-              {project.name}
-            </h1>
-            {project.pitch ? <p className="text-muted-foreground">{project.pitch}</p> : null}
-          </header>
+          <ProjectHeader projectId={project.id} name={project.name} pitch={project.pitch} />
 
           <Workbench
             project={project}

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
+import { ThemeScript } from "@factory/ui/theme";
+
 import "./globals.css";
 
 // Convention (see docs/superpowers/plans §B.4): the root layout stays config-free.
@@ -48,8 +50,18 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`}>
+    // suppressHydrationWarning: ThemeScript below mutates the class list before
+    // hydration runs, so the server-rendered class list and the first client render
+    // legitimately disagree on `dark` — that's the point, not a bug to silence away.
+    <html
+      lang="en"
+      className={`${plexSans.variable} ${plexMono.variable}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-svh bg-background font-sans text-foreground antialiased">
+        {/* Static client boilerplate, same as next/font/local above — no config read,
+            so it stays legal in this config-free root layout (see the note up top). */}
+        <ThemeScript />
         {children}
       </body>
     </html>

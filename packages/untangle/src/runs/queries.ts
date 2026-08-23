@@ -262,6 +262,41 @@ export async function countRunsToday(userId: string, kind?: string): Promise<num
   return row?.value ?? 0;
 }
 
+export interface LatestRunSummary {
+  id: string;
+  status: RunStatus;
+  startedAt: Date;
+  finishedAt: Date | null;
+}
+
+/** Most recent run of a given `kind` for `userId`, or `undefined` if none exists yet.
+ * Backs the dashboard's "today's plan" widget, which needs to know WHEN the latest
+ * `kind: "daily-plan"` run happened without assuming anything about the cron's own
+ * schedule or state — it just asks the `runs` table directly, the same way every other
+ * read in this file does. Deliberately generic on `kind` (mirrors `countRunsToday`'s own
+ * shape) rather than daily-plan-specific: this file is domain-agnostic (see
+ * `schema/run.ts`'s header comment) and must never know what a "daily plan" is. */
+export async function getLatestRunForUserByKind(
+  userId: string,
+  kind: string,
+): Promise<LatestRunSummary | undefined> {
+  const [row] = await getDb()
+    .select({
+      id: schema.runs.id,
+      status: schema.runs.status,
+      startedAt: schema.runs.startedAt,
+      finishedAt: schema.runs.finishedAt,
+    })
+    .from(schema.runs)
+    .where(and(eq(schema.runs.userId, userId), eq(schema.runs.kind, kind)))
+    .orderBy(desc(schema.runs.startedAt))
+    .limit(1);
+  if (!row) {
+    return undefined;
+  }
+  return { ...row, status: row.status as RunStatus };
+}
+
 /** Runs owned by `userId`, newest first, each with its step count. */
 export async function listRunsForUser(userId: string, limit = 20): Promise<RunListItem[]> {
   const runRows = await getDb()

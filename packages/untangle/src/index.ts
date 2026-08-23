@@ -26,9 +26,11 @@ export {
   countRunsToday,
   listRunsForUser,
   getRunForUser,
+  getLatestRunForUserByKind,
   type RunListItem,
   type RunDetail,
   type RunStepRow,
+  type LatestRunSummary,
 } from "./runs/queries";
 
 // --- runs/constants ----------------------------------------------------------------------

@@ -3,9 +3,10 @@ import { listProjectsForUser } from "@factory/brainstorm";
 
 import { NewProjectForm } from "@/components/dashboard/new-project-form";
 import { ProjectCard } from "@/components/dashboard/project-card";
-import { SignOutButton } from "@/components/auth/sign-out-button";
-import { SiteFooter } from "@/components/marketing/site-footer";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SignOutButton } from "@factory/ui/auth";
+import { SiteFooter } from "@factory/ui/marketing";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@factory/ui/primitives";
+import { ThemeToggle } from "@factory/ui/theme";
 
 // Capability-conditional UI must render dynamically (design spec §5.1), and this page's
 // contents are gated on a live session lookup besides — never statically prerendered.
@@ -27,7 +28,13 @@ export default async function DashboardPage() {
             <p className="text-sm text-muted-foreground">
               Welcome{session.user.name ? `, ${session.user.name}` : ""}.
             </p>
-            <SignOutButton />
+            {/* This dashboard doesn't render SiteHeader (it has its own top bar via
+                this Card), so the toggle lands here instead — the only reachable spot
+                for someone who lands straight on /dashboard without visiting "/". */}
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <SignOutButton />
+            </div>
           </CardContent>
         </Card>
 

@@ -12,7 +12,12 @@ import type { DisplayTask } from "./types";
 
 export interface TaskCardProps {
   task: DisplayTask;
-  hovered: boolean;
+  /** The currently hovered task's id (or `null`), NOT a pre-computed boolean — each
+   * card (root and every recursive child alike) compares this against its OWN `task.id`.
+   * Passing a boolean down the recursion was the bug: every child inherited its parent's
+   * match instead of computing its own, so hovering one root lit up its whole subtree
+   * (`workspace.tsx`/`task-card.tsx` fix, T8). */
+  hoveredTaskId: string | null;
   onHover: (id: string | null) => void;
   onDeleted: (id: string) => void;
   onStatusChanged: (id: string, status: "open" | "done") => void;
@@ -29,7 +34,7 @@ export interface TaskCardProps {
  */
 export function TaskCard({
   task,
-  hovered,
+  hoveredTaskId,
   onHover,
   onDeleted,
   onStatusChanged,
@@ -37,6 +42,7 @@ export function TaskCard({
 }: TaskCardProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const hovered = hoveredTaskId === task.id;
   const hasSource = task.sourceStart !== null && task.sourceEnd !== null;
 
   function handleToggle() {
@@ -125,7 +131,7 @@ export function TaskCard({
             <TaskCard
               key={child.id}
               task={child}
-              hovered={hovered}
+              hoveredTaskId={hoveredTaskId}
               onHover={onHover}
               onDeleted={onDeleted}
               onStatusChanged={onStatusChanged}

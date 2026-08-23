@@ -242,6 +242,56 @@ describe.skipIf(!TEST_DATABASE_URL)("runs engine queries (integration)", () => {
     expect(countToday).toBe(1);
   }, 30_000);
 
+  it("getLatestRunForUserByKind returns the newest run of that kind, scoped by kind and user", async () => {
+    const { createRun, getLatestRunForUserByKind } = await import("../../src/runs/queries");
+    await seedUser("user-latest-plan");
+    await seedUser("user-latest-plan-other");
+
+    expect(await getLatestRunForUserByKind("user-latest-plan", "daily-plan")).toBeUndefined();
+
+    const capture = await createRun({
+      userId: "user-latest-plan",
+      kind: "capture",
+      driver: "inline",
+      runsPerDay: null,
+      enforceLimit: true,
+    });
+    // A same-user run of a DIFFERENT kind must never shadow the kind actually asked for.
+    expect(await getLatestRunForUserByKind("user-latest-plan", "daily-plan")).toBeUndefined();
+
+    const firstPlan = await createRun({
+      userId: "user-latest-plan",
+      kind: "daily-plan",
+      driver: "durable",
+      runsPerDay: null,
+      enforceLimit: false,
+    });
+    await db.execute(sql`
+      update runs set started_at = now() - interval '1 day' where id = ${firstPlan.id}
+    `);
+    const secondPlan = await createRun({
+      userId: "user-latest-plan",
+      kind: "daily-plan",
+      driver: "durable",
+      runsPerDay: null,
+      enforceLimit: false,
+    });
+    // A different user's later run must never leak into this user's result.
+    await createRun({
+      userId: "user-latest-plan-other",
+      kind: "daily-plan",
+      driver: "durable",
+      runsPerDay: null,
+      enforceLimit: false,
+    });
+
+    const latest = await getLatestRunForUserByKind("user-latest-plan", "daily-plan");
+    expect(latest?.id).toBe(secondPlan.id);
+    expect(latest?.id).not.toBe(firstPlan.id);
+    expect(latest?.id).not.toBe(capture.id);
+    expect(latest?.status).toBe("running");
+  }, 30_000);
+
   it("finishRun writes the final status/total cost/error", async () => {
     const { createRun, finishRun } = await import("../../src/runs/queries");
     await seedUser("user-finish");

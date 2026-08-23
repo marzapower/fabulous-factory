@@ -3,14 +3,21 @@ import { requireSession } from "@factory/auth";
 import { getEntitlement } from "@factory/billing";
 import { getClientConfig, isEnabled } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
-import { countRunsToday, listTasksForUser } from "@factory/untangle";
+import {
+  countRunsToday,
+  getLatestRunForUserByKind,
+  listOpenTasksForUser,
+  listTasksForUser,
+} from "@factory/untangle";
 
-import { SignOutButton } from "@/components/auth/sign-out-button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SignOutButton } from "@factory/ui/auth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@factory/ui/primitives";
+import { ThemeToggle } from "@factory/ui/theme";
 import { BillingCard } from "@/components/billing/billing-card";
+import { TodaysPlan } from "@/components/dashboard/todays-plan";
 import { Workspace } from "@/components/workspace/workspace";
-import { SiteFooter } from "@/components/marketing/site-footer";
-import { CapabilityPanel } from "../capability-panel";
+import { SiteFooter } from "@factory/ui/marketing";
+import { CapabilityPanel } from "@factory/ui/capability-panel";
 
 // Capability-conditional UI must render dynamically (design spec §5.1), and this page's
 // contents are gated on a live session lookup besides — never statically prerendered.
@@ -26,11 +33,21 @@ export default async function DashboardPage() {
   // `packages/jobs` — so the workspace's usage line stays correct in every profile
   // without this page branching on `isEnabled("billing")` itself; only the billing
   // card's mount below does that.
-  const [tasks, runsToday, entitlement] = await Promise.all([
+  const jobsEnabled = isEnabled("jobs");
+
+  const [tasks, runsToday, entitlement, latestPlanRunRow, openTasks] = await Promise.all([
     listTasksForUser(session.user.id),
     countRunsToday(session.user.id, "capture"),
     getEntitlement(session.user.id),
+    // Both daily-plan reads are skipped outright when `jobs` is off — there is no cron,
+    // so there is nothing to find, and the widget never needs this data in that state.
+    jobsEnabled ? getLatestRunForUserByKind(session.user.id, "daily-plan") : null,
+    jobsEnabled ? listOpenTasksForUser(session.user.id) : [],
   ]);
+  // `getLatestRunForUserByKind` resolves `undefined` (no such run yet), never `null` —
+  // normalized here so `TodaysPlan`'s prop stays a plain `T | null` rather than also
+  // having to account for `undefined`.
+  const latestPlanRun = latestPlanRunRow ?? null;
 
   return (
     <ClientConfigProvider config={config}>
@@ -48,7 +65,13 @@ export default async function DashboardPage() {
               <p className="text-sm text-muted-foreground">
                 Welcome{session.user.name ? `, ${session.user.name}` : ""}.
               </p>
-              <SignOutButton />
+              {/* This dashboard doesn't render SiteHeader (it has its own top bar via
+                  this Card), so the toggle lands here instead — the only reachable spot
+                  for someone who lands straight on /dashboard without visiting "/". */}
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <SignOutButton />
+              </div>
             </CardContent>
           </Card>
 
@@ -56,17 +79,11 @@ export default async function DashboardPage() {
               disabled there must be zero billing UI. */}
           {isEnabled("billing") && <BillingCard entitlement={entitlement} runCount={runsToday} />}
 
-          {/* Degradation is visible, not hidden (K.10): with `jobs` off there is no
-              daily plan and no cron — this says so plainly rather than rendering a
-              dead control. Interactive runs are unaffected either way; they were
-              always inline (K.1.6). */}
-          {!isEnabled("jobs") && (
-            <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-              Daily plan is off in this deployment — turn on the{" "}
-              <code className="font-mono">jobs</code> capability for a morning summary of what
-              matters today. Untangling on demand works exactly the same either way.
-            </p>
-          )}
+          {/* "Today's plan" (T8) — the in-app surface for the daily-plan feature, which
+              previously only existed as an email. Renders its own honest state for all
+              three cases (jobs off / jobs on with no run yet / jobs on with a plan run) —
+              see `TodaysPlan`'s own doc comment. */}
+          <TodaysPlan jobsEnabled={jobsEnabled} latestRun={latestPlanRun} openTasks={openTasks} />
 
           <Workspace
             initialTasks={tasks}

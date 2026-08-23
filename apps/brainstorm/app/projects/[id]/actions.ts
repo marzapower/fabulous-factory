@@ -26,6 +26,7 @@ export const renameProjectAction = defineAction({
     name: z.string().trim().min(1).max(80).optional(),
     pitch: z.string().trim().max(200).optional(),
   }),
+  rateLimit: { name: "brainstorm-rename-project", windowSeconds: 60, max: 30 },
   action: async ({ session, input }) => {
     const updated = await renameProjectForUser(input.projectId, session.user.id, {
       name: input.name,
