@@ -29,6 +29,12 @@ import { getCapabilities, getEnv } from "@factory/config";
 const env = getEnv();
 const isDev = getCapabilities().jobs === "inngest" && env.INNGEST_DEV === "1";
 
+// Every external call carries an explicit timeout and a bounded retry (conventions.md
+// security posture) — verified against the installed `inngest` v4 `ClientOptions` type:
+// there is no `timeout`/`retries` knob on the client itself (only the unrelated `fetch`
+// override and per-function `retries`/`timeouts` on `createFunction`, e.g.
+// `packages/config/scripts/gen.ts`'s job template). The SDK's own HTTP layer applies its
+// own internal request handling; no override is configured here.
 export const inngest = new Inngest({
   id: "fabulous-factory",
   eventKey: env.INNGEST_EVENT_KEY,

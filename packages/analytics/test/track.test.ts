@@ -86,6 +86,7 @@ describe("track()", () => {
     expect(mocks.moduleLoadSpy).toHaveBeenCalledTimes(1);
     expect(mocks.constructorSpy).toHaveBeenCalledWith("phc_test", {
       host: "https://eu.i.posthog.com",
+      requestTimeout: 10_000,
     });
     expect(mocks.captureMock).toHaveBeenCalledWith({
       distinctId: "user_1",
@@ -104,6 +105,7 @@ describe("track()", () => {
     await vi.waitFor(() => expect(mocks.constructorSpy).toHaveBeenCalled());
     expect(mocks.constructorSpy).toHaveBeenCalledWith("phc_test", {
       host: "https://us.i.posthog.com",
+      requestTimeout: 10_000,
     });
   });
 

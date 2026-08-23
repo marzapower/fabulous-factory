@@ -19,6 +19,11 @@ export interface CopyEntry {
  */
 export const BASE_STATIC_ENTRIES: CopyEntry[] = [
   { src: "eslint.config.mjs", dest: "eslint.config.mjs" },
+  { src: "eslint.factory-rules.mjs", dest: "eslint.factory-rules.mjs" },
+  // Ambient type declaration for the above — needed for `packages/config/test/
+  // factory-eslint-rules.test.ts` (also shipped, see BASE_EXCLUDED_FILES's comment on
+  // what's NOT shipped) to typecheck in a composed product repo the same way it does here.
+  { src: "eslint.factory-rules.d.mts", dest: "eslint.factory-rules.d.mts" },
   { src: ".dependency-cruiser.cjs", dest: ".dependency-cruiser.cjs" },
   { src: "tsconfig.base.json", dest: "tsconfig.base.json" },
   { src: "vitest.config.ts", dest: "vitest.config.ts" },
@@ -68,6 +73,7 @@ export const BASE_EXCLUDED_FILES = [
   "packages/config/test/factory-agents.test.ts",
   "packages/config/test/launch-checklist-drift.test.ts",
   "docs/guides/release-checklist.md",
+  "packages/create/test/app-drift.test.ts",
 ];
 
 /** Root-level filename prefix scanned dynamically for the `.prettierrc*` glob. */
@@ -90,7 +96,7 @@ export const PRESET_LAUNCH_ITEMS_OVERLAY = "overlay/launch-items.md";
 /**
  * Root files that cannot be shared with the factory — maintained as adopter variants, not
  * derived by patching (spec §5). Sourced from `payload/variants/*`, required (not
- * `optional`) — every scaffold needs all five.
+ * `optional`) — every scaffold needs all six.
  */
 export const VARIANT_ENTRIES: CopyEntry[] = [
   { src: "payload/variants/package.json", dest: "package.json" },
@@ -98,6 +104,7 @@ export const VARIANT_ENTRIES: CopyEntry[] = [
   { src: "payload/variants/ci.yml", dest: ".github/workflows/ci.yml" },
   { src: "payload/variants/README.md", dest: "README.md" },
   { src: "payload/variants/gitignore", dest: "gitignore" },
+  { src: "payload/variants/renovate.json", dest: "renovate.json" },
 ];
 
 /**

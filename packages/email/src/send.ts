@@ -46,6 +46,14 @@ let resendClientKey: string | undefined;
 async function getResendClient(apiKey: string): Promise<import("resend").Resend> {
   if (!resendClient || resendClientKey !== apiKey) {
     const { Resend } = await import("resend");
+    // Every external call carries an explicit timeout and a bounded retry (conventions.md
+    // security posture) — verified against the installed `resend` v6 types (`ResendOptions`
+    // exposes only `baseUrl`/`userAgent`): the SDK provides NO timeout or retry knob at
+    // all, at the client or per-call level. Accepted consequence: a hung Resend request can
+    // block a `send()`/`sendRendered()` caller indefinitely; email delivery is already
+    // best-effort (`SendResult.delivered` is checked, never awaited into a hard dependency
+    // per CLAUDE.md's graceful-degradation contract) — mitigate at the call site with an
+    // external timeout if a specific caller needs one.
     resendClient = new Resend(apiKey);
     resendClientKey = apiKey;
   }

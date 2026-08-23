@@ -65,7 +65,7 @@ export type ActionOptions<S extends z.ZodTypeAny | "none", T> =
 /**
  * The only legal way to declare a `"use server"` export (spec §8.4, backstopped by the
  * raw-export lint ban, plan D.5). Runtime order mirrors `defineHandler` minus the origin
- * check: Next 15.5 Server Actions ship built-in Origin↔Host verification for their POST
+ * check: Next 16 Server Actions ship built-in Origin↔Host verification for their POST
  * transport, so duplicating it here would be redundant (plan D.1/D.9.11).
  *
  *   1. session    — resolved once via `getSession()`, tolerant of a failing auth stack

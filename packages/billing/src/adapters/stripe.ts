@@ -34,7 +34,12 @@ function getClient(): Stripe {
     throw new Error("[@factory/billing] STRIPE_SECRET_KEY is not set");
   }
   if (!stripeClient || stripeClientKey !== secretKey) {
-    stripeClient = new Stripe(secretKey);
+    // Every external call carries an explicit timeout and a bounded retry (conventions.md
+    // security posture) — 20s covers Stripe's slowest documented endpoints with room to
+    // spare, and 2 retries is the SDK's own idempotent-retry mechanism (safe here: every
+    // mutating call in this adapter is either naturally idempotent (checkout/portal session
+    // creation from fresh state) or POST retried via Stripe's built-in idempotency keys).
+    stripeClient = new Stripe(secretKey, { timeout: 20_000, maxNetworkRetries: 2 });
     stripeClientKey = secretKey;
   }
   return stripeClient;

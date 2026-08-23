@@ -14,7 +14,7 @@ export interface HandlerCtx<S extends z.ZodTypeAny | "none", Sess> {
   req: NextRequest;
   session: Sess;
   input: InferInput<S>;
-  /** Awaited Next 15 route params — optional catch-all segments are `undefined` (plan D.9.9). */
+  /** Awaited Next 16 route params — optional catch-all segments are `undefined` (plan D.9.9). */
   params: Record<string, string | string[] | undefined>;
 }
 
@@ -92,8 +92,9 @@ function checkWebhookContentLength(req: NextRequest): Response | undefined {
  *
  * A route with dynamic segments (`app/api/auth/[...all]/route.ts`) gets a real promise
  * of its params. A route WITHOUT them (`app/api/runs/route.ts`) gets the `params` key
- * with `undefined` as its value — verified against Next 15.5 by probing a live request,
- * and `await undefined` is `undefined`, so the awaited result is what actually differs.
+ * with `undefined` as its value — verified against Next 15.5 by probing a live request
+ * (verified unchanged on Next 16), and `await undefined` is `undefined`, so the awaited
+ * result is what actually differs.
  *
  * Next's own generated route types (`.next/types/**`) declare `params` as a
  * non-optional `Promise<any>` regardless, so this interface cannot be widened to
@@ -200,13 +201,14 @@ export function defineHandler<S extends z.ZodTypeAny | "none">(
       // Substituting `{}` cannot reintroduce B2's unbounded-bucket bug: `deriveRouteName`
       // only rewrites segments that MATCH a param value, so with no params it returns the
       // pathname unchanged — and the only routes that reach here with no params are the
-      // ones that have no dynamic segments. Verified against Next 15.5's own matcher: a
-      // dynamic matcher always produces a params object (an optional catch-all at its
-      // base yields a truthy `{}`), so `undefined` is reachable only on the static branch.
+      // ones that have no dynamic segments. Verified against Next 15.5's own matcher
+      // (verified unchanged on Next 16): a dynamic matcher always produces a params
+      // object (an optional catch-all at its base yields a truthy `{}`), so `undefined`
+      // is reachable only on the static branch.
       //
       // The remaining assumption is that a static route's pathname IS its bucket, and
       // that one is NOT framework-guaranteed: `req.nextUrl.pathname` is the PRE-rewrite
-      // URL. Nothing in this repo rewrites (`apps/web/middleware.ts` only calls
+      // URL. Nothing in this repo rewrites (`apps/web/proxy.ts` only calls
       // `next()`/`redirect()`, and `next.config.ts` declares no `rewrites()`), but an
       // adopter who adds a rewrite from a VARIABLE source path onto a rate-limited static
       // route would mint one bucket per source path. If you add rewrites, derive the
@@ -235,7 +237,7 @@ export function defineHandler<S extends z.ZodTypeAny | "none">(
       }
 
       // (4) Origin check — state-changing methods only. Route handlers get no framework
-      // CSRF protection (unlike Server Actions, which Next 15.5 already verifies —
+      // CSRF protection (unlike Server Actions, which Next 16 already verifies —
       // `defineAction` therefore skips this, plan D.1/D.9.11).
       if (STATE_CHANGING_METHODS.has(req.method.toUpperCase()) && !isOriginAllowed(req)) {
         throw new ApiError(403, "invalid_origin", "Origin check failed");

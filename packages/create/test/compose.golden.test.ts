@@ -268,6 +268,10 @@ describe.each(availablePresets)("compose $id — other root variants", (preset) 
   it("ships a README.md (payload/variants/README.md)", () => {
     expect(existsSync(path.join(outDirs.get(preset.id)!, "README.md"))).toBe(true);
   });
+
+  it("ships a renovate.json (payload/variants/renovate.json)", () => {
+    expect(existsSync(path.join(outDirs.get(preset.id)!, "renovate.json"))).toBe(true);
+  });
 });
 
 describe.each(availablePresets)("compose $id — compose warnings", (preset) => {

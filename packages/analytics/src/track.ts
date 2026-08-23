@@ -25,6 +25,11 @@ async function getPostHogClient(): Promise<import("posthog-node").PostHog> {
       const env = getEnv();
       const client = new PostHog(env.POSTHOG_KEY ?? "", {
         host: env.POSTHOG_HOST ?? DEFAULT_POSTHOG_HOST,
+        // Every external call carries an explicit timeout and a bounded retry
+        // (conventions.md security posture). `requestTimeout` is stated explicitly even
+        // though 10s is already posthog-node's own default — the SDK's `fetchRetryCount`
+        // (default 3) already bounds retries, so no separate override is needed there.
+        requestTimeout: 10_000,
       });
       posthogClient = client;
       return client;

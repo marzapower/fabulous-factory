@@ -222,6 +222,10 @@ function composeLaunchMd(repoRoot: string, outDir: string, preset: PresetMeta): 
   writeFileSync(dest, merged);
 }
 
+/** `VARIANT_ENTRIES`' `package.json` `dest` — like `VARIANT_DOCKERFILE_DEST`, singled out
+ * because `compose.ts` doesn't copy it fully verbatim: see `composePackageJson`. */
+const VARIANT_PACKAGE_JSON_DEST = "package.json";
+
 function composeVariants(
   repoRoot: string,
   outDir: string,
@@ -231,10 +235,52 @@ function composeVariants(
   for (const entry of VARIANT_ENTRIES) {
     if (entry.dest === VARIANT_DOCKERFILE_DEST) {
       composeDockerfile(repoRoot, outDir, preset, entry, warnings);
+    } else if (entry.dest === VARIANT_PACKAGE_JSON_DEST) {
+      composePackageJson(repoRoot, outDir, preset, entry, warnings);
     } else {
       copyEntry(repoRoot, outDir, entry, warnings);
     }
   }
+}
+
+/**
+ * `VARIANT_ENTRIES`' `package.json` copies verbatim, then gets one `db:generate:<domain>`
+ * script stamped in per domain package `preset` claims (conventions.md's
+ * `pnpm db:generate:<domain>`, e.g. `db:generate:untangle`) — mirrors
+ * `composeDockerfile`'s per-preset stamping, for the same reason: a preset's own claimed
+ * domain package(s) aren't known until compose time. Inserted directly after the existing
+ * generic `db:generate` key (stable key order) rather than appended, so the composed
+ * `package.json`'s script list stays deterministic and reads top-to-bottom as "generate
+ * everything, then generate this one domain". A preset claiming no domain packages (e.g.
+ * `nothing`) is a no-op — the file still copies, just with no `db:generate:*` addition.
+ */
+function composePackageJson(
+  repoRoot: string,
+  outDir: string,
+  preset: PresetMeta,
+  entry: CopyEntry,
+  warnings: string[],
+): void {
+  copyEntry(repoRoot, outDir, entry, warnings);
+  if (preset.packages.length === 0) return;
+
+  const destPath = path.join(outDir, entry.dest);
+  const pkg = JSON.parse(readFileSync(destPath, "utf8")) as Record<string, unknown>;
+  const existingScripts = (pkg.scripts ?? {}) as Record<string, string>;
+
+  const scripts: Record<string, string> = {};
+  for (const [key, value] of Object.entries(existingScripts)) {
+    scripts[key] = value;
+    if (key === "db:generate") {
+      for (const pkgName of preset.packages) {
+        scripts[`db:generate:${pkgName}`] =
+          `pnpm --filter @factory/${pkgName} exec drizzle-kit generate`;
+      }
+    }
+  }
+  pkg.scripts = scripts;
+
+  writeFileSync(destPath, `${JSON.stringify(pkg, null, 2)}\n`);
 }
 
 /** Stamps `entry` (the Dockerfile variant) with `preset`'s claimed domain package manifest
