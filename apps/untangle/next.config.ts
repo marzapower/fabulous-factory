@@ -34,6 +34,17 @@ const nextConfig: NextConfig = {
   ],
   outputFileTracingRoot: path.join(__dirname, "../../"),
 
+  // @sentry/node (packages/observability's guarded dynamic import, see errors.ts) pulls
+  // in @opentelemetry/instrumentation, which uses require-in-the-middle — a Node-only
+  // dynamic `require()` hook. Left in the default webpack bundling path, that trips
+  // "Critical dependency: require function is used in a way in which dependencies
+  // cannot be statically extracted" on every route that transitively imports
+  // @factory/observability (runs, ... via @factory/llm -> @factory/untangle).
+  // Declaring it here makes Next leave it as a real Node `require` in the server bundle
+  // instead of trying to statically bundle it — the fix Next's own docs point at for
+  // exactly this warning with Sentry/OTel-style instrumentation packages.
+  serverExternalPackages: ["@sentry/node"],
+
   // Security headers (design spec §8.4/§8.5, plan D.6). Deliberately NO Content-Security-
   // Policy in M3: a safe default CSP needs to know the app's actual asset/script origins
   // (nonces, inline-script usage, third-party embeds from later milestones like billing/
