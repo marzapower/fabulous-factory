@@ -52,17 +52,14 @@ function mustFind(presets: PresetMeta[], id: string): PresetMeta {
 
 // The picker's default is whichever entry lands first in the manifest. `listPresets`
 // returns presets alphabetically by id, which would put "Fabulous Brainstorm Chat" first
-// by accident — README calls Untangle the flagship (the "keepable base" preset) and the
-// root `dev` script targets it, so it must be the manifest's first entry, not whatever
+// by accident — the intended pitch order is the gentlest on-ramp (Nothing) first, then
+// the flagship demo (Untangle, the "keepable base" preset the root `dev` script targets),
+// then Brainstorm — so the manifest is built from this explicit order, not whatever
 // preset happens to sort first.
-const FLAGSHIP_PRESET_ID = "untangle";
+const PRESET_ORDER = ["nothing", "untangle", "brainstorm"];
 
 function toManifest(presets: PresetMeta[]) {
-  const ordered = [...presets].sort((a, b) => {
-    if (a.id === FLAGSHIP_PRESET_ID) return -1;
-    if (b.id === FLAGSHIP_PRESET_ID) return 1;
-    return 0;
-  });
+  const ordered = [...presets].sort((a, b) => PRESET_ORDER.indexOf(a.id) - PRESET_ORDER.indexOf(b.id));
   return ordered.map(({ id, label, description, status }) => ({ id, label, description, status }));
 }
 
