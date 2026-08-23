@@ -39,8 +39,8 @@ const plexMono = localFont({
  */
 export const metadata: Metadata = {
   title: {
-    default: "Untangle — paste the mess, get the list",
-    template: "%s · Untangle",
+    default: "Fabulous Untangle — paste the mess, get the list",
+    template: "%s · Fabulous Untangle",
   },
   description:
     "Paste an unsorted brain dump and get back a task list: what's actually a task, when each one matters, and the big ones split into steps you can start. The sample product that ships with Fabulous Factory.",

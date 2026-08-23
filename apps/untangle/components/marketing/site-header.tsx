@@ -15,7 +15,7 @@ export function SiteHeader() {
             further down the page (`built-on-factory.tsx`) and in the footer. */}
         <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
           <span aria-hidden="true">🧶</span>
-          <span>Untangle</span>
+          <span>Fabulous Untangle</span>
         </Link>
 
         <nav aria-label="Primary" className="flex items-center gap-4 text-sm sm:gap-6">
