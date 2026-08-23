@@ -1,6 +1,6 @@
 {
   "name": "create-fabulous-factory",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Alias for `fabulous-factory` so `npm create fabulous-factory` / `pnpm create fabulous-factory` work.",
   "license": "MIT",
   "author": "Daniele Di Bernardo",

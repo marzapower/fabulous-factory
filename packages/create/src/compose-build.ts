@@ -59,7 +59,9 @@ function mustFind(presets: PresetMeta[], id: string): PresetMeta {
 const PRESET_ORDER = ["nothing", "untangle", "brainstorm"];
 
 function toManifest(presets: PresetMeta[]) {
-  const ordered = [...presets].sort((a, b) => PRESET_ORDER.indexOf(a.id) - PRESET_ORDER.indexOf(b.id));
+  const ordered = [...presets].sort(
+    (a, b) => PRESET_ORDER.indexOf(a.id) - PRESET_ORDER.indexOf(b.id),
+  );
   return ordered.map(({ id, label, description, status }) => ({ id, label, description, status }));
 }
 
