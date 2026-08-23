@@ -12,7 +12,7 @@
 
 [![npm](https://img.shields.io/npm/v/fabulous-factory.svg?logo=npm)](https://www.npmjs.com/package/fabulous-factory)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg)](LICENSE)
-[![Next.js 15](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Postgres](https://img.shields.io/badge/Postgres-required-4169e1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Drizzle](https://img.shields.io/badge/Drizzle-ORM-c5f74f)](https://orm.drizzle.team/)
@@ -34,9 +34,11 @@ email, analytics, error tracking — without spending the next three weeks wirin
 arguing with your agent about how to handle a webhook. This repo gives you that skeleton,
 already built and already talking to itself, so you can skip straight to the part only
 you can do: deciding what your product actually is. You state intent, your agents build
-it, and the repo makes that safe — because roughly **45% of AI-generated code ships with
-an OWASP-class vulnerability**, and a solo founder isn't going to catch what a senior
-reviewer would.
+it, and the repo makes that safe — because
+[Veracode's 2025 GenAI Code Security report](https://www.veracode.com/blog/genai-code-security-report/)
+found that **45% of AI-generated code samples failed security tests and introduced OWASP
+Top 10 vulnerabilities**, and a solo founder isn't going to catch what a senior reviewer
+would.
 
 Every other starter answers this with prose — a `CONVENTIONS.md` the agent reads,
 forgets, and violates by Tuesday. Fabulous Factory answers it with **structure**:
@@ -140,7 +142,7 @@ later via env vars — nothing above is required to get running.
 | 🐳 **Deploy**        | Vercel **and** Docker, both first-class     | standalone output, compose profiles, migrate image                                                  | —                                                                     |
 | 🏭 **Factory layer** | Agent skills, spec/ADR templates, scaffolds | the repo _is_ your agents' memory                                                                   | —                                                                     |
 
-Frozen stack, on purpose: Next.js 15 (App Router) · TypeScript strict · Postgres ·
+Frozen stack, on purpose: Next.js 16 (App Router) · TypeScript strict · Postgres ·
 Drizzle · Tailwind + shadcn/ui · pnpm workspaces. No variant matrix to maintain — every
 hour went into depth instead.
 
@@ -205,7 +207,8 @@ the installer) walks you through exactly that split.
 
 ## 🚀 Deploy anywhere that runs Node or containers
 
-- **Vercel** — connect repo (root directory `apps/untangle`), set `DATABASE_URL` +
+- **Vercel** — connect repo (root directory `apps/untangle` here; `apps/web` in a
+  scaffolded repo), set `DATABASE_URL` +
   `BETTER_AUTH_SECRET` for Production and Preview, run migrations yourself before each
   deploy that needs them (no release-phase job — see `docs/guides/deploy-vercel.md`),
   done.
@@ -253,9 +256,9 @@ baseline vars ship as placeholder build args.
 Things we deliberately **don't** promise:
 
 - **It's a snapshot, not a subscription.** Your copy is a fork by design. The value is
-  delivered the day you clone — coherent, tested, yours. Renovate config is included to
-  keep _your_ fork fresh; tagged releases and pinned versions for the youngest
-  dependencies.
+  delivered the day you clone — coherent, tested, yours. A Renovate config (extending
+  `config:best-practices`) ships at the root of your scaffold to keep _your_ fork fresh;
+  tagged releases and pinned versions for the youngest dependencies.
 - **No no-code fantasy.** The floor is "can run `pnpm dev` or click a Codespaces
   button". Below that, this isn't your tool.
 - **Not in v1:** multi-tenancy, admin panel, i18n, metered billing, a second stack

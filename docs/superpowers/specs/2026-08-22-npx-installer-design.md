@@ -3,6 +3,18 @@
 **Date:** 2026-08-22
 **Status:** Approved design, pending implementation plan
 
+> **Superseded notes (added later, body below left as originally written):**
+>
+> - §4's single `apps/demo` layout was superseded by the three-preset family
+>   (`untangle`/`nothing`/`brainstorm`, commit 2c71ee3) — there is no single `apps/demo`
+>   in the shipped repo.
+> - Package pruning, which §3/§5 said v1 would NOT implement, IS implemented: compose-time
+>   pruning of unclaimed domain packages (`packages/create/src/compose.ts`), migration-chain
+>   pruning, and Dockerfile `COPY` marker stamping all key off each preset's `packages` field.
+> - The per-preset README seed override (§5, "a README adopter seed, per-preset
+>   overridable") was not implemented — there is a single `payload/variants/README.md`
+>   shared by every preset, not one per preset.
+
 ## 1. Problem
 
 Fabulous Factory is distributed as a GitHub template repo: adopters clone it in

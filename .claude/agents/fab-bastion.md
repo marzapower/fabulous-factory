@@ -1,6 +1,6 @@
 ---
 name: fab-bastion
-description: Independent security review of uncommitted or proposed changes — auth modes, input validation, rate limits, SSRF, untrusted input, secrets and PII, migration safety, webhook verification; has no Write or Edit tool, and Bash is for inspection only, never to modify anything. Use before merging anything that touches a guarded zone (packages/auth, packages/core, packages/billing, apps/*/middleware.ts, packages/db/migrations), or whenever a change handles user-supplied URLs, external text, money, or credentials — distinct from fab-warden, which owns conventions and quality, not security.
+description: Independent security review of uncommitted or proposed changes — auth modes, input validation, rate limits, SSRF, untrusted input, secrets and PII, migration safety, webhook verification; has no Write or Edit tool, and Bash is for inspection only, never to modify anything. Use before merging anything that touches a guarded zone (packages/auth, packages/core, packages/billing, apps/*/proxy.ts, packages/ui/src/middleware.ts, packages/db/migrations), or whenever a change handles user-supplied URLs, external text, money, or credentials — distinct from fab-warden, which owns conventions and quality, not security.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
@@ -36,8 +36,11 @@ that writes, installs, commits, or reaches the network.
 2. **Input.** A real zod schema, or an explicit `input: "none"` that the handler body
    actually justifies. A body that reads fields off an unparsed payload is a finding.
 3. **Rate limits.** Mandatory on `auth: "public"`. A `"none"` opt-out needs a reason that
-   survives being read aloud. Limits belong in the wrapper, never in `middleware.ts` —
-   edge middleware cannot reach Postgres.
+   survives being read aloud. Limits belong in the wrapper, never in `proxy.ts` — rate
+   limiting needs Postgres via the wrapper, and while `proxy.ts` now runs in the `nodejs`
+   runtime (Next 16) and could technically reach it, the rule still stands: a DB round trip
+   on every request here is avoidable latency the wrapper doesn't pay, not something the
+   runtime merely used to be incapable of.
 4. **SSRF.** Any fetch of a user-supplied URL goes through `safeFetch()` (`@factory/core`).
    A bare `fetch()` on anything that can be influenced by a request is a finding, including
    one hidden behind a helper.
@@ -57,8 +60,9 @@ that writes, installs, commits, or reaches the network.
 
 ## Guarded zones
 
-`packages/auth`, `packages/core`, `packages/billing`, your app's `middleware.ts`
-(`apps/*/middleware.ts`), `packages/db/migrations`. A change touching any of them needs the checklist in
+`packages/auth`, `packages/core`, `packages/billing`, your app's `proxy.ts`
+(`apps/*/proxy.ts`), the shared `packages/ui/src/middleware.ts` it calls into,
+`packages/db/migrations`. A change touching any of them needs the checklist in
 `.github/PULL_REQUEST_TEMPLATE.md` completed. Walk that checklist item by item and say,
 for each, whether the diff actually earns the tick — "looks fine" is not a review.
 

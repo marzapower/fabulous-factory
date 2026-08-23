@@ -43,6 +43,7 @@ which ships exactly one) may import anything; nothing imports `apps/*`.
 | `analytics`     | `config`                                                        |
 | `observability` | `config`                                                        |
 | `core`          | `config`, `db`, `auth`                                          |
+| `ui`            | `config`, `auth`                                                |
 | `llm`           | `config`, `db`, `core`, `observability`                         |
 | `jobs`          | `config`                                                        |
 | `billing`       | `config`, `db`                                                  |
@@ -114,15 +115,27 @@ subject, enforced by commitlint (`commit-msg` husky hook) and a CI PR-title chec
 - **`safeFetch()`** (`@factory/core`) is mandatory for any fetch of a user-supplied URL —
   scheme allowlist, private/link-local/metadata-range denial, size/time limits,
   redirect re-validation.
-- **Rate limiting lives in the wrapper (`defineHandler`/`defineAction`), never in
-  middleware** — edge middleware cannot open a TCP connection to Postgres, and the
-  Postgres-backed limiter needs one.
-- Your app's `middleware.ts` (`apps/*/middleware.ts`) is an optimistic first layer only
-  (redirects obviously signed-out page loads before render) — it is **not** the security
-  boundary; the wrapper's mandatory auth mode is.
-- **Guarded zones**: `packages/auth`, `packages/core`, `packages/billing`,
-  `middleware.ts`, and `packages/db` migrations. A PR touching any of these needs a
-  security checklist and an independent, fresh-context security review before merging —
-  no exceptions for "just a small change."
+- Every vendor client carries an explicit timeout and a bounded retry, or documents why it
+  can't: Stripe (`packages/billing/src/adapters/stripe.ts`'s `getClient`) sets
+  `timeout`/`maxNetworkRetries` explicitly; Postgres (`packages/db/src/client.ts`'s
+  `getDb`) sets `connectionTimeoutMillis`/pool `max`/`idleTimeoutMillis` explicitly;
+  PostHog (`packages/analytics/src/track.ts`) sets `requestTimeout` explicitly, on top of
+  the SDK's own bounded-retry default; Inngest (`packages/jobs/src/client.ts`) and Resend
+  (`packages/email/src/send.ts`'s `getResendClient`) expose no such client-level option at
+  all — both are documented as an accepted, SDK-imposed gap at their construction site.
+- **Rate limiting lives in the wrapper (`defineHandler`/`defineAction`), never in the
+  proxy** — rate limiting needs Postgres via the wrapper; the rule stands even though
+  `proxy.ts` now runs in the `nodejs` runtime (Next 16) and could technically reach
+  Postgres directly — a DB round trip on every request there is avoidable latency the
+  wrapper doesn't pay, not something the runtime merely used to be incapable of.
+- Your app's `proxy.ts` (`apps/*/proxy.ts`) is an optimistic first layer only (redirects
+  obviously signed-out page loads before render) — it is **not** the security boundary;
+  the wrapper's mandatory auth mode is. The shared allowlist logic lives in
+  `packages/ui/src/middleware.ts` (`@factory/ui/middleware`); each app's `proxy.ts` calls
+  `createAuthProxy()` with only its own extra allowlist entries.
+- **Guarded zones**: `packages/auth`, `packages/core`, `packages/billing`, `proxy.ts`
+  (`apps/*/proxy.ts`), `packages/ui/src/middleware.ts`, and `packages/db` migrations. A PR
+  touching any of these needs a security checklist and an independent, fresh-context
+  security review before merging — no exceptions for "just a small change."
 - Never log secrets or PII. LLM call logs store metadata (tokens, cost, latency), never
   raw payloads.

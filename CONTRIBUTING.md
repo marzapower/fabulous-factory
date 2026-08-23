@@ -58,8 +58,8 @@ guidance. Adding a background job specifically: use `add-a-job`.
 
 ## Guarded zones
 
-PRs touching `packages/auth`, `packages/core`, `packages/billing`,
-`apps/*/middleware.ts`, or `packages/db/migrations` need the security checklist from
+PRs touching `packages/auth`, `packages/core`, `packages/billing`, `apps/*/proxy.ts`,
+`packages/ui/src/middleware.ts`, or `packages/db/migrations` need the security checklist from
 `.github/PULL_REQUEST_TEMPLATE.md` completed in the PR description, plus an independent,
 fresh-context security review before merge. CI's `guarded-zones` job blocks merge on
 those paths until the checklist's final line reads exactly `- [x] security-checklist`.

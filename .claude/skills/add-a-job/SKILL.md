@@ -96,19 +96,22 @@ export const { GET, POST, PUT } = serve({ client: inngest, functions });
 ```
 
 (If your job lives in a domain package, merge its `functions` export in too — see
-Untangle's shipped route for the two-array spread.) Then add the route to
-`apps/*/middleware.ts`'s `EXACT_ALLOWLIST` — a single flat route, not a prefix, since
-Inngest calls it server-to-server with no cookie and no sub-paths of its own:
+Untangle's shipped route for the two-array spread.) Then add the route to your app's
+`proxy.ts` (`apps/*/proxy.ts`) `extraExactAllowlist` — a single flat entry, not a prefix,
+since Inngest calls it server-to-server with no cookie and no sub-paths of its own. The
+shared allowlist logic itself lives in `@factory/ui/middleware`
+(`packages/ui/src/middleware.ts`); an app only ever adds its own extra entries at its own
+`createAuthProxy()` call site:
 
 ```diff
- const EXACT_ALLOWLIST = new Set([
-   "/",
-   "/login",
-   ...
-+  "/api/inngest",
- ]);
+ export const proxy = createAuthProxy({
+   extraExactAllowlist: [
+     "/api/billing/webhook",
++    "/api/inngest",
+   ],
+ });
 ```
 
-Middleware is a **guarded zone** (`docs/agents/conventions.md`) — this one-line addition
+The proxy is a **guarded zone** (`docs/agents/conventions.md`) — this one-line addition
 still needs a security checklist and independent review, no exceptions for "just adding
 one entry."

@@ -15,9 +15,9 @@ Renders `LAUNCH.md`: one line per item, open vs. done, and which skill owns each
 one. `Product definition` → `define-product`; `App identity`/`Design system`/
 `Email templates` → `brand-it`; `Plans catalog` → `enable-billing`. This skill owns
 `Legal pages`, `README`, `Template showcase`, and whichever domain-rename item your
-preset seeded (`Demo logic` for Untangle, `Brainstormer domain` for Brainstorm Chat, none
-for Nothing — it ships with no example domain) directly — the rest, delegate to their
-skill.
+preset seeded (`## [ ] Untangle domain · blocks launch` for Untangle, `Brainstormer
+domain` for Brainstorm Chat, none for Nothing — it ships with no example domain)
+directly — the rest, delegate to their skill.
 
 ## Phase 2 — Rename the domain
 
@@ -104,8 +104,9 @@ only ever touches the base chain:
 pnpm --filter @factory/untangle exec drizzle-kit generate
 ```
 
-The shipped preset names this `pnpm db:generate:untangle` in `package.json` — use
-whichever name your `git mv` above landed on if you renamed the package too.
+The installer stamps a `db:generate:<domain>` script per preset into the adopter root
+`package.json` at compose time (e.g. `db:generate:untangle`) — use whichever name your
+`git mv` above landed on if you renamed the package too.
 
 Review it before it runs — a table/column _rename_ migration should contain `ALTER
 TABLE ... RENAME`, not a drop-and-recreate; if Drizzle proposes the latter, it read the
@@ -249,8 +250,9 @@ that leads into it. Once `/features` is gone both are dead ends — remove them 
 `apps/web/app/page.tsx` and delete the components, or repoint `features-link` at your own
 docs.
 
-**Middleware** (`apps/web/middleware.ts`) allowlists the deleted routes — remove the
-`/features` entries (and any `/api/demo/` entry you added), and nothing else:
+**The shared proxy allowlist** (`packages/ui/src/middleware.ts` — every app's
+`apps/*/proxy.ts` calls into it) allowlists the deleted routes — remove the `/features`
+entries (and any `/api/demo/` entry you added), and nothing else:
 
 ```diff
 -  // Public template feature-explainer pages index.
@@ -260,7 +262,7 @@ docs.
 +const PREFIX_ALLOWLIST = ["/api/auth/"];
 ```
 
-Middleware is a **guarded zone** (`docs/agents/conventions.md`) — a PR touching it needs
+This file is a **guarded zone** (`docs/agents/conventions.md`) — a PR touching it needs
 a security checklist and an independent review, no exceptions for "just deleting two
 lines." Make exactly this diff and nothing more; don't refactor the allowlist while
 you're in there.

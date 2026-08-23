@@ -36,7 +36,7 @@ must not ship its starter kit's guided tour.
   are removed or repointed at the product's own feature, not the template's example
   domain
 - Dead links from the home page's feature grid are removed or repointed
-- `apps/web/middleware.ts`'s `/features/` allowlist entries (and any public demo route
-  under `apps/web/app/api/demo/`) are removed if the pages/routes are deleted
+- `packages/ui/src/middleware.ts`'s `/features/` allowlist entries (and any public demo
+  route under `apps/web/app/api/demo/`) are removed if the pages/routes are deleted
 
 **Signed off:** _(date + who confirmed — filled only when ticked)_

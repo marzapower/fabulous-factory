@@ -5,7 +5,7 @@ human partner's document — plain language, no code; agents derive specs from i
 the other way around. `LAUNCH.md` (repo root) is the shared launch checklist — no agent
 ships past an unchecked `blocks launch` item; run `pnpm factory:status` to render it.
 
-**Stack (frozen):** Next.js 15 (App Router), TypeScript strict, Postgres + Drizzle,
+**Stack (frozen):** Next.js 16 (App Router), TypeScript strict, Postgres + Drizzle,
 Tailwind + shadcn/ui, pnpm workspaces. Billing (Stripe/disabled) and LLM
 (local/openrouter/direct) are the only adapter seams.
 

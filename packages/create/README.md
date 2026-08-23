@@ -28,7 +28,7 @@ openssl rand -hex 32       # → paste as BETTER_AUTH_SECRET in .env
 pnpm dev                   # migrations self-apply; you're running.
 ```
 
-Stack: Next.js 15 (App Router) · TypeScript strict · Postgres · Drizzle · Tailwind + shadcn/ui · pnpm workspaces. Billing, LLM, email, jobs, and analytics are all optional and light up later via env vars.
+Stack: Next.js 16 (App Router) · TypeScript strict · Postgres · Drizzle · Tailwind + shadcn/ui · pnpm workspaces. Billing, LLM, email, jobs, and analytics are all optional and light up later via env vars.
 
 ## Learn more
 

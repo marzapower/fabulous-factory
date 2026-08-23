@@ -9,7 +9,7 @@ set lives in `payload/` + `presets/`, composed into a product repo by the npx in
 at publish time, not promoted here (see
 `docs/superpowers/specs/2026-08-22-npx-installer-design.md`).
 
-**Stack (frozen):** Next.js 15 (App Router), TypeScript strict, Postgres + Drizzle,
+**Stack (frozen):** Next.js 16 (App Router), TypeScript strict, Postgres + Drizzle,
 Tailwind + shadcn/ui, pnpm workspaces. Billing (Stripe/disabled) and LLM
 (local/openrouter/direct) are the only adapter seams.
 

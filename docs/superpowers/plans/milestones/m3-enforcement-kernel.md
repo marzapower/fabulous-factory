@@ -289,6 +289,8 @@ async function GET…` and `export const GET = <non-CallExpression>` are FORBIDD
    `@factory/db` (workspace:*), `undici ^8`, `zod ^4`, `server-only`; peerDeps
    `next ^15`; devDeps `next ^15.5.23`, `@types/node ^22`, `typescript ~6.0.3`,
    `vitest ^4`, `tsx`.
+   > **Note (added later):** peers moved to `next ^16.0.0` in the Next 16 upgrade —
+   > `next ^15` above reflects this milestone's original decision, not the current repo.
 6. **Security-gate pre-verification (before the CI wiring is committed)**: run gitleaks
    LOCALLY over the full history; commit a `.gitleaks.toml` path-allowlisting
    `.env.example`, `docs/**` (research docs + plan contain deliberate example

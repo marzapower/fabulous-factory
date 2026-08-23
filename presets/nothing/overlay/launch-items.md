@@ -9,7 +9,7 @@ real product must not ship its starter kit's guided tour.
 
 - The `apps/web/app/features/` directory's docs pages are removed or replaced with
   product content
-- `apps/web/middleware.ts`'s `/features/` allowlist entries are removed
+- `packages/ui/src/middleware.ts`'s `/features/` allowlist entries are removed
 - `apps/web/app/api/demo/*` and any route under it are removed
 
 **Signed off:** _(date + who confirmed — filled only when ticked)_
