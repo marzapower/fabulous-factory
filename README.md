@@ -10,6 +10,7 @@
 
 <br/>
 
+[![npm](https://img.shields.io/npm/v/fabulous-factory.svg?logo=npm)](https://www.npmjs.com/package/fabulous-factory)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg)](LICENSE)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -63,9 +64,6 @@ That's the whole philosophy: **what is mechanical must never be probabilistic.**
 
 ## ⚡ Quickstart
 
-> Ships with the first published release of the `fabulous-factory` npm package — until
-> then, see [Contributing](CONTRIBUTING.md) to run the factory's own demo from a clone.
-
 ```bash
 npx fabulous-factory@latest install     # or: pnpm create fabulous-factory
 cd my-saas
@@ -79,13 +77,40 @@ The installer walks you through picking a **preset** — a product shape — and
 repo that's already yours: common infrastructure, your chosen app, and your agent's
 instruction set, all installed. Three presets ship:
 
-- **Fabulous Untangle** — a full working micro-SaaS: paste messy text, get it captured,
-  normalized, and turned into a daily plan.
-- **Fabulous Nothing** — a blank slate: homepage, capability pages, auth, and an empty
-  dashboard, with no example domain to rip out.
-- **Fabulous Brainstorm Chat** — a per-user project brainstormer: an LLM chat that
-  streams prose and proposal cards you accept or dismiss onto an Ideas/Features/Notes
-  board.
+<table>
+<tr>
+<td width="33%" valign="top">
+
+**Fabulous Nothing**
+
+A blank slate: homepage, capability pages, auth, and an empty dashboard, with no example
+domain to rip out.
+
+<img src="docs/screenshots/nothing.png" alt="Fabulous Nothing homepage — blank slate with working auth and capability panel" width="100%">
+
+</td>
+<td width="33%" valign="top">
+
+**Fabulous Untangle**
+
+A full working micro-SaaS: paste messy text, get it captured, normalized, and turned
+into a daily plan.
+
+<img src="docs/screenshots/untangle.png" alt="Fabulous Untangle homepage — paste messy notes, get extracted, triaged tasks" width="100%">
+
+</td>
+<td width="33%" valign="top">
+
+**Fabulous Brainstorm Chat**
+
+A per-user project brainstormer: an LLM chat that streams prose and proposal cards you
+accept or dismiss onto an Ideas/Features/Notes board.
+
+<img src="docs/screenshots/brainstorm.png" alt="Fabulous Brainstorm Chat homepage — chat that turns ideas into feature cards" width="100%">
+
+</td>
+</tr>
+</table>
 
 Then ask your agent: _"what's left to make this mine?"_
 
