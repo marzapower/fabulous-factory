@@ -2,6 +2,7 @@ services:
   db: # always on
     image: postgres:18-alpine
     environment: { POSTGRES_PASSWORD: postgres }
+    ports: ["${DB_PORT:-5432}:5432"] # host access for local 'pnpm dev'
     volumes: [ff-db-data:/var/lib/postgresql] # PG18 path, NOT .../data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]

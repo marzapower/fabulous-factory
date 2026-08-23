@@ -50,6 +50,19 @@ async function buildProviderFactory(
       // always present on the local branch.
       baseURL: env.LLM_LOCAL_BASE_URL!,
       includeUsage: true,
+      // Without this the AI SDK defaults structured-output support to false and never
+      // sends `response_format: json_schema`, so schema-bound calls silently fall back to
+      // unconstrained prose and fail to parse — verified against oMLX honoring strict
+      // `response_format: json_schema` correctly.
+      supportsStructuredOutputs: true,
+      // Local reasoning models (e.g. Qwen) stream a large chain-of-thought preamble before
+      // any real content, which alone can blow through caller-side timeouts; this is the
+      // Qwen/vLLM/oMLX convention for suppressing it, and a no-op on servers that don't
+      // recognize the field.
+      transformRequestBody: (body) => ({
+        ...body,
+        chat_template_kwargs: { enable_thinking: false },
+      }),
     });
     return (modelId) => provider(modelId);
   }
