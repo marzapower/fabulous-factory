@@ -30,7 +30,7 @@ RUN pnpm config set store-dir /pnpm/store
 # ---------------------------------------------------------------------------
 FROM base AS deps
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 COPY apps/brainstorm/package.json apps/brainstorm/package.json
 COPY apps/nothing/package.json apps/nothing/package.json
 COPY apps/untangle/package.json apps/untangle/package.json
@@ -50,7 +50,7 @@ COPY packages/observability/package.json packages/observability/package.json
 COPY packages/untangle/package.json packages/untangle/package.json
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+    if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else pnpm install; fi
 
 # ---------------------------------------------------------------------------
 # builder: overlay real source and build the Next.js standalone output.
