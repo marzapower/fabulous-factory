@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   test: {
     environment: "node",
+    setupFiles: [path.resolve(__dirname, "test/setup.ts")],
   },
   resolve: {
     alias: {

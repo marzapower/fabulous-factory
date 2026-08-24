@@ -15,7 +15,7 @@
     "boundaries": "depcruise apps packages --config .dependency-cruiser.cjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "pnpm -r run typecheck",
+    "typecheck": "pnpm -r run typecheck && tsc --noEmit -p benchmarks",
     "test": "vitest run",
     "check": "pnpm lint && pnpm boundaries && pnpm format:check && pnpm typecheck && pnpm test",
     "factory:doctor": "tsx packages/config/scripts/doctor.ts",

@@ -14,6 +14,9 @@ export default defineConfig({
     },
   },
   test: {
-    projects: ["packages/*", "apps/*"],
+    // "benchmarks" (not a glob) — the harness lives directly at benchmarks/kernel-value/,
+    // not under a packages/*-style subdirectory layout, so it needs its own explicit
+    // entry (see benchmarks/vitest.config.ts).
+    projects: ["packages/*", "apps/*", "benchmarks"],
   },
 });

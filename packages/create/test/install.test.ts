@@ -2,9 +2,14 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { assertEmptyTarget, derivePickerDefault, type PresetManifestEntry } from "../src/install";
+import {
+  assertEmptyTarget,
+  derivePickerDefault,
+  warnIfNodeTooOld,
+  type PresetManifestEntry,
+} from "../src/install";
 
 const TWO_AVAILABLE: PresetManifestEntry[] = [
   {
@@ -82,5 +87,36 @@ describe("assertEmptyTarget", () => {
     const linkPath = path.join(dir, "link");
     symlinkSync(realDir, linkPath);
     expect(() => assertEmptyTarget(linkPath)).toThrow(/symlink/);
+  });
+});
+
+describe("warnIfNodeTooOld", () => {
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it("warns, mentioning the offending version and the fix, on a pre-24 major", () => {
+    warnIfNodeTooOld("22.14.0");
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const [message] = warnSpy.mock.calls[0] as [string];
+    expect(message).toContain("22.14.0");
+    expect(message).toContain("nvm install 24");
+  });
+
+  it("stays silent on Node 24 and above", () => {
+    warnIfNodeTooOld("24.0.0");
+    warnIfNodeTooOld("25.1.2");
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("never throws on an unparseable version string", () => {
+    expect(() => warnIfNodeTooOld("bogus")).not.toThrow();
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });

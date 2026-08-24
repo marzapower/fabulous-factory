@@ -58,6 +58,31 @@ const SHARED_APP_FILES = [
   "app/fonts/OFL.txt",
 ];
 
+/** Repo-root-relative, `apps/<app>/`-relative paths — files that are near-copies across
+ * all three preset apps, differing ONLY in the `metadata.description` string (per-preset
+ * product name in a user-facing sentence, e.g. "your Untangle account" vs "your Fabulous
+ * Nothing account"). Compared below after stripping that one line, not byte-for-byte —
+ * unlike `SHARED_APP_FILES`, where a real delta anywhere is a bug. `app/api/account/
+ * export/route.ts` deliberately isn't here: its per-app delta is a domain import + a
+ * domain export call (`nothing` has neither, shipping no domain package), which the
+ * `description:`-only normalization below can't express — that one is left uncompared. */
+const NORMALIZED_SHARED_APP_FILES = [
+  "app/settings/page.tsx",
+  "app/(auth)/forgot-password/page.tsx",
+  "app/(auth)/reset-password/page.tsx",
+];
+
+/** Strips a `description: "...",` metadata line — the only permitted per-preset delta in
+ * `NORMALIZED_SHARED_APP_FILES`. Anchored to the exact `metadata` field name (not just any
+ * string containing "description") so a stray unrelated `description:` elsewhere in the
+ * file — none exists today, but the regex shouldn't silently swallow one if it did — isn't
+ * accidentally normalized away too. */
+const DESCRIPTION_LINE = /^\s*description: ".*",\n/m;
+
+function normalizeDescription(source: string): string {
+  return source.replace(DESCRIPTION_LINE, "");
+}
+
 function readAppFile(app: string, relPath: string): Buffer {
   return readFileSync(path.join(repoRoot, "apps", app, relPath));
 }
@@ -69,6 +94,17 @@ describe("preset app drift gate", () => {
       const other = readAppFile(app, relPath);
       expect(other.equals(canonical), `${relPath}: ${DRIFT_MESSAGE}`).toBe(true);
     });
+
+    it.each(NORMALIZED_SHARED_APP_FILES)(
+      "%s stays identical outside its metadata description",
+      (relPath) => {
+        const canonical = normalizeDescription(
+          readAppFile(CANONICAL_APP, relPath).toString("utf8"),
+        );
+        const other = normalizeDescription(readAppFile(app, relPath).toString("utf8"));
+        expect(other, `${relPath}: ${DRIFT_MESSAGE}`).toBe(canonical);
+      },
+    );
   });
 
   it("packages/ui/src/lib/utils.ts stays in sync with the canonical app copy", () => {

@@ -38,3 +38,6 @@ export { buildTurnContext, buildTurnTask, turnElementSchema } from "./prompts";
 
 // --- turn ----------------------------------------------------------------------
 export { mapTurnElement, runBrainstormTurn, type BrainstormTurnInput } from "./turn";
+
+// --- export (account-data export) ----------------------------------------------------
+export { exportUserData } from "./export";

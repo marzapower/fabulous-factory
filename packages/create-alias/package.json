@@ -18,6 +18,9 @@
     "saas"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "bin": {
     "create-fabulous-factory": "./bin.js"
   },

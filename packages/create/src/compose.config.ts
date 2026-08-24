@@ -84,6 +84,7 @@ export const PAYLOAD_STATIC_ENTRIES: CopyEntry[] = [
   { src: "payload/CLAUDE.md", dest: "CLAUDE.md" },
   { src: "payload/AGENTS.md", dest: "AGENTS.md" },
   { src: "payload/.factory/config.json", dest: ".factory/config.json" },
+  { src: "payload/.factory/sync-manifest.json", dest: ".factory/sync-manifest.json" },
 ];
 
 export const PAYLOAD_AGENTS_DIR: CopyEntry = { src: "payload/agents", dest: ".claude/agents" };
@@ -105,6 +106,11 @@ export const VARIANT_ENTRIES: CopyEntry[] = [
   { src: "payload/variants/README.md", dest: "README.md" },
   { src: "payload/variants/gitignore", dest: "gitignore" },
   { src: "payload/variants/renovate.json", dest: "renovate.json" },
+  { src: "payload/variants/.npmrc", dest: ".npmrc" },
+  // Companion to `.npmrc`'s engine-strict: `.nvmrc` makes complying with the Node >= 24
+  // requirement automatic for nvm/fnm users (`nvm use` / shell auto-switch), instead of
+  // only refusing at `pnpm install` time. Not secret-shaped, so a plain copy suffices.
+  { src: "payload/variants/.nvmrc", dest: ".nvmrc" },
 ];
 
 /**
@@ -113,6 +119,16 @@ export const VARIANT_ENTRIES: CopyEntry[] = [
  * (see `lib/dockerfile-stamp.ts`) instead of running `VARIANT_ENTRIES`' generic copy loop.
  */
 export const VARIANT_DOCKERFILE_DEST = "Dockerfile";
+
+/**
+ * `VARIANT_ENTRIES`' `.npmrc` `dest` — singled out for the same reason as
+ * `VARIANT_DOCKERFILE_DEST`: `copyRecursive`'s secret-hygiene filter (`lib/fs.ts`'s
+ * `SECRET_EXACT_FILENAMES`) treats every `.npmrc` as secret-shaped and refuses to copy it,
+ * by design (a real adopter `.npmrc` could carry a registry auth token). This one adopter
+ * variant is a deliberate, content-pinned exception (ADR-0006) — `compose.ts` copies it
+ * directly, bypassing that filter, instead of weakening the filter itself.
+ */
+export const VARIANT_NPMRC_DEST = ".npmrc";
 
 /** Preset overlay (spec §5): `PRODUCT.md` seed. */
 export const PRESET_PRODUCT_MD_OVERLAY = "overlay/PRODUCT.md";

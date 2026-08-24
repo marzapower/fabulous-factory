@@ -202,6 +202,31 @@ describe("send — resend, success", () => {
   });
 });
 
+describe("send — resend, timeout", () => {
+  it("returns the timeout reason when the resend call hangs past the local bound", async () => {
+    vi.useFakeTimers();
+    mockedGetCapabilities.mockReturnValue(capabilitiesWith("resend"));
+    mockedGetEnv.mockReturnValue({
+      ...BASE_ENV,
+      EMAIL_FROM: "Fabulous Factory <hello@example.com>",
+      RESEND_API_KEY: "re_test_key",
+    } as Env);
+    // Never resolves on its own — only `deliver()`'s local timeout can settle the race.
+    resendState.sendMock.mockImplementationOnce(() => new Promise(() => {}));
+
+    const resultPromise = send("verify-email", "user@example.com", {
+      url: "https://example.com/verify",
+    });
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    const result = await resultPromise;
+
+    expect(result).toEqual({ delivered: false, reason: "timeout" });
+
+    vi.useRealTimers();
+  });
+});
+
 describe("send — resend, provider error", () => {
   it("maps a provider error to the typed no-op", async () => {
     mockedGetCapabilities.mockReturnValue(capabilitiesWith("resend"));

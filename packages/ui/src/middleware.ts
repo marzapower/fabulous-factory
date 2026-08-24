@@ -41,6 +41,13 @@ const EXACT_ALLOWLIST = new Set([
   "/terms",
   "/privacy",
   "/api/health",
+  // Both only ever reach a signed-out visitor by definition — the login form's
+  // "forgot password?" link, and better-auth's own `/api/auth/reset-password/:token`
+  // callback redirect landing on `/reset-password?token=…` — so gating either behind the
+  // session-cookie check below would bounce every legitimate visit straight back to
+  // /login before the form ever renders.
+  "/forgot-password",
+  "/reset-password",
   // Public template feature-explainer pages index.
   "/features",
   // Live examples backing the /features docs pages (K.15.3/K.16 T12) — exact, not

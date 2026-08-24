@@ -20,6 +20,7 @@ import { cancel, confirm, intro, isCancel, select, text } from "@clack/prompts";
 import { copyRecursive } from "./lib/fs";
 import { renameGitignoreFiles } from "./lib/gitignore";
 import { stampProjectName, toKebabCase, validateProjectName } from "./lib/name-stamp";
+import { stampProvenance } from "./lib/provenance-stamp";
 
 export interface InstallOptions {
   preset?: string;
@@ -37,6 +38,26 @@ export interface PresetManifestEntry {
 }
 
 const DEFAULT_PROJECT_NAME = "my-app";
+const MIN_NODE_MAJOR = 24;
+
+/**
+ * Warns — never refuses — when running under a Node major version below what the
+ * scaffolded repo itself enforces (`"engines": { "node": ">=24" }`, `engine-strict=true`
+ * in its `.npmrc`). Without this, `install` on an older Node scaffolds cleanly, then the
+ * scaffold's own `pnpm install` hard-fails on engine-strict with nothing pointing at Node
+ * as the cause. The scaffold's contents are Node-version-agnostic until that install step,
+ * so this only warns and keeps going. Takes the version string as a parameter (defaulting
+ * to `process.versions.node`) rather than reading `process.env` — nothing here is
+ * environment-configurable, sanctioned or otherwise.
+ */
+export function warnIfNodeTooOld(nodeVersion: string = process.versions.node): void {
+  const major = Number.parseInt(nodeVersion.split(".")[0] ?? "", 10);
+  if (Number.isNaN(major) || major >= MIN_NODE_MAJOR) return;
+  console.warn(
+    `⚠ Running under Node ${nodeVersion} — the scaffolded repo enforces Node >= ${MIN_NODE_MAJOR} ` +
+      `via engine-strict, so its own "pnpm install" will fail. Upgrade first, e.g. "nvm install ${MIN_NODE_MAJOR}".`,
+  );
+}
 
 /**
  * `FABULOUS_FACTORY_TEMPLATES_DIR` overrides the embedded-templates lookup — test-only
@@ -45,11 +66,29 @@ const DEFAULT_PROJECT_NAME = "my-app";
  * the relative-to-this-file default, which resolves correctly whether this runs as
  * `src/cli.ts` (via `tsx`, in tests) or the built `dist/cli.js` (published).
  */
+/** This package's own root — same whether this runs as `src/cli.ts` (via `tsx`, in tests)
+ * or the built `dist/cli.js` (published): both sit one level under it. */
+function packageRoot(): string {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  return path.join(here, "..");
+}
+
 function templatesRoot(): string {
   const override = process.env.FABULOUS_FACTORY_TEMPLATES_DIR;
   if (override) return path.resolve(override);
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  return path.join(here, "..", "templates");
+  return path.join(packageRoot(), "templates");
+}
+
+/**
+ * This installed CLI's own version, read from its `package.json` at runtime — never
+ * `process.env` (npx-installer design spec §6's sanctioned exception is `templatesRoot`'s
+ * override, not this). `package.json` always ships in the npm tarball regardless of the
+ * `files` allowlist, so this is reliable both installed from npm and run against source.
+ */
+function resolveFactoryVersion(): string {
+  const pkgPath = path.join(packageRoot(), "package.json");
+  const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: string };
+  return pkg.version ?? "0.0.0";
 }
 
 function loadManifest(): PresetManifestEntry[] {
@@ -213,6 +252,7 @@ function printNextSteps(projectName: string): void {
 }
 
 export async function install(options: InstallOptions): Promise<void> {
+  warnIfNodeTooOld();
   const manifest = loadManifest();
 
   let answers: Answers;
@@ -243,6 +283,10 @@ export async function install(options: InstallOptions): Promise<void> {
     copyRecursive(sourceDir, targetDir);
     renameGitignoreFiles(targetDir);
     stampNames(targetDir, answers.projectName);
+    stampProvenance(targetDir, {
+      preset: answers.presetId,
+      factoryVersion: resolveFactoryVersion(),
+    });
   } catch (error) {
     throw new Error(
       `Scaffold partially created at "${targetDir}" — ${errorMessage(error)}. ` +

@@ -17,6 +17,8 @@ describe("isPublicPath", () => {
     "/api/health",
     "/api/demo/kernel-echo",
     "/api/demo/security-check",
+    "/forgot-password",
+    "/reset-password",
   ])("treats %s as public", (pathname) => {
     expect(isPublicPath(pathname)).toBe(true);
   });
@@ -61,6 +63,15 @@ describe("createAuthProxy", () => {
     const result = proxy(request("/login"));
     expect(result).toBeUndefined();
   });
+
+  it.each(["/forgot-password", "/reset-password"])(
+    "returns undefined (pass-through) for %s with no session cookie",
+    (pathname) => {
+      const proxy = createAuthProxy();
+      const result = proxy(request(pathname));
+      expect(result).toBeUndefined();
+    },
+  );
 
   it("returns undefined (pass-through) for an app's extraExactAllowlist entry", () => {
     const proxy = createAuthProxy({ extraExactAllowlist: ["/api/billing/webhook"] });

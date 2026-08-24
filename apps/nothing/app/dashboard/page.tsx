@@ -1,12 +1,22 @@
+import Link from "next/link";
+
 import { requireSession } from "@factory/auth";
 import { getClientConfig } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
 
 import { SignOutButton } from "@factory/ui/auth";
 import { SiteFooter } from "@factory/ui/marketing";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@factory/ui/primitives";
+import {
+  buttonVariants,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@factory/ui/primitives";
 import { CapabilityPanel } from "@factory/ui/capability-panel";
 import { ThemeToggle } from "@factory/ui/theme";
+import { cn } from "@/lib/utils";
 
 // Capability-conditional UI must render dynamically (design spec §5.1), and this page's
 // contents are gated on a live session lookup besides — never statically prerendered.
@@ -33,6 +43,12 @@ export default async function DashboardPage() {
                   this Card), so the toggle lands here instead — the only reachable spot
                   for someone who lands straight on /dashboard without visiting "/". */}
               <div className="flex items-center gap-2">
+                <Link
+                  href="/settings"
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                >
+                  Settings
+                </Link>
                 <ThemeToggle />
                 <SignOutButton />
               </div>

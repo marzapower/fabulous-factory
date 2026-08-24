@@ -31,7 +31,10 @@ import { TEMPLATES, type TemplateName, type TemplateProps } from "./templates";
 
 export type SendResult =
   | { delivered: true }
-  | { delivered: false; reason: "disabled" | "console" | "provider-error" | "not-configured" };
+  | {
+      delivered: false;
+      reason: "disabled" | "console" | "provider-error" | "not-configured" | "timeout";
+    };
 
 /**
  * Lazy module-singleton for the Resend client (review fix, M5 cycle — mirrors the
@@ -46,14 +49,11 @@ let resendClientKey: string | undefined;
 async function getResendClient(apiKey: string): Promise<import("resend").Resend> {
   if (!resendClient || resendClientKey !== apiKey) {
     const { Resend } = await import("resend");
-    // Every external call carries an explicit timeout and a bounded retry (conventions.md
-    // security posture) — verified against the installed `resend` v6 types (`ResendOptions`
-    // exposes only `baseUrl`/`userAgent`): the SDK provides NO timeout or retry knob at
-    // all, at the client or per-call level. Accepted consequence: a hung Resend request can
-    // block a `send()`/`sendRendered()` caller indefinitely; email delivery is already
-    // best-effort (`SendResult.delivered` is checked, never awaited into a hard dependency
-    // per CLAUDE.md's graceful-degradation contract) — mitigate at the call site with an
-    // external timeout if a specific caller needs one.
+    // The installed `resend` v6 types (`ResendOptions` exposes only `baseUrl`/`userAgent`)
+    // confirm the SDK itself has no client- or call-level timeout knob. Conventions.md's
+    // "every external call carries an explicit timeout" rule is satisfied one layer up
+    // instead — `deliver()` races the actual `resend.emails.send` call against a local
+    // timeout — so this constructor stays a plain, timeout-agnostic client.
     resendClient = new Resend(apiKey);
     resendClientKey = apiKey;
   }
@@ -65,6 +65,8 @@ async function getResendClient(apiKey: string): Promise<import("resend").Resend>
 const SUBJECTS: Record<TemplateName, string> = {
   "verify-email": "Verify your email address",
   "magic-link": "Your sign-in link",
+  "reset-password": "Reset your password",
+  "delete-account": "Confirm account deletion",
 };
 
 /** The shared transport/degradation path — the ONLY function in this package that reads
@@ -97,10 +99,32 @@ async function deliver(subject: string, to: string, element: ReactElement): Prom
 
   const html = await render(element);
   const resend = await getResendClient(env.RESEND_API_KEY ?? "");
-  const { error } = await resend.emails.send({ from: env.EMAIL_FROM, to, subject, html, text });
 
-  if (error) {
-    console.error("[@factory/email] Resend provider error", error);
+  // Conventions.md's "every external call carries an explicit timeout" rule, applied here
+  // since the `resend` SDK itself exposes no such knob (see `getResendClient`): race the
+  // actual send against a local bound instead. No retry — email isn't idempotent, and a
+  // timed-out send may already be in flight at Resend, so retrying risks a duplicate.
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<"timeout">((resolve) => {
+    timer = setTimeout(() => resolve("timeout"), 10_000);
+  });
+  let outcome: Awaited<ReturnType<typeof resend.emails.send>> | "timeout";
+  try {
+    outcome = await Promise.race([
+      resend.emails.send({ from: env.EMAIL_FROM, to, subject, html, text }),
+      timeout,
+    ]);
+  } finally {
+    // Also on a rejected send — a lost race must never leave the timer handle dangling.
+    clearTimeout(timer!);
+  }
+
+  if (outcome === "timeout") {
+    return { delivered: false, reason: "timeout" };
+  }
+
+  if (outcome.error) {
+    console.error("[@factory/email] Resend provider error", outcome.error);
     return { delivered: false, reason: "provider-error" };
   }
 

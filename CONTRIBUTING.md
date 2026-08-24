@@ -10,6 +10,10 @@ time. That compose model, and the factory's own conventions, are what this file 
 
 ## Set up
 
+Node >= 24 is required and now enforced via `engine-strict` — `pnpm install` fails
+outright on an older Node. The repo ships a `.nvmrc`, so `nvm install && nvm use` (no
+version argument) picks the right one; shell auto-switch hooks and fnm honor it too.
+
 **Devcontainer** (fastest — Postgres included):
 
 ```bash

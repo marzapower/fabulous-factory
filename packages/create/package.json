@@ -20,6 +20,9 @@
     "monorepo"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "bin": {
     "fabulous-factory": "./dist/cli.js"
   },

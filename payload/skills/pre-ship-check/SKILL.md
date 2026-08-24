@@ -23,11 +23,17 @@ Do not proceed to Phase 1 while any `blocks launch` item remains unchecked.
 
 ## Phase 1 — Flip the stage
 
-Edit `.factory/config.json`:
+Edit `.factory/config.json` in place, changing only the `stage` field to
+`"production"` — read the file, keep every other field exactly as it is, then write it
+back:
 
 ```json
-{ "stage": "production" }
+{ "stage": "production", "preset": "…", "factoryVersion": "…" }
 ```
+
+Never overwrite the file with `{ "stage": "production" }` alone: `preset` and
+`factoryVersion` are `pnpm factory:sync`'s provenance stamp, and wiping them breaks
+every future sync for this repo.
 
 This changes `pnpm preflight` from advisory to blocking.
 

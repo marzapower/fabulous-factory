@@ -1,6 +1,9 @@
 # ADR 0003: Replace the hash-based Adoption Ledger with a declarative LAUNCH.md checklist
 
-**Status:** accepted
+**Status:** accepted — staging mechanism superseded by ADR-0005
+
+_The LAUNCH.md-checklist decision below still stands; the `.factory/handoff` +
+`factory:init` promotion mechanism described in the body is historical (see ADR-0005)._
 
 ## Context
 

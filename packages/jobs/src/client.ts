@@ -29,15 +29,37 @@ import { getCapabilities, getEnv } from "@factory/config";
 const env = getEnv();
 const isDev = getCapabilities().jobs === "inngest" && env.INNGEST_DEV === "1";
 
-// Every external call carries an explicit timeout and a bounded retry (conventions.md
-// security posture) — verified against the installed `inngest` v4 `ClientOptions` type:
-// there is no `timeout`/`retries` knob on the client itself (only the unrelated `fetch`
-// override and per-function `retries`/`timeouts` on `createFunction`, e.g.
-// `packages/config/scripts/gen.ts`'s job template). The SDK's own HTTP layer applies its
-// own internal request handling; no override is configured here.
+/**
+ * Every external call carries an explicit timeout and a bounded retry (conventions.md
+ * security posture). The installed `inngest` v4 `ClientOptions` type exposes no
+ * timeout/retry knob directly on the client — but it DOES expose a `fetch` override
+ * (`typeof fetch`), and every HTTP call the client makes (send, signals, the internal
+ * fetch used by `serve()`) is routed through `this.fetch`, so overriding it here bounds
+ * ALL of them, not just `send()`. `AbortSignal.timeout(10_000)` supplies the bound;
+ * `AbortSignal.any` composes it with any signal the SDK itself already attaches to a
+ * given call (e.g. `sendSignal`'s cancellation signal) so neither bound is silently
+ * dropped.
+ *
+ * No retry is added at this layer: `inngest.send()` already wraps its own HTTP call in
+ * an internal bounded retry (`retryWithBackoff`), and Inngest's own step/function retry
+ * semantics (`retries` on `createFunction`, e.g. `packages/config/scripts/gen.ts`'s job
+ * template) are the bounded-retry story for job execution. Adding a second, transport-
+ * level retry here would risk double-sending an event or double-invoking a step.
+ */
+export function makeTimeoutFetch(ms: number): typeof fetch {
+  return (input: Parameters<typeof fetch>[0], init: RequestInit = {}): Promise<Response> => {
+    const bound = AbortSignal.timeout(ms);
+    const signal = init.signal ? AbortSignal.any([init.signal, bound]) : bound;
+    return fetch(input, { ...init, signal });
+  };
+}
+
+export const timeoutFetch = makeTimeoutFetch(10_000);
+
 export const inngest = new Inngest({
   id: "fabulous-factory",
   eventKey: env.INNGEST_EVENT_KEY,
   signingKey: env.INNGEST_SIGNING_KEY,
   isDev,
+  fetch: timeoutFetch,
 });

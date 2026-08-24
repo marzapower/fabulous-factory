@@ -98,6 +98,26 @@ describe("fabulous-factory install --yes --no-install --no-git", () => {
     expect(output).toContain("pnpm dev");
   });
 
+  it("stamps provenance into .factory/config.json, preserving stage", () => {
+    const target = path.join(scratchDir, "provenance-check");
+    runCli([
+      "install",
+      "--yes",
+      "--no-install",
+      "--no-git",
+      "--dir",
+      target,
+      "--preset",
+      "untangle",
+    ]);
+
+    const config = JSON.parse(readFileSync(path.join(target, ".factory/config.json"), "utf8"));
+    const ownVersion = JSON.parse(
+      readFileSync(path.join(repoRoot, "packages/create/package.json"), "utf8"),
+    ).version;
+    expect(config).toEqual({ stage: "prototype", preset: "untangle", factoryVersion: ownVersion });
+  });
+
   it("stamps the project name into root package.json", () => {
     const target = path.join(scratchDir, "stamp-check");
     runCli([

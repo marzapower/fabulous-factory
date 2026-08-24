@@ -82,3 +82,6 @@ export { DAILY_PLAN_EVENT, type DailyPlanEventData } from "./events";
 
 // --- functions ----------------------------------------------------------------------
 export { functions } from "./functions";
+
+// --- export (account-data export) ----------------------------------------------------
+export { exportUserData } from "./export";

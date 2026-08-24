@@ -18,6 +18,7 @@
     "check": "pnpm lint && pnpm boundaries && pnpm format:check && pnpm typecheck && pnpm test",
     "factory:doctor": "tsx packages/config/scripts/doctor.ts",
     "factory:status": "tsx packages/config/scripts/factory-status.ts",
+    "factory:sync": "tsx packages/config/scripts/factory-sync.ts",
     "preflight": "tsx packages/config/scripts/preflight.ts",
     "gen": "tsx packages/config/scripts/gen.ts",
     "db:migrate": "tsx packages/db/scripts/migrate.ts",

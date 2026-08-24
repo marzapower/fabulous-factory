@@ -1,0 +1,4 @@
+{
+  "version": 1,
+  "paths": ["packages/core/", "eslint.factory-rules.mjs"]
+}

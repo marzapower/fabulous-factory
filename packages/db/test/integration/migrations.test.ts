@@ -68,6 +68,9 @@ describe.skipIf(!TEST_DATABASE_URL)("migrations (integration)", () => {
     const tableNames = new Set(result.rows.map((row) => String(row.table_name)));
 
     // The shared chain (packages/db) owns only auth + billing + llm-call + rate-limit.
+    // `rate_limit` (singular) is better-auth's own DB-backed rate limiter table; `rate_limits`
+    // (plural) is the kernel's — see `src/schema/better-auth-rate-limit.ts` for why they're
+    // deliberately two separate tables.
     expect(tableNames).toEqual(
       new Set([
         "user",
@@ -77,6 +80,7 @@ describe.skipIf(!TEST_DATABASE_URL)("migrations (integration)", () => {
         "billing_events",
         "subscriptions",
         "llm_calls",
+        "rate_limit",
         "rate_limits",
       ]),
     );

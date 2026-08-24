@@ -129,6 +129,19 @@ later via env vars — nothing above is required to get running.
 
 </details>
 
+**Or skip local setup entirely:**
+
+[![Deploy with Vercel](https://vercel.com/button)](<https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmarzapower%2Ffabulous-factory&root-directory=apps%2Funtangle&env=DATABASE_URL%2CBETTER_AUTH_SECRET&envDescription=Baseline%20required%20vars%20%E2%80%94%20DATABASE_URL%20(a%20reachable%20Postgres%20connection%20string)%20and%20BETTER_AUTH_SECRET%20(%60openssl%20rand%20-hex%2032%60).%20Everything%20else%20is%20optional.&envLink=https%3A%2F%2Fgithub.com%2Fmarzapower%2Ffabulous-factory%2Fblob%2Fmaster%2Fdocs%2Fguides%2Fdeploy-vercel.md&project-name=fabulous-factory&repository-name=fabulous-factory>)
+
+This clones **this repo as-is** (the Untangle preset, unmodified — not the installer's
+pick-a-preset flow) and pre-fills the Root Directory (`apps/untangle`) and the two
+required env var names in Vercel's import screen. You still have to: provide real values
+for `DATABASE_URL` and `BETTER_AUTH_SECRET`, run migrations yourself after the first
+deploy (`docs/guides/deploy-vercel.md`), and set `APP_URL` to your new domain. This is
+the fastest way to see the flagship app running, not a substitute for
+`npx fabulous-factory@latest install` when you actually want to build your own product on
+it.
+
 ## 🧩 What's in the box
 
 |                      |                                             |                                                                                                     |                                                                       |

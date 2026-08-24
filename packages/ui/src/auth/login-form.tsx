@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { authClient } from "@factory/auth/client";
@@ -162,7 +163,22 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="password">Password</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            {/* Password reset needs the email service; `magicLinkEnabled` is derived from
+                the exact same capability read (`deriveAuthOptions`' `email.magicLink` =
+                `capabilities.email !== "disabled"`), so gating on it here hides the link
+                precisely when the reset flow couldn't send anything — without widening
+                this component's props. */}
+            {magicLinkEnabled && (
+              <Link
+                href="/forgot-password"
+                className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+              >
+                Forgot password?
+              </Link>
+            )}
+          </div>
           <Input
             id="password"
             name="password"

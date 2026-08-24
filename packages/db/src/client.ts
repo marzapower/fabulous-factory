@@ -49,13 +49,17 @@ export function getDb(): NodePgDatabase<typeof schema> {
     // security posture): `max` bounds the pool so a leak/spike can't exhaust Postgres'
     // connection limit, `connectionTimeoutMillis` bounds how long a caller waits to
     // acquire one, and `idleTimeoutMillis` recycles connections that would otherwise sit
-    // open indefinitely. `statement_timeout` (query-level policy) is deliberately out of
-    // scope here.
+    // open indefinitely. `statement_timeout`/`query_timeout` (both typed on `pg`'s own
+    // `PoolConfig` — `@types/pg` 8.23.1 — and applied by `pg` per-connection) bound how
+    // long a single query is allowed to run server-side and client-side respectively, so a
+    // stuck query can no longer hold a pooled connection open indefinitely.
     const pool = new Pool({
       connectionString,
       max: 10,
       connectionTimeoutMillis: 10_000,
       idleTimeoutMillis: 30_000,
+      statement_timeout: 30_000,
+      query_timeout: 35_000,
     });
     cachedDb = drizzle({ client: pool, schema });
   }

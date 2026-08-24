@@ -3,7 +3,9 @@
 This is **your product**, built with fabulous-factory. `PRODUCT.md` is your
 human partner's document — plain language, no code; agents derive specs from it, never
 the other way around. `LAUNCH.md` (repo root) is the shared launch checklist — no agent
-ships past an unchecked `blocks launch` item; run `pnpm factory:status` to render it.
+ships past an unchecked `blocks launch` item; run `pnpm factory:status` to render it. Run
+`pnpm factory:sync` to pull kernel and lint-rule fixes forward from a newer factory
+release into this repo.
 
 **Stack (frozen):** Next.js 16 (App Router), TypeScript strict, Postgres + Drizzle,
 Tailwind + shadcn/ui, pnpm workspaces. Billing (Stripe/disabled) and LLM

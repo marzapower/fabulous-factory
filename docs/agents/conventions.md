@@ -115,14 +115,33 @@ subject, enforced by commitlint (`commit-msg` husky hook) and a CI PR-title chec
 - **`safeFetch()`** (`@factory/core`) is mandatory for any fetch of a user-supplied URL —
   scheme allowlist, private/link-local/metadata-range denial, size/time limits,
   redirect re-validation.
-- Every vendor client carries an explicit timeout and a bounded retry, or documents why it
-  can't: Stripe (`packages/billing/src/adapters/stripe.ts`'s `getClient`) sets
-  `timeout`/`maxNetworkRetries` explicitly; Postgres (`packages/db/src/client.ts`'s
-  `getDb`) sets `connectionTimeoutMillis`/pool `max`/`idleTimeoutMillis` explicitly;
-  PostHog (`packages/analytics/src/track.ts`) sets `requestTimeout` explicitly, on top of
-  the SDK's own bounded-retry default; Inngest (`packages/jobs/src/client.ts`) and Resend
-  (`packages/email/src/send.ts`'s `getResendClient`) expose no such client-level option at
-  all — both are documented as an accepted, SDK-imposed gap at their construction site.
+- Every vendor client carries an explicit timeout and a bounded retry. The timeout half
+  holds everywhere, with no documented exceptions. The bounded-retry half holds everywhere
+  except two reasoned, documented cases, named inline below: Inngest's transport-level
+  `fetch` override adds no retry of its own (the SDK's own `send()` retry plus its
+  step/function retry semantics already cover it — a second, transport-level retry would
+  risk a duplicate send), and Resend's `deliver()` adds no retry at all (email isn't
+  idempotent; a timed-out send may already be in flight, so retrying risks sending twice).
+  Where the SDK exposes a native knob, that
+  knob is used directly: Stripe (`packages/billing/src/adapters/stripe.ts`'s `getClient`)
+  sets `timeout`/`maxNetworkRetries` explicitly; PostHog (`packages/analytics/src/track.ts`)
+  sets `requestTimeout` explicitly, on top of the SDK's own bounded-retry default;
+  Postgres (`packages/db/src/client.ts`'s `getDb`) sets pool-level
+  `connectionTimeoutMillis`/`max`/`idleTimeoutMillis` plus query-level
+  `statement_timeout`/`query_timeout` on the `Pool` config. Where the SDK exposes no such
+  knob, the bound is applied one layer out instead: Inngest
+  (`packages/jobs/src/client.ts`) has no `timeout`/`retries` option on the client itself,
+  so a `fetch` override built on `AbortSignal.timeout(10_000)` (composed with any signal
+  the SDK already attaches to a given call) is passed to `new Inngest({ fetch: … })`,
+  bounding every HTTP call the client makes; no retry is added at that layer since
+  `inngest.send()` already wraps its own call in a bounded retry and Inngest's own
+  step/function retry semantics are the bounded-retry story for job execution — a second,
+  transport-level retry there would risk a duplicate send. Resend
+  (`packages/email/src/send.ts`'s `deliver()`) similarly has no client-level timeout knob
+  (`getResendClient`), so `deliver()` races the actual `resend.emails.send` call against a
+  local ~10s timeout and returns a typed `{ delivered: false, reason: "timeout" }` result
+  if it loses; email deliberately gets no retry — it isn't idempotent, and a timed-out send
+  may already be in flight at Resend, so retrying risks sending twice.
 - **Rate limiting lives in the wrapper (`defineHandler`/`defineAction`), never in the
   proxy** — rate limiting needs Postgres via the wrapper; the rule stands even though
   `proxy.ts` now runs in the `nodejs` runtime (Next 16) and could technically reach

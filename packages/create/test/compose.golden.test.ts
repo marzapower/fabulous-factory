@@ -102,7 +102,16 @@ describe.each(availablePresets)("compose $id — adopter instruction set", (pres
   });
 
   it('ships .factory/config.json exactly {"stage":"prototype"}', () => {
+    // Provenance (preset/factoryVersion) is stamped at INSTALL time (`install.ts`'s
+    // `stampProvenance`), not compose time — the composed template output is unchanged.
     expect(JSON.parse(read(preset.id, ".factory/config.json"))).toEqual({ stage: "prototype" });
+  });
+
+  it("ships .factory/sync-manifest.json (payload/.factory/sync-manifest.json)", () => {
+    expect(JSON.parse(read(preset.id, ".factory/sync-manifest.json"))).toEqual({
+      version: 1,
+      paths: ["packages/core/", "eslint.factory-rules.mjs"],
+    });
   });
 });
 
@@ -220,7 +229,16 @@ describe.each(availablePresets)("compose $id — secret hygiene", (preset) => {
       if (name === ".env.example") continue;
       expect(name).not.toMatch(/^\.env(\..+)?$/);
       expect(name).not.toMatch(/\.(pem|key|p12)$/);
-      expect(name).not.toBe(".npmrc");
+      // The one sanctioned exception: the adopter variant `.npmrc` (payload/variants/.npmrc)
+      // carries no secret — just a why-comment plus `engine-strict=true` — pinned exactly,
+      // so any future content drift (e.g. a registry token accidentally added) fails this
+      // test loudly.
+      if (name === ".npmrc") {
+        expect(readFileSync(file, "utf8")).toBe(
+          '# Refuse installs on a Node version outside this repo\'s package.json "engines" range (>=24).\nengine-strict=true\n',
+        );
+        continue;
+      }
       expect(name).not.toMatch(/^id_rsa/);
     }
   });
@@ -271,6 +289,16 @@ describe.each(availablePresets)("compose $id — other root variants", (preset) 
 
   it("ships a renovate.json (payload/variants/renovate.json)", () => {
     expect(existsSync(path.join(outDirs.get(preset.id)!, "renovate.json"))).toBe(true);
+  });
+
+  it("ships .npmrc with its why-comment and engine-strict=true (payload/variants/.npmrc)", () => {
+    expect(read(preset.id, ".npmrc")).toBe(
+      '# Refuse installs on a Node version outside this repo\'s package.json "engines" range (>=24).\nengine-strict=true\n',
+    );
+  });
+
+  it("ships .nvmrc pinning Node 24, so nvm/fnm users comply automatically (payload/variants/.nvmrc)", () => {
+    expect(read(preset.id, ".nvmrc")).toBe("24\n");
   });
 });
 

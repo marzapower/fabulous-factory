@@ -25,6 +25,7 @@ import {
   PRETTIERRC_PREFIX,
   VARIANT_DOCKERFILE_DEST,
   VARIANT_ENTRIES,
+  VARIANT_NPMRC_DEST,
   type CopyEntry,
 } from "./compose.config";
 import { stampDockerfileDomainPackages } from "./lib/dockerfile-stamp";
@@ -237,6 +238,8 @@ function composeVariants(
       composeDockerfile(repoRoot, outDir, preset, entry, warnings);
     } else if (entry.dest === VARIANT_PACKAGE_JSON_DEST) {
       composePackageJson(repoRoot, outDir, preset, entry, warnings);
+    } else if (entry.dest === VARIANT_NPMRC_DEST) {
+      composeNpmrc(repoRoot, outDir, entry, warnings);
     } else {
       copyEntry(repoRoot, outDir, entry, warnings);
     }
@@ -281,6 +284,31 @@ function composePackageJson(
   pkg.scripts = scripts;
 
   writeFileSync(destPath, `${JSON.stringify(pkg, null, 2)}\n`);
+}
+
+/**
+ * Copies `entry` (the `.npmrc` variant) via a direct read/write, bypassing
+ * `copyRecursive`'s secret-hygiene filter (`lib/fs.ts`'s `SECRET_EXACT_FILENAMES`, which
+ * treats every `.npmrc` as secret-shaped by design) — see `VARIANT_NPMRC_DEST`'s comment
+ * in `compose.config.ts` for why this one adopter variant is a deliberate exception.
+ */
+function composeNpmrc(
+  repoRoot: string,
+  outDir: string,
+  entry: CopyEntry,
+  warnings: string[],
+): void {
+  const absSrc = path.join(repoRoot, entry.src);
+  if (!existsSync(absSrc)) {
+    if (entry.optional) {
+      warnings.push(`Skipped missing (optional) compose source: ${entry.src}`);
+      return;
+    }
+    throw new Error(`Missing required compose source: ${entry.src}`);
+  }
+  const dest = path.join(outDir, entry.dest);
+  mkdirSync(path.dirname(dest), { recursive: true });
+  writeFileSync(dest, readFileSync(absSrc, "utf8"));
 }
 
 /** Stamps `entry` (the Dockerfile variant) with `preset`'s claimed domain package manifest

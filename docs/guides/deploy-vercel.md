@@ -19,6 +19,19 @@ In Vercel, "Add New… → Project" and import your GitHub repo. Set:
   `deploy-docker.md`) — Vercel's own build pipeline does its own output tracing and
   ignores the standalone folder. It's harmless on Vercel, just unused there.
 
+### Via the deploy button
+
+The button in the root `README.md` is a Vercel clone-URL that pre-fills two things in the
+import screen so you don't have to: **Root Directory** (`apps/untangle`, via the
+documented `root-directory` query param) and the **required env var names**
+(`DATABASE_URL`, `BETTER_AUTH_SECRET`, via `env`) — Vercel confirms both parameters are
+"equivalent to enabling the Override toggle" in the dashboard, so this is a real
+preselection, not a hope. It does **not** fill in values (env values can't be passed in a
+URL — Vercel's own docs call that insecure since the URL lands in browser history), and
+it does not run migrations for you. After clicking it: confirm Root Directory shows
+`apps/untangle`, paste real values for the two required vars, deploy, then do steps 3–5
+below before you call it live.
+
 ## 2. Required environment variables
 
 Set these in **Project Settings → Environment Variables**, for both the Production and

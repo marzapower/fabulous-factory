@@ -8,6 +8,8 @@ import { TEMPLATES, type TemplateName, type TemplateProps } from "../src/templat
 const PROPS: { [K in TemplateName]: TemplateProps[K] } = {
   "verify-email": { url: "https://example.com/verify?token=abc" },
   "magic-link": { url: "https://example.com/magic?token=xyz" },
+  "reset-password": { url: "https://example.com/reset-password/abc" },
+  "delete-account": { url: "https://example.com/delete-user/callback?token=xyz" },
 };
 
 // Indexing TEMPLATES/PROPS by the widened `TemplateName` union `describe.each` hands the
