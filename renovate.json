@@ -3,8 +3,15 @@
   "extends": ["config:best-practices", "schedule:weekly"],
   "packageRules": [
     {
+      "description": "Supply-chain cooldown: never propose a release younger than 7 days. Unlike pnpm's own minimumReleaseAge (kept at 1 day in pnpm-workspace.yaml so a fresh clone installs), this only delays update PRs, so the stricter floor costs nothing.",
+      "matchPackageNames": ["*"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Restated rather than inherited from the rule above: Renovate merges matching rules in order, but the semgrep OWASP ruleset checks each packageRules entry in isolation.",
       "matchPackageNames": ["better-auth", "inngest", "ai", "tsup", "@inngest/test"],
-      "rangeStrategy": "pin"
+      "rangeStrategy": "pin",
+      "minimumReleaseAge": "7 days"
     }
   ]
 }
