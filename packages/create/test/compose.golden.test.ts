@@ -230,13 +230,16 @@ describe.each(availablePresets)("compose $id — secret hygiene", (preset) => {
       expect(name).not.toMatch(/^\.env(\..+)?$/);
       expect(name).not.toMatch(/\.(pem|key|p12)$/);
       // The one sanctioned exception: the adopter variant `.npmrc` (payload/variants/.npmrc)
-      // carries no secret — just a why-comment plus `engine-strict=true` — pinned exactly,
-      // so any future content drift (e.g. a registry token accidentally added) fails this
-      // test loudly.
+      // carries no secret — only comments and `engine-strict=true`. Every directive it
+      // declares is pinned, so a registry token accidentally added later (e.g.
+      // `//registry.npmjs.org/:_authToken=...`) fails this test loudly, while the why-
+      // comments above them stay free to change.
       if (name === ".npmrc") {
-        expect(readFileSync(file, "utf8")).toBe(
-          '# Refuse installs on a Node version outside this repo\'s package.json "engines" range (>=24).\nengine-strict=true\n',
-        );
+        const directives = readFileSync(file, "utf8")
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line !== "" && !line.startsWith("#"));
+        expect(directives).toEqual(["engine-strict=true"]);
         continue;
       }
       expect(name).not.toMatch(/^id_rsa/);
@@ -292,13 +295,33 @@ describe.each(availablePresets)("compose $id — other root variants", (preset) 
   });
 
   it("ships .npmrc with its why-comment and engine-strict=true (payload/variants/.npmrc)", () => {
-    expect(read(preset.id, ".npmrc")).toBe(
-      '# Refuse installs on a Node version outside this repo\'s package.json "engines" range (>=24).\nengine-strict=true\n',
+    const npmrc = read(preset.id, ".npmrc");
+    expect(npmrc).toContain(
+      '# Refuse installs on a Node version outside this repo\'s package.json "engines" range (>=24).',
     );
+    expect(npmrc).toContain("engine-strict=true");
+    // The release-age policy belongs in pnpm-workspace.yaml, not here — npm's own
+    // `min-release-age` key is dead config in a pnpm workspace, so the semgrep OWASP rule
+    // demanding it is suppressed rather than satisfied with a setting nothing reads.
+    expect(npmrc).not.toContain("min-release-age=");
+    expect(npmrc).toContain("# nosemgrep: package_managers.npm.npm-missing-minimum-release-age");
   });
 
   it("ships .nvmrc pinning Node 24, so nvm/fnm users comply automatically (payload/variants/.nvmrc)", () => {
     expect(read(preset.id, ".nvmrc")).toBe("24\n");
+  });
+
+  // Regression guard: the root vitest config's "benchmarks" project is factory-dev-only and
+  // never ships, and vitest hard-fails at startup on a projects entry that doesn't resolve —
+  // an unconditional entry killed the scaffold's `pnpm test` before a single test ran, so
+  // every non-glob project must be gated on the directory actually being present.
+  it("ships a vitest config with no unconditional project that the scaffold lacks", () => {
+    // Whitespace-normalized so the assertion pins the gate itself, not prettier's wrapping.
+    const config = read(preset.id, "vitest.config.ts").replace(/\s+/g, "");
+    expect(existsSync(path.join(outDirs.get(preset.id)!, "benchmarks"))).toBe(false);
+    expect(config).toContain(
+      'projects:["packages/*","apps/*",...(existsSync(benchmarksDir)?["benchmarks"]:[])]',
+    );
   });
 });
 
