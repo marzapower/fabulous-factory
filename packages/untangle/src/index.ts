@@ -85,3 +85,6 @@ export { functions } from "./functions";
 
 // --- export (account-data export) ----------------------------------------------------
 export { exportUserData } from "./export";
+
+// --- demo-seed ----------------------------------------------------------------------
+export { seedUntangleDemo, findDemoUserId, DEMO_USER_EMAIL } from "./demo-seed";

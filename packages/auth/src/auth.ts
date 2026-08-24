@@ -54,6 +54,18 @@ const { socialProviders, email: emailFeatures } = deriveAuthOptions(env, capabil
 const emailEnabled = capabilities.email !== "disabled";
 
 /**
+ * `TRUSTED_PROXIES` is a comma-separated list (registry.ts); Better Auth wants an array
+ * of IP/CIDR strings. Trimmed and empty-entry-filtered so a trailing comma or stray
+ * whitespace in the env value doesn't produce a bogus `""` entry. `undefined` (var unset,
+ * or set but empty after trimming) when there's nothing to configure — `advanced` is then
+ * omitted entirely below, so Better Auth falls through to its own default
+ * (`trustedProxies` unset) exactly as it did before this var existed.
+ */
+const trustedProxies = env.TRUSTED_PROXIES?.split(",")
+  .map((entry) => entry.trim())
+  .filter((entry) => entry.length > 0);
+
+/**
  * Rate limiting (security review, 2026-08-24 → hardened): better-auth's own mounted
  * endpoints — notably the unauthenticated, email-sending `/request-password-reset` —
  * are rate-limited by better-auth itself (`onRequestRateLimit`, called from its router
@@ -75,10 +87,14 @@ const emailEnabled = capabilities.email !== "disabled";
  * is not a new failure mode this repo takes on: `DATABASE_URL` is already the hard
  * baseline dependency for auth itself (session/user reads hit the same DB), so a DB
  * outage already breaks these endpoints regardless of the rate limiter.
- * Deployment-specific still: `advanced.ipAddress.trustedProxies`/`ipAddressHeaders`
- * remain per-deployment configuration (multi-hop `x-forwarded-for` without them
- * collapses every client behind the proxy into one shared bucket) — same category as
- * `APP_URL`, not something this module can pin generically.
+ * `advanced.ipAddress.trustedProxies` (verified against `better-auth@1.7.1`'s own
+ * `@better-auth/core` types, `init-options.d.mts`: `advanced.ipAddress.trustedProxies?:
+ * string[]`) is now wired from `TRUSTED_PROXIES` below — multi-hop `x-forwarded-for`
+ * without it collapses every client behind the proxy into one shared rate-limit bucket,
+ * same category of per-deployment config as `APP_URL`. `ipAddressHeaders` stays
+ * unwired: no registered env var claims a non-default header list yet, and Better
+ * Auth's own header-detection default is a reasonable one to keep unless a deployment
+ * needs otherwise.
  */
 export const auth = betterAuth({
   database: drizzleAdapter(getDb(), { provider: "pg", schema }),
@@ -167,6 +183,13 @@ export const auth = betterAuth({
   // finding). 10 minutes keeps the no-password path usable right after signing in while
   // closing the stolen-cookie window. Never set 0 — that DISABLES the freshness check.
   session: { freshAge: 60 * 10 },
+  // Absent (not `advanced: { ipAddress: { trustedProxies: undefined } }`) when
+  // TRUSTED_PROXIES is unset — same absent-key idiom as the email-gated blocks above, so
+  // Better Auth falls through to its own untrusted-proxy default rather than this module
+  // pinning a value either way.
+  ...(trustedProxies && trustedProxies.length > 0
+    ? { advanced: { ipAddress: { trustedProxies } } }
+    : {}),
   // `undefined` → Better Auth's same-origin default.
   baseURL: env.APP_URL,
   // Always a string — hard-required by config validation since M8; see the module doc

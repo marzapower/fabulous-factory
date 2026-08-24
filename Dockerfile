@@ -4,6 +4,7 @@
 #
 #   docker build .                               -> runtime image (default/last stage)
 #   docker build --target runner .                -> runtime image (explicit)
+#   docker build --target runner-seed .            -> demo-seed image (profile: demo only)
 #   docker build --target migrate .                -> one-shot migrator image
 #
 # See docs/superpowers/plans/milestones/m8-docker-deploy.md §I.4 for the contract.
@@ -126,3 +127,45 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
     CMD wget -qO- http://127.0.0.1:${PORT}/api/health || exit 1
 
 CMD ["node", "apps/untangle/server.js"]
+
+# ---------------------------------------------------------------------------
+# runner-seed: `seed` compose service support only (profile: demo). Layers a full
+# monorepo copy (source + node_modules, tsx included since it's a devDependency of the
+# root, apps/untangle, packages/db, and packages/untangle — this stage never runs `pnpm
+# install --prod`) on top of the lean `runner` image, kept under ./repo so it never
+# shadows the standalone app's own traced ./node_modules. This is the ONLY reason this
+# stage is heavier than `runner`; the `app` service (built from `runner`, not this stage)
+# never reads anything under ./repo.
+#
+# `apps/untangle/scripts/seed-demo.ts` needs BOTH @factory/auth and @factory/untangle,
+# an edge neither package's own DAG allowlist permits (see that script's own doc
+# comment) — apps/* aren't bound by that DAG the same way, so it lives here instead of
+# in packages/db's or packages/untangle's own scripts.
+#
+# "server-only" (guarding every @factory/* package's public entry) throws unless
+# resolved under Next's build-time "react-server" export condition — a false positive
+# for a plain Node script, which is unambiguously server context, just not a bundled
+# one. Setting `--conditions=react-server` on the seed command instead of this patch was
+# tried and rejected: it silences the poison, but it ALSO flips React's and Next's own
+# conditional exports (`react-server` is React's real condition for swapping in its
+# Server-Components-only build, which has no `createContext`), crashing the first
+# `next/navigation` import pulled in transitively (@factory/core's define-action.ts ->
+# @factory/auth's public entry -> session.ts -> next/navigation) — verified directly.
+# Overwriting the installed package's index.js with its own no-op "react-server"
+# condition target (empty.js) has zero effect on the standalone app above: that guard is
+# a build-time/webpack concern already resolved when `builder` ran `pnpm build`; nothing
+# in the compiled server.js requires "server-only" at runtime.
+FROM runner AS runner-seed
+
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./repo/node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/package.json /app/pnpm-workspace.yaml /app/tsconfig.base.json ./repo/
+COPY --from=builder --chown=nextjs:nodejs /app/packages ./repo/packages
+COPY --from=builder --chown=nextjs:nodejs /app/apps/untangle/scripts ./repo/apps/untangle/scripts
+COPY --from=builder --chown=nextjs:nodejs /app/apps/untangle/package.json /app/apps/untangle/tsconfig.json ./repo/apps/untangle/
+# apps/untangle's OWN node_modules (its "@factory/*" workspace symlinks + drizzle-orm) —
+# without this, resolving "@factory/auth" etc. from ./repo/apps/untangle/scripts/
+# seed-demo.ts would climb straight past apps/untangle to ./repo/node_modules, which
+# only carries the ROOT package.json's own dependencies, not apps/untangle's.
+COPY --from=builder --chown=nextjs:nodejs /app/apps/untangle/node_modules ./repo/apps/untangle/node_modules
+RUN find ./repo/node_modules -type d -name server-only -exec sh -c \
+      'test -f "$1/empty.js" && cp "$1/empty.js" "$1/index.js"' _ {} \;

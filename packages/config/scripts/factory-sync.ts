@@ -85,8 +85,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /** Reads `.factory/config.json`'s `preset`/`factoryVersion` (ADR-0006's install-time
  * provenance stamp) — missing/unparseable/non-string fields degrade to `undefined`,
  * never throw; `main` turns "still undefined after CLI overrides" into the actionable
- * error. */
-export function readLocalProvenance(repoRoot: string): {
+ * error. Module-private: `runSync` is the only caller, real fs behavior only, not
+ * injectable — see `SyncRunDeps`. */
+function readLocalProvenance(repoRoot: string): {
   preset?: string;
   factoryVersion?: string;
 } {
@@ -106,8 +107,8 @@ export function readLocalProvenance(repoRoot: string): {
 
 /** Reads and validates `.factory/sync-manifest.json` — missing entirely means this repo
  * predates the sync channel (a pre-ADR-0006 scaffold), a distinct error from a malformed
- * manifest. */
-export function readLocalManifest(repoRoot: string): SyncManifest {
+ * manifest. Module-private, real fs only — see `SyncRunDeps`. */
+function readLocalManifest(repoRoot: string): SyncManifest {
   const manifestPath = path.join(repoRoot, ".factory", "sync-manifest.json");
   if (!existsSync(manifestPath)) {
     throw new Error(
@@ -134,8 +135,9 @@ export function validateVersionSpec(version: string, source: string): string {
   );
 }
 
-/** `true` when `git status --porcelain` reports anything at all. */
-export function isGitDirty(repoRoot: string): boolean {
+/** `true` when `git status --porcelain` reports anything at all. Module-private — see
+ * `SyncRunDeps`. */
+function isGitDirty(repoRoot: string): boolean {
   const output = execFileSync("git", ["status", "--porcelain"], {
     cwd: repoRoot,
     encoding: "utf8",
@@ -146,11 +148,8 @@ export function isGitDirty(repoRoot: string): boolean {
 /** Recursively collects every file under `rootDir` whose path (relative to `rootDir`,
  * posix-separated) matches one of `prefixes` — walks only the prefix subtrees themselves,
  * never the whole repo, since a `packages/core/`-style prefix can sit inside an otherwise
- * enormous monorepo checkout. */
-export function collectFilesUnderPrefixes(
-  rootDir: string,
-  prefixes: readonly string[],
-): FileSnapshot {
+ * enormous monorepo checkout. Module-private — see `SyncRunDeps`. */
+function collectFilesUnderPrefixes(rootDir: string, prefixes: readonly string[]): FileSnapshot {
   const out: Record<string, string> = {};
   for (const prefix of prefixes) {
     if (prefix.endsWith("/")) {
@@ -223,8 +222,9 @@ interface MergeResult {
 /** Three-way merge via `git merge-file --stdout` against temp files — never mutates a
  * real file itself; the caller decides whether/where to write the result. A missing
  * `base` (a file added independently on both sides, absent from the common ancestor) is
- * treated as an empty file, same as `git merge-file` would treat a genuinely empty one. */
-export function mergeFile(base: string | undefined, target: string, local: string): MergeResult {
+ * treated as an empty file, same as `git merge-file` would treat a genuinely empty one.
+ * Module-private — exercised only indirectly, through `applyActions`/`runSync`. */
+function mergeFile(base: string | undefined, target: string, local: string): MergeResult {
   const workDir = mkdtempSync(path.join(tmpdir(), "factory-sync-merge-"));
   try {
     const oursPath = path.join(workDir, "ours");
@@ -265,7 +265,7 @@ export function mergeFile(base: string | undefined, target: string, local: strin
   }
 }
 
-export interface ApplyResult {
+interface ApplyResult {
   applied: string[];
   skipped: string[];
   conflicts: string[];
@@ -273,8 +273,8 @@ export interface ApplyResult {
 
 /** Executes `actions` against `repoRoot` — the only impure counterpart to
  * `planSyncActions`. `dryRun: true` still runs merges (to detect conflicts, via temp
- * files only) but writes nothing to `repoRoot`. */
-export function applyActions(
+ * files only) but writes nothing to `repoRoot`. Module-private — see `SyncRunDeps`. */
+function applyActions(
   actions: readonly SyncAction[],
   repoRoot: string,
   base: FileSnapshot,
@@ -324,8 +324,9 @@ export function applyActions(
 
 /** Reads the actual resolved version off an extracted package root's own
  * `package.json` — `--to`'s default is the literal string `"latest"`, so this is what
- * actually gets stamped into `.factory/config.json`'s `factoryVersion`. */
-export function readPackedVersion(packageRoot: string): string {
+ * actually gets stamped into `.factory/config.json`'s `factoryVersion`. Module-private —
+ * see `SyncRunDeps`. */
+function readPackedVersion(packageRoot: string): string {
   const pkg = JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8")) as {
     version?: string;
   };
@@ -335,8 +336,9 @@ export function readPackedVersion(packageRoot: string): string {
 
 /** Updates `.factory/config.json`'s `factoryVersion` in place, preserving every other
  * field (`stage`, `preset`) — mirrors `provenance-stamp.ts`'s posture in `packages/create`
- * (never throws on a missing/malformed file; a missing file just becomes `{}` first). */
-export function stampFactoryVersion(repoRoot: string, version: string): void {
+ * (never throws on a missing/malformed file; a missing file just becomes `{}` first).
+ * Module-private — see `SyncRunDeps`. */
+function stampFactoryVersion(repoRoot: string, version: string): void {
   const configPath = path.join(repoRoot, ".factory", "config.json");
   let parsed: Record<string, unknown> = {};
   if (existsSync(configPath)) {
@@ -360,32 +362,19 @@ function printSummary(result: ApplyResult, dryRun: boolean): void {
   for (const relPath of result.conflicts) console.log(`    ${relPath}`);
 }
 
-/** The effectful collaborators `runSync` needs, injectable so its orchestration —
- * notably the version-bump rule — is unit-testable without `npm pack`/network/git.
- * Defaults to the real fs/exec/git implementations above; a test overrides just the
- * pieces that would otherwise hit the network (chiefly `fetchPackedVersion`) while
- * exercising the real fs-backed ones (`collectFilesUnderPrefixes`, `applyActions`,
- * `stampFactoryVersion`, `readPackedVersion`) against a throwaway repo root. */
+/** The one effectful collaborator `runSync` needs injectable so its orchestration —
+ * notably the version-bump rule — is unit-testable without `npm pack`/network. Every
+ * other collaborator (`isGitDirty`, `readLocalProvenance`, `readLocalManifest`,
+ * `collectFilesUnderPrefixes`, `applyActions`, `stampFactoryVersion`,
+ * `readPackedVersion`) is real-fs-backed and module-private; a test fakes only
+ * `fetchPackedVersion` (the network call) and exercises the rest for real against a
+ * throwaway repo root. */
 export interface SyncRunDeps {
-  isGitDirty: typeof isGitDirty;
-  readLocalProvenance: typeof readLocalProvenance;
-  readLocalManifest: typeof readLocalManifest;
   fetchPackedVersion: typeof fetchPackedVersion;
-  collectFilesUnderPrefixes: typeof collectFilesUnderPrefixes;
-  applyActions: typeof applyActions;
-  stampFactoryVersion: typeof stampFactoryVersion;
-  readPackedVersion: typeof readPackedVersion;
 }
 
 const defaultSyncRunDeps: SyncRunDeps = {
-  isGitDirty,
-  readLocalProvenance,
-  readLocalManifest,
   fetchPackedVersion,
-  collectFilesUnderPrefixes,
-  applyActions,
-  stampFactoryVersion,
-  readPackedVersion,
 };
 
 export interface RunSyncResult {
@@ -409,14 +398,14 @@ export function runSync(
 ): RunSyncResult {
   const d: SyncRunDeps = { ...defaultSyncRunDeps, ...deps };
 
-  if (!args.allowDirty && d.isGitDirty(repoRoot)) {
+  if (!args.allowDirty && isGitDirty(repoRoot)) {
     throw new Error(
       "factory:sync refuses to run on a dirty working tree — commit or stash first, or pass " +
         "--allow-dirty.",
     );
   }
 
-  const provenance = d.readLocalProvenance(repoRoot);
+  const provenance = readLocalProvenance(repoRoot);
   const presetId = args.preset ?? provenance.preset;
   const fromVersion = args.from ?? provenance.factoryVersion;
 
@@ -434,7 +423,7 @@ export function runSync(
   );
   const toVersion = args.to ?? "latest";
   validateVersionSpec(toVersion, args.to !== undefined ? "--to flag" : "default value");
-  const manifest = d.readLocalManifest(repoRoot);
+  const manifest = readLocalManifest(repoRoot);
 
   const workDir = mkdtempSync(path.join(tmpdir(), "factory-sync-"));
   try {
@@ -450,12 +439,12 @@ export function runSync(
       throw new Error(`fabulous-factory@${toVersion} has no template for preset "${presetId}".`);
     }
 
-    const base = d.collectFilesUnderPrefixes(baseTemplateDir, manifest.paths);
-    const target = d.collectFilesUnderPrefixes(targetTemplateDir, manifest.paths);
-    const local = d.collectFilesUnderPrefixes(repoRoot, manifest.paths);
+    const base = collectFilesUnderPrefixes(baseTemplateDir, manifest.paths);
+    const target = collectFilesUnderPrefixes(targetTemplateDir, manifest.paths);
+    const local = collectFilesUnderPrefixes(repoRoot, manifest.paths);
 
     const actions = planSyncActions(manifest.paths, base, target, local);
-    const result = d.applyActions(actions, repoRoot, base, target, local, { dryRun: args.dryRun });
+    const result = applyActions(actions, repoRoot, base, target, local, { dryRun: args.dryRun });
 
     printSummary(result, args.dryRun);
 
@@ -467,8 +456,8 @@ export function runSync(
     // would reopen an already-resolved conflict.
     let stampedVersion: string | undefined;
     if (!args.dryRun) {
-      stampedVersion = d.readPackedVersion(targetRoot);
-      d.stampFactoryVersion(repoRoot, stampedVersion);
+      stampedVersion = readPackedVersion(targetRoot);
+      stampFactoryVersion(repoRoot, stampedVersion);
     }
 
     return {

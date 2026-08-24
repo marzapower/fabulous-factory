@@ -1,4 +1,10 @@
-import type { AppMode, RawEnv } from "./registry";
+import {
+  ENV_REGISTRY,
+  type AppMode,
+  type EnvVarName,
+  type RawEnv,
+  type ServiceGroup,
+} from "./registry";
 
 export interface Capabilities {
   billing: "stripe" | "disabled";
@@ -32,10 +38,28 @@ function hasCredentialsFor(profile: LlmProfile, env: RawEnv): boolean {
   }
 }
 
+/**
+ * True iff every `"allOf"`-combinator var in `group` (per `ENV_REGISTRY`, plan G.3.3
+ * follow-up) is present — the single AND-group check `deriveBilling`/`deriveJobs` both
+ * delegate to instead of hand-listing var names, so the registry's `combinator` field
+ * stays the one place that AND shape is expressed. `false` when the group has no
+ * `"allOf"` vars at all (an empty AND is never "satisfied").
+ */
+function allOfSatisfied(group: ServiceGroup, env: RawEnv): boolean {
+  const vars = ENV_REGISTRY.filter((v) => v.group === group && v.combinator === "allOf");
+  return vars.length > 0 && vars.every((v) => Boolean(env[v.name as EnvVarName]));
+}
+
+/** Every `"oneOf"`-combinator var name in `group` — standalone alternatives to its AND-group. */
+function oneOfVarNames(group: ServiceGroup): readonly EnvVarName[] {
+  return ENV_REGISTRY.filter((v) => v.group === group && v.combinator === "oneOf").map(
+    (v) => v.name,
+  );
+}
+
 function deriveBilling(env: RawEnv): Capabilities["billing"] {
   if (env.BILLING_PROVIDER === "disabled") return "disabled";
-  if (env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET) return "stripe";
-  return "disabled";
+  return allOfSatisfied("billing", env) ? "stripe" : "disabled";
 }
 
 function deriveLlm(env: RawEnv): Capabilities["llm"] {
@@ -63,13 +87,18 @@ function deriveJobs(env: RawEnv, mode: AppMode): Capabilities["jobs"] {
   // FINAL rule (plan G.2.3 + G.10.12), refined by the review fix below — retires M1's
   // provisional "development implies inngest": Inngest v4 defaults to CLOUD mode, so
   // without INNGEST_DEV=1 the client would throw on send() rather than talk to a local
-  // dev server. Enabled iff either both cloud keys are present (any mode) or
-  // INNGEST_DEV is the exact string "1" AND mode isn't production — "0", any other
-  // value, or a stray dev-only var surviving into a production env (e.g. a dev .env
-  // copied to prod) all stay disabled. This also gates `client.ts`'s `isDev` flag: a
-  // production env can never end up in Inngest's signature-skipping dev mode.
-  if (env.INNGEST_EVENT_KEY && env.INNGEST_SIGNING_KEY) return "inngest";
-  if (env.INNGEST_DEV === "1" && mode !== "production") return "inngest";
+  // dev server. Enabled iff either both cloud keys are present (any mode, the "allOf"
+  // group in the registry) or INNGEST_DEV (the registry's lone "oneOf" var for this
+  // group) is the exact string "1" AND mode isn't production — "0", any other value, or
+  // a stray dev-only var surviving into a production env (e.g. a dev .env copied to
+  // prod) all stay disabled. This also gates `client.ts`'s `isDev` flag: a production env
+  // can never end up in Inngest's signature-skipping dev mode. The AND-group presence
+  // check comes from `ENV_REGISTRY` via `allOfSatisfied`; the "=== '1'" value semantics
+  // for the one "oneOf" var (INNGEST_DEV) are business logic the registry's combinator
+  // can't express on its own, so they stay explicit here.
+  if (allOfSatisfied("jobs", env)) return "inngest";
+  const devVar = oneOfVarNames("jobs")[0];
+  if (devVar && env[devVar] === "1" && mode !== "production") return "inngest";
   return "disabled";
 }
 

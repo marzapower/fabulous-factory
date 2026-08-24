@@ -60,15 +60,6 @@ async function getResendClient(apiKey: string): Promise<import("resend").Resend>
   return resendClient;
 }
 
-/** One subject line per template — kept here rather than per-template so callers never
- * have to pass a subject themselves. */
-const SUBJECTS: Record<TemplateName, string> = {
-  "verify-email": "Verify your email address",
-  "magic-link": "Your sign-in link",
-  "reset-password": "Reset your password",
-  "delete-account": "Confirm account deletion",
-};
-
 /** The shared transport/degradation path — the ONLY function in this package that reads
  * `getCapabilities()`/`getEnv()` for email or loads the `resend` SDK. Both `send()` and
  * `sendRendered()` fully reduce to this. */
@@ -136,8 +127,8 @@ export async function send<T extends TemplateName>(
   to: string,
   props: TemplateProps[T],
 ): Promise<SendResult> {
-  const element = TEMPLATES[template](props);
-  const subject = SUBJECTS[template];
+  const { Component, subject } = TEMPLATES[template];
+  const element = Component(props);
   return deliver(subject, to, element);
 }
 

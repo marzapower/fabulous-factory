@@ -9,6 +9,7 @@
     "./account": "./src/account/index.ts",
     "./marketing": "./src/marketing/index.ts",
     "./capability-panel": "./src/capability-panel.tsx",
+    "./dashboard": "./src/dashboard/top-bar.tsx",
     "./features": "./src/features/index.ts",
     "./feedback": "./src/feedback/index.ts",
     "./middleware": "./src/middleware.ts",

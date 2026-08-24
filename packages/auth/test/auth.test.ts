@@ -35,8 +35,11 @@ vi.mock("better-auth/plugins", () => ({
 
 const BASE_ENV = { BETTER_AUTH_SECRET: "a".repeat(16) };
 
-function setCapabilities(email: "disabled" | "console" | "resend") {
-  mockedGetEnv.mockReturnValue(BASE_ENV);
+function setCapabilities(
+  email: "disabled" | "console" | "resend",
+  envOverrides: Record<string, string> = {},
+) {
+  mockedGetEnv.mockReturnValue({ ...BASE_ENV, ...envOverrides });
   mockedGetCapabilities.mockReturnValue({
     billing: "disabled",
     llm: "disabled",
@@ -65,6 +68,7 @@ async function loadAuthConfig() {
       };
     };
     rateLimit?: { enabled: boolean; storage: string };
+    advanced?: { ipAddress?: { trustedProxies?: string[] } };
     plugins: unknown[];
   };
 }
@@ -155,5 +159,32 @@ describe.each(["console", "resend"] as const)("auth config — email %s", (email
     expect(consoleErrorSpy.mock.calls[0]?.[0]).not.toContain("https://example.com/reset");
 
     consoleErrorSpy.mockRestore();
+  });
+});
+
+describe("auth config — TRUSTED_PROXIES wiring", () => {
+  it("omits `advanced` entirely when TRUSTED_PROXIES is unset, so Better Auth falls through to its own default", async () => {
+    setCapabilities("disabled");
+    const config = await loadAuthConfig();
+
+    expect(config).not.toHaveProperty("advanced");
+  });
+
+  it("wires advanced.ipAddress.trustedProxies, split and trimmed, when TRUSTED_PROXIES is set", async () => {
+    setCapabilities("disabled", { TRUSTED_PROXIES: "10.0.0.0/24, 192.0.2.10 ,203.0.113.5" });
+    const config = await loadAuthConfig();
+
+    expect(config.advanced?.ipAddress?.trustedProxies).toEqual([
+      "10.0.0.0/24",
+      "192.0.2.10",
+      "203.0.113.5",
+    ]);
+  });
+
+  it("omits `advanced` when TRUSTED_PROXIES is set but empty after trimming", async () => {
+    setCapabilities("disabled", { TRUSTED_PROXIES: "  , ," });
+    const config = await loadAuthConfig();
+
+    expect(config).not.toHaveProperty("advanced");
   });
 });

@@ -1,14 +1,27 @@
 /**
  * Declarative compose lists (npx-installer design spec §5): explicit include lists, no
- * heuristics. `compose.ts` is the engine that reads these; this file holds only data.
- * Every `src` is repo-root-relative, every `dest` is output-root-relative.
+ * heuristics. `compose.ts` is the engine that reads these; this file holds only data (plus
+ * the `CopyEntry` shape itself — `transform` is a per-call function value `compose.ts`
+ * attaches at compose time, never baked into the static entry arrays below, since it must
+ * close over that compose's own fresh `warnings` array; see `compose.ts`'s
+ * `withVariantTransform`). Every `src` is repo-root-relative, every `dest` is
+ * output-root-relative.
  */
+import type { PresetMeta } from "./presets";
 
 export interface CopyEntry {
   src: string;
   dest: string;
   /** Missing source is tolerated (recorded as a warning) instead of throwing. */
   optional?: boolean;
+  /**
+   * When present, `compose.ts`'s `composeVariants` calls this instead of the generic
+   * `copyEntry` copy — for entries that need more than a verbatim copy (Dockerfile
+   * stamping, package.json script injection, the `.npmrc` secret-filter bypass). Attached
+   * per compose call, not on the static entry arrays themselves (see the file-level
+   * comment above).
+   */
+  transform?: (repoRoot: string, outDir: string, preset: PresetMeta) => void;
 }
 
 /**

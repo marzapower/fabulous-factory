@@ -16,7 +16,7 @@ import {
 // N2 (K.16): this page is Static, not Live — `apps/web` has no `@factory/email`
 // dependency at all, and reaching for `@react-email/render` from here directly would
 // breach vendor confinement (only `packages/email` may import it). Source + the
-// `SUBJECTS` map are shown as excerpts instead of a rendered preview.
+// `TEMPLATES` map are shown as excerpts instead of a rendered preview.
 const sendSnippet = `export async function send<T extends TemplateName>(
   template: T,
   to: string,
@@ -28,8 +28,8 @@ const sendSnippet = `export async function send<T extends TemplateName>(
     return { delivered: false, reason: "disabled" };
   }
 
-  const element = TEMPLATES[template](props);
-  const subject = SUBJECTS[template];
+  const { Component, subject } = TEMPLATES[template];
+  const element = Component(props);
   const text = await render(element, { plainText: true });
 
   if (capabilities.email === "console") {
@@ -43,10 +43,10 @@ const sendSnippet = `export async function send<T extends TemplateName>(
   ...
 }`;
 
-const subjectsSnippet = `const SUBJECTS: Record<TemplateName, string> = {
-  "verify-email": "Verify your email address",
-  "magic-link": "Your sign-in link",
-  "daily-plan": "Your plan for today",
+const subjectsSnippet = `const TEMPLATES: Record<TemplateName, TemplateEntry> = {
+  "verify-email": { Component: VerifyEmail, subject: "Verify your email address" },
+  "magic-link": { Component: MagicLink, subject: "Your sign-in link" },
+  "daily-plan": { Component: DailyPlan, subject: "Your plan for today" },
 };`;
 
 export function EmailFeaturePage({ brand, emoji }: { brand: string; emoji?: string }) {
@@ -84,10 +84,14 @@ export function EmailFeaturePage({ brand, emoji }: { brand: string; emoji?: stri
           <h2 className="text-xl font-semibold">Real source</h2>
           <CodeBlock code={sendSnippet} caption="Simplified from packages/email/src/send.ts" />
           <p className="mt-4 text-muted-foreground">
-            The subject line for every template lives in one map, never scattered across call sites:
+            Every template pairs its component with its subject line in one map, never scattered
+            across call sites:
           </p>
           <div className="mt-2">
-            <CodeBlock code={subjectsSnippet} caption="packages/email/src/send.ts — SUBJECTS" />
+            <CodeBlock
+              code={subjectsSnippet}
+              caption="packages/email/src/templates/index.ts — TEMPLATES"
+            />
           </div>
         </section>
 

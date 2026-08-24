@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 
-import { hasCredentialAccount, requireSession } from "@factory/auth";
-import { isEnabled } from "@factory/config";
-import { AccountSettings } from "@factory/ui/account";
-import { SiteFooter } from "@factory/ui/marketing";
+import { AccountSettingsPage } from "@factory/ui/auth";
 
 export const metadata: Metadata = {
   title: "Account settings",
@@ -15,26 +12,6 @@ export const metadata: Metadata = {
 // same discipline as the dashboard page.
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage() {
-  const session = await requireSession({ redirectTo: "/login" });
-  const hasPasswordAccount = await hasCredentialAccount(session.user.id);
-
-  return (
-    <div className="fab-shell flex min-h-svh flex-col">
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
-        <AccountSettings
-          user={{
-            name: session.user.name,
-            email: session.user.email,
-            emailVerified: session.user.emailVerified,
-          }}
-          emailEnabled={isEnabled("email")}
-          hasPasswordAccount={hasPasswordAccount}
-          exportHref="/api/account/export"
-        />
-      </main>
-
-      <SiteFooter />
-    </div>
-  );
+export default function SettingsPage() {
+  return <AccountSettingsPage appName="Fabulous Nothing" />;
 }

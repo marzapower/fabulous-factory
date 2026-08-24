@@ -29,7 +29,7 @@ import {
   type Quality,
 } from "../src/llm-routing";
 import { PLANS, type Plan } from "../src/plans";
-import { type AppMode, type EnvVarName, type RawEnv } from "../src/registry";
+import { type AppMode, type EnvVarName, type EnvVarSpec, type RawEnv } from "../src/registry";
 import { loadStage } from "./factory-stage";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -52,6 +52,37 @@ const SERVICE_TITLES: Record<ServiceName, string> = {
   analytics: "analytics",
   errors: "errors",
 };
+
+/**
+ * Builds the "enable with: ..." hint string from a service's `enables: true` registry
+ * specs, reading each spec's `combinator` instead of the old position-based/service-name
+ * branching (which reverse-engineered the shape from `ENV_REGISTRY`'s array order and a
+ * hardcoded `service === "llm" | "jobs"` check). Three shapes, matching the three
+ * `combinator` values (registry.ts's `EnvVarSpec.combinator` doc comment):
+ *
+ * - Any `"anyOf"` vars present (llm) → "any of: A, B, C, D" — every var in the group is
+ *   an independent alternative, so there's no AND-group to separate out.
+ * - Otherwise, the `"allOf"` vars (if any) join with " + " into the AND-group phrase; a
+ *   single `"allOf"` var alone renders as just its own name (billing needs both Stripe
+ *   keys; email/analytics/errors need only their one var).
+ * - Any `"oneOf"` vars append as ", or A, or B" — standalone alternatives to the
+ *   AND-group (jobs: the two cloud keys, or INNGEST_DEV alone).
+ */
+export function enableWithHint(hints: readonly EnvVarSpec[]): string {
+  const anyOfVars = hints.filter((spec) => spec.combinator === "anyOf");
+  if (anyOfVars.length > 0) {
+    return `any of: ${anyOfVars.map((spec) => spec.name).join(", ")}`;
+  }
+
+  const allOfVars = hints.filter((spec) => spec.combinator === "allOf");
+  const oneOfVars = hints.filter((spec) => spec.combinator === "oneOf");
+  const andPart = allOfVars.map((spec) => spec.name).join(" + ");
+
+  if (oneOfVars.length > 0) {
+    return `${andPart}, or ${oneOfVars.map((spec) => spec.name).join(", or ")}`;
+  }
+  return andPart;
+}
 
 const AUTH_SOCIAL_PROVIDERS: ReadonlyArray<{
   name: string;
@@ -76,9 +107,11 @@ const PLACEHOLDER_SECRET_PATTERN =
  * key presence. `BETTER_AUTH_SECRET` is now REQUIRED (M8, I.3.a) — same tier as
  * `DATABASE_URL` — so a genuinely missing value is already reported by
  * `printValidationIssues` above; this section instead flags a value that IS set but still
- * looks like an unedited placeholder (I.10.7).
+ * looks like an unedited placeholder (I.10.7). Also flags a production deployment with no
+ * `TRUSTED_PROXIES` — advisory only, since Better Auth's own untrusted-proxy default still
+ * works, just with all clients behind the proxy sharing one rate-limit bucket.
  */
-function printAuthSection(env: RawEnv): void {
+function printAuthSection(env: RawEnv, mode: AppMode): void {
   console.log("✓ auth: email/password (always on)");
 
   for (const provider of AUTH_SOCIAL_PROVIDERS) {
@@ -101,7 +134,23 @@ function printAuthSection(env: RawEnv): void {
     );
   }
 
+  const trustedProxiesHint = trustedProxiesWarning(env, mode);
+  if (trustedProxiesHint) {
+    console.log(`    ${trustedProxiesHint}`);
+  }
+
   console.log("");
+}
+
+/**
+ * Pure — exported for tests. Advisory-only (never a hard failure, M1: doctor is a report,
+ * not a gate): `null` outside production mode or once `TRUSTED_PROXIES` is set, otherwise
+ * the warning line (same voice as `printBillingSection`'s `APP_URL` warning — one plain
+ * sentence, states what breaks, no jargon).
+ */
+export function trustedProxiesWarning(env: RawEnv, mode: AppMode): string | null {
+  if (mode !== "production" || env.TRUSTED_PROXIES) return null;
+  return "⚠ TRUSTED_PROXIES is not set — behind a reverse proxy, every client's requests share one rate-limit bucket instead of being tracked separately";
 }
 
 const QUALITIES: readonly Quality[] = ["cheap", "balanced", "high"];
@@ -264,18 +313,7 @@ function printServiceLine(
     }
   } else {
     const hints = serviceHints(service);
-    const names = hints.map((spec) => spec.name);
-    // llm's hint vars are alternatives (any single one enables a profile); billing needs
-    // every listed var set together — "+" fits it exactly. jobs (registry order: the two
-    // cloud keys, then INNGEST_DEV — G.10.12's pinned 2-AND-then-1-OR shape) needs the
-    // last var alone OR every var before it together.
-    const enableWith =
-      service === "llm"
-        ? `any of: ${names.join(", ")}`
-        : service === "jobs"
-          ? `${names.slice(0, -1).join(" + ")}, or ${names.at(-1)}`
-          : names.join(" + ");
-    console.log(`    enable with: ${enableWith}`);
+    console.log(`    enable with: ${enableWithHint(hints)}`);
     for (const spec of hints) {
       console.log(`      ${spec.name}: ${spec.description}`);
     }
@@ -348,7 +386,7 @@ function main(): void {
 
   printHeader(mode);
   printValidationIssues(env);
-  printAuthSection(env);
+  printAuthSection(env, mode);
 
   for (const service of Object.keys(SERVICE_TITLES) as ServiceName[]) {
     printServiceLine(service, capabilities, env, mode);
@@ -357,6 +395,15 @@ function main(): void {
   printFactorySection();
 }
 
-main();
-// Always exits 0 — doctor is a report, not a gate (M1). Preflight (M9) is the gate.
-process.exitCode = 0;
+// Guarded (same idiom as gen-env-example.ts): importing this module from a test — to
+// reach the exported pure helpers (`enableWithHint`, `trustedProxiesWarning`) — must
+// never also run `main()`'s real-env side effects (`readMergedEnv()`, console output).
+const __filename = fileURLToPath(import.meta.url);
+const invokedDirectly =
+  process.argv[1] !== undefined && path.resolve(process.argv[1]) === path.resolve(__filename);
+
+if (invokedDirectly) {
+  main();
+  // Always exits 0 — doctor is a report, not a gate (M1). Preflight (M9) is the gate.
+  process.exitCode = 0;
+}

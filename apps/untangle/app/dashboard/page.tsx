@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { AnalyticsProvider } from "@factory/analytics/client";
 import { requireSession } from "@factory/auth";
 import { getEntitlement } from "@factory/billing";
@@ -12,17 +10,8 @@ import {
   listTasksForUser,
 } from "@factory/untangle";
 
-import { SignOutButton } from "@factory/ui/auth";
-import {
-  buttonVariants,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@factory/ui/primitives";
-import { ThemeToggle } from "@factory/ui/theme";
-import { cn } from "@/lib/utils";
+import { DashboardTopBar } from "@factory/ui/dashboard";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@factory/ui/primitives";
 import { BillingCard } from "@/components/billing/billing-card";
 import { TodaysPlan } from "@/components/dashboard/todays-plan";
 import { Workspace } from "@/components/workspace/workspace";
@@ -75,19 +64,7 @@ export default async function DashboardPage() {
               <p className="text-sm text-muted-foreground">
                 Welcome{session.user.name ? `, ${session.user.name}` : ""}.
               </p>
-              {/* This dashboard doesn't render SiteHeader (it has its own top bar via
-                  this Card), so the toggle lands here instead — the only reachable spot
-                  for someone who lands straight on /dashboard without visiting "/". */}
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/settings"
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-                >
-                  Settings
-                </Link>
-                <ThemeToggle />
-                <SignOutButton />
-              </div>
+              <DashboardTopBar userEmail={session.user.email} settingsHref="/settings" />
             </CardContent>
           </Card>
 

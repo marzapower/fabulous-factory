@@ -80,6 +80,28 @@ describe("ENV_REGISTRY invariants", () => {
     }
   });
 
+  it("declares `combinator` explicitly (never omitted) on every entry", () => {
+    const validCombinators = new Set(["allOf", "oneOf", "anyOf", null]);
+    for (const spec of ENV_REGISTRY) {
+      expect(
+        Object.prototype.hasOwnProperty.call(spec, "combinator"),
+        `${spec.name} is missing the 'combinator' key entirely`,
+      ).toBe(true);
+      expect(
+        validCombinators.has(spec.combinator),
+        `${spec.name}.combinator is not one of "allOf" | "oneOf" | "anyOf" | null: ${String(spec.combinator)}`,
+      ).toBe(true);
+    }
+  });
+
+  it("gives every var with combinator !== null an enables: true (a combinator only makes sense for an enabling var)", () => {
+    for (const spec of ENV_REGISTRY) {
+      if (spec.combinator !== null) {
+        expect(spec.enables, `${spec.name} has a combinator but enables: false`).toBe(true);
+      }
+    }
+  });
+
   it("has a non-empty `enables` set for every service group doctor derives hints from (G.3.3/G.10.10)", () => {
     const serviceGroups = [
       "billing",

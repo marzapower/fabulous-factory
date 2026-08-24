@@ -244,10 +244,27 @@ docker compose up --build
 ```
 
 `db` → `migrate` → `app` boot in order; `curl localhost:3000/api/health` →
-`{"status":"ok"}`. Compose supplies its own `DATABASE_URL`; a missing
-`BETTER_AUTH_SECRET` fails fast at compose interpolation time with an actionable
-message, before anything half-boots. `docker build` itself needs zero real env — the two
-baseline vars ship as placeholder build args.
+`{"status":"ok"}`. This is the command to actually deploy somewhere — a bare
+`docker compose up` never creates any account or seed data, so it's safe to run
+against a real host, including one reachable from the internet. Compose supplies
+its own `DATABASE_URL`; a missing `BETTER_AUTH_SECRET` fails fast at compose
+interpolation time with an actionable message, before anything half-boots.
+`docker build` itself needs zero real env — the two baseline vars ship as
+placeholder build args.
+
+**Demo account (local/dev only)** — to get a populated workspace to poke at
+without signing up by hand, run the `demo` profile instead:
+
+```bash
+docker compose --profile demo up --build
+```
+
+> ⚠️ Never enable the `demo` profile on a deployment reachable from the
+> internet — it creates a real account with a publicly-known password.
+
+This additionally seeds a demo account with a populated workspace — log in at
+`localhost:3000` with `demo@fabulous.dev` / `FabulousDemo123!` to see real
+captured, triaged, and decomposed tasks with no extra setup.
 
 - **Port** — override with `APP_PORT=8080 docker compose up`.
 - **Jobs profile** (self-hosted Inngest) — put `INNGEST_EVENT_KEY` and an

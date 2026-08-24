@@ -17,7 +17,7 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r run typecheck && tsc --noEmit -p benchmarks",
     "test": "vitest run",
-    "check": "pnpm lint && pnpm boundaries && pnpm format:check && pnpm typecheck && pnpm test",
+    "check": "node scripts/check-node-version.mjs && pnpm lint && pnpm boundaries && pnpm format:check && pnpm typecheck && pnpm test",
     "factory:doctor": "tsx packages/config/scripts/doctor.ts",
     "factory:status": "tsx packages/config/scripts/factory-status.ts",
     "preflight": "tsx packages/config/scripts/preflight.ts",

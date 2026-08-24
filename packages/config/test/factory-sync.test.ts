@@ -1,28 +1,29 @@
 /**
- * `factory-sync.ts` — unit tests for the fs/exec side that doesn't need the network
- * (`parseSyncArgs`, `readLocalProvenance`, `readLocalManifest`, `collectFilesUnderPrefixes`,
- * `stampFactoryVersion`, `applyActions`), plus a smoke test exercising `mergeFile`'s real
- * `git merge-file` path against local fixture dirs — no `npm pack`, no network.
+ * `factory-sync.ts` — unit tests for the pure, still-exported helpers (`parseSyncArgs`,
+ * `validateVersionSpec`), plus integration-style coverage of `runSync`, the module's sole
+ * remaining orchestration export. Every fs/exec collaborator `runSync` uses internally
+ * (`isGitDirty`, `readLocalProvenance`, `readLocalManifest`, `collectFilesUnderPrefixes`,
+ * `mergeFile`, `applyActions`, `stampFactoryVersion`, `readPackedVersion`) is
+ * module-private now, so their behavior is exercised here through `runSync`'s real,
+ * unmocked fs/git side — only `fetchPackedVersion` (the network call) is faked, per
+ * `SyncRunDeps`'s "fake the network, exercise the real filesystem-backed pieces" split.
  */
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  applyActions,
-  collectFilesUnderPrefixes,
-  mergeFile,
-  parseSyncArgs,
-  readLocalManifest,
-  readLocalProvenance,
-  readPackedVersion,
-  runSync,
-  stampFactoryVersion,
-  validateVersionSpec,
-} from "../scripts/factory-sync";
+import { parseSyncArgs, runSync, validateVersionSpec } from "../scripts/factory-sync";
 
 describe("parseSyncArgs", () => {
   it("defaults dryRun/allowDirty to false and leaves the rest undefined", () => {
@@ -59,116 +60,6 @@ describe("parseSyncArgs", () => {
   });
 });
 
-let repoRoot: string;
-
-beforeEach(() => {
-  repoRoot = mkdtempSync(path.join(tmpdir(), "factory-sync-test-"));
-});
-
-afterEach(() => {
-  rmSync(repoRoot, { recursive: true, force: true });
-});
-
-describe("readLocalProvenance", () => {
-  it("reads preset/factoryVersion from .factory/config.json", () => {
-    mkdirSync(path.join(repoRoot, ".factory"), { recursive: true });
-    writeFileSync(
-      path.join(repoRoot, ".factory", "config.json"),
-      JSON.stringify({ stage: "prototype", preset: "untangle", factoryVersion: "0.3.0" }),
-    );
-    expect(readLocalProvenance(repoRoot)).toEqual({ preset: "untangle", factoryVersion: "0.3.0" });
-  });
-
-  it("degrades to {} when the file is missing", () => {
-    expect(readLocalProvenance(repoRoot)).toEqual({});
-  });
-
-  it("degrades to {} when the file is unparseable, never throws", () => {
-    mkdirSync(path.join(repoRoot, ".factory"), { recursive: true });
-    writeFileSync(path.join(repoRoot, ".factory", "config.json"), "not json");
-    expect(() => readLocalProvenance(repoRoot)).not.toThrow();
-    expect(readLocalProvenance(repoRoot)).toEqual({});
-  });
-
-  it("drops non-string preset/factoryVersion fields instead of returning them", () => {
-    mkdirSync(path.join(repoRoot, ".factory"), { recursive: true });
-    writeFileSync(
-      path.join(repoRoot, ".factory", "config.json"),
-      JSON.stringify({ preset: 1, factoryVersion: null }),
-    );
-    expect(readLocalProvenance(repoRoot)).toEqual({});
-  });
-});
-
-describe("readLocalManifest", () => {
-  it("parses a valid manifest file", () => {
-    mkdirSync(path.join(repoRoot, ".factory"), { recursive: true });
-    writeFileSync(
-      path.join(repoRoot, ".factory", "sync-manifest.json"),
-      JSON.stringify({ version: 1, paths: ["packages/core/"] }),
-    );
-    expect(readLocalManifest(repoRoot)).toEqual({ version: 1, paths: ["packages/core/"] });
-  });
-
-  it("throws an actionable error when the manifest is missing entirely", () => {
-    expect(() => readLocalManifest(repoRoot)).toThrow(/predates the factory:sync channel/);
-  });
-});
-
-describe("collectFilesUnderPrefixes", () => {
-  it("collects every file under a directory prefix, recursively", () => {
-    mkdirSync(path.join(repoRoot, "tracked", "nested"), { recursive: true });
-    writeFileSync(path.join(repoRoot, "tracked", "a.ts"), "a");
-    writeFileSync(path.join(repoRoot, "tracked", "nested", "b.ts"), "b");
-    writeFileSync(path.join(repoRoot, "untracked.ts"), "nope");
-
-    expect(collectFilesUnderPrefixes(repoRoot, ["tracked/"])).toEqual({
-      "tracked/a.ts": "a",
-      "tracked/nested/b.ts": "b",
-    });
-  });
-
-  it("collects an exact-file prefix", () => {
-    writeFileSync(path.join(repoRoot, "eslint.factory-rules.mjs"), "rules");
-    expect(collectFilesUnderPrefixes(repoRoot, ["eslint.factory-rules.mjs"])).toEqual({
-      "eslint.factory-rules.mjs": "rules",
-    });
-  });
-
-  it("is empty when the prefix doesn't exist on disk", () => {
-    expect(collectFilesUnderPrefixes(repoRoot, ["missing/"])).toEqual({});
-  });
-
-  it("skips an exact-file entry that is a symlink instead of following it", () => {
-    const secretPath = path.join(repoRoot, "secret.txt");
-    writeFileSync(secretPath, "top secret local content");
-    symlinkSync(secretPath, path.join(repoRoot, "eslint.factory-rules.mjs"));
-
-    expect(collectFilesUnderPrefixes(repoRoot, ["eslint.factory-rules.mjs"])).toEqual({});
-  });
-
-  it("ignores node_modules/dist/.next/.turbo anywhere under a directory prefix", () => {
-    mkdirSync(path.join(repoRoot, "tracked", "node_modules", "some-dep"), { recursive: true });
-    writeFileSync(
-      path.join(repoRoot, "tracked", "node_modules", "some-dep", "index.js"),
-      "installed",
-    );
-    mkdirSync(path.join(repoRoot, "tracked", "dist"), { recursive: true });
-    writeFileSync(path.join(repoRoot, "tracked", "dist", "out.js"), "built");
-    mkdirSync(path.join(repoRoot, "tracked", ".next"), { recursive: true });
-    writeFileSync(path.join(repoRoot, "tracked", ".next", "trace"), "generated");
-    mkdirSync(path.join(repoRoot, "tracked", ".turbo"), { recursive: true });
-    writeFileSync(path.join(repoRoot, "tracked", ".turbo", "cache.json"), "cache");
-    mkdirSync(path.join(repoRoot, "tracked", "nested", "node_modules"), { recursive: true });
-    writeFileSync(path.join(repoRoot, "tracked", "nested", "node_modules", "x.js"), "nested-dep");
-    writeFileSync(path.join(repoRoot, "tracked", "a.ts"), "a");
-
-    expect(collectFilesUnderPrefixes(repoRoot, ["tracked/"])).toEqual({
-      "tracked/a.ts": "a",
-    });
-  });
-});
-
 describe("validateVersionSpec", () => {
   it("accepts the literal 'latest'", () => {
     expect(validateVersionSpec("latest", "--to flag")).toBe("latest");
@@ -201,40 +92,14 @@ describe("validateVersionSpec", () => {
   });
 });
 
-describe("stampFactoryVersion", () => {
-  it("updates factoryVersion in place, preserving other fields", () => {
-    mkdirSync(path.join(repoRoot, ".factory"), { recursive: true });
-    writeFileSync(
-      path.join(repoRoot, ".factory", "config.json"),
-      JSON.stringify({ stage: "prototype", preset: "untangle", factoryVersion: "0.3.0" }),
-    );
+let repoRoot: string;
 
-    stampFactoryVersion(repoRoot, "0.4.0");
-
-    expect(
-      JSON.parse(readFileSync(path.join(repoRoot, ".factory", "config.json"), "utf8")),
-    ).toEqual({ stage: "prototype", preset: "untangle", factoryVersion: "0.4.0" });
-  });
-
-  it("creates the field from scratch when config.json is missing", () => {
-    mkdirSync(path.join(repoRoot, ".factory"), { recursive: true });
-    stampFactoryVersion(repoRoot, "0.4.0");
-    expect(
-      JSON.parse(readFileSync(path.join(repoRoot, ".factory", "config.json"), "utf8")),
-    ).toEqual({ factoryVersion: "0.4.0" });
-  });
+beforeEach(() => {
+  repoRoot = mkdtempSync(path.join(tmpdir(), "factory-sync-test-"));
 });
 
-describe("readPackedVersion", () => {
-  it("reads version from an extracted package root's package.json", () => {
-    writeFileSync(path.join(repoRoot, "package.json"), JSON.stringify({ version: "1.2.3" }));
-    expect(readPackedVersion(repoRoot)).toBe("1.2.3");
-  });
-
-  it("throws when package.json has no version field", () => {
-    writeFileSync(path.join(repoRoot, "package.json"), JSON.stringify({}));
-    expect(() => readPackedVersion(repoRoot)).toThrow(/no "version" field/);
-  });
+afterEach(() => {
+  rmSync(repoRoot, { recursive: true, force: true });
 });
 
 const hasGit = (() => {
@@ -246,127 +111,45 @@ const hasGit = (() => {
   }
 })();
 
-describe.skipIf(!hasGit)("mergeFile (smoke test — real git merge-file, no network)", () => {
-  it("cleanly merges non-overlapping changes", () => {
-    const base = "line1\nline2\nline3\n";
-    const target = "line1\nline2\nline3-upstream\n";
-    const local = "line1-local\nline2\nline3\n";
-
-    const result = mergeFile(base, target, local);
-
-    expect(result.conflict).toBe(false);
-    expect(result.content).toBe("line1-local\nline2\nline3-upstream\n");
-  });
-
-  it("reports a conflict, with markers, for overlapping changes", () => {
-    const base = "line1\n";
-    const target = "line1-upstream\n";
-    const local = "line1-local\n";
-
-    const result = mergeFile(base, target, local);
-
-    expect(result.conflict).toBe(true);
-    expect(result.content).toContain("<<<<<<<");
-    expect(result.content).toContain("=======");
-    expect(result.content).toContain(">>>>>>>");
-  });
-
-  it("treats a missing base as empty (independently-added file on both sides)", () => {
-    const result = mergeFile(undefined, "upstream content\n", "upstream content\n");
-    expect(result.conflict).toBe(false);
-    expect(result.content).toBe("upstream content\n");
-  });
-});
-
-describe("applyActions", () => {
-  it("writes 'add' actions, deletes 'delete' actions, and skips 'skip' actions", () => {
-    mkdirSync(path.join(repoRoot, "tracked"), { recursive: true });
-    writeFileSync(path.join(repoRoot, "tracked", "old.ts"), "old content");
-
-    const base = { "tracked/old.ts": "old content" };
-    const target = { "tracked/new.ts": "new content" };
-    const local = { "tracked/old.ts": "old content" };
-
-    const result = applyActions(
-      [
-        { path: "tracked/new.ts", kind: "add" },
-        { path: "tracked/old.ts", kind: "delete" },
-      ],
-      repoRoot,
-      base,
-      target,
-      local,
-      { dryRun: false },
-    );
-
-    expect(result).toEqual({
-      applied: ["tracked/new.ts", "tracked/old.ts"],
-      skipped: [],
-      conflicts: [],
-    });
-    expect(readFileSync(path.join(repoRoot, "tracked", "new.ts"), "utf8")).toBe("new content");
-    expect(() => readFileSync(path.join(repoRoot, "tracked", "old.ts"), "utf8")).toThrow();
-  });
-
-  it("dry-run never writes to disk", () => {
-    const target = { "tracked/new.ts": "new content" };
-
-    const result = applyActions(
-      [{ path: "tracked/new.ts", kind: "add" }],
-      repoRoot,
-      {},
-      target,
-      {},
-      { dryRun: true },
-    );
-
-    expect(result.applied).toEqual(["tracked/new.ts"]);
-    expect(() => readFileSync(path.join(repoRoot, "tracked", "new.ts"), "utf8")).toThrow();
-  });
-
-  it("reports 'keep-deleted' actions as conflicts without touching disk", () => {
-    const result = applyActions(
-      [{ path: "tracked/x.ts", kind: "keep-deleted" }],
-      repoRoot,
-      {},
-      {},
-      {},
-      { dryRun: false },
-    );
-    expect(result).toEqual({ applied: [], skipped: [], conflicts: ["tracked/x.ts"] });
-  });
-});
-
 describe("runSync", () => {
   const preset = "untangle";
 
   /** Fakes `fetchPackedVersion` entirely — no `npm pack`, no network, no tar — building
    * a `templates/<preset>/` tree straight on disk under the caller-provided `workDir`
-   * and a `package.json` stamped with `pkgVersion`, mirroring what `fetchPackedVersion`
-   * itself returns (`workDir/package`). Keyed by the exact version string `runSync`
-   * passes in, so `--from`/`--to` route to the right fixture. */
+   * and a `package.json` stamped with `pkgVersion` (or omitted entirely, to exercise
+   * `readPackedVersion`'s error path), mirroring what `fetchPackedVersion` itself returns
+   * (`workDir/package`). Keyed by the exact version string `runSync` passes in, so
+   * `--from`/`--to` route to the right fixture. Every other collaborator
+   * (`collectFilesUnderPrefixes`, `mergeFile`, `applyActions`, `stampFactoryVersion`,
+   * `readPackedVersion`, `isGitDirty`, `readLocalProvenance`, `readLocalManifest`) runs
+   * for real against `repoRoot` and the fixture trees this builds. */
   function fakeFetchPackedVersion(
-    byVersion: Record<string, { files: Record<string, string>; pkgVersion: string }>,
-  ): typeof import("../scripts/factory-sync").fetchPackedVersion {
-    return (version, workDir) => {
+    byVersion: Record<string, { files: Record<string, string>; pkgVersion?: string }>,
+  ) {
+    return (version: string, workDir: string): string => {
       const spec = byVersion[version];
       if (!spec) throw new Error(`unexpected version requested: ${version}`);
       const pkgRoot = path.join(workDir, "package");
+      // Always create templates/<preset>/ itself, even with zero files, so runSync's
+      // "has no template for preset" existence check passes.
+      mkdirSync(path.join(pkgRoot, "templates", preset), { recursive: true });
       for (const [relPath, content] of Object.entries(spec.files)) {
         const full = path.join(pkgRoot, "templates", preset, relPath);
         mkdirSync(path.dirname(full), { recursive: true });
         writeFileSync(full, content);
       }
       mkdirSync(pkgRoot, { recursive: true });
+      // `pkgVersion: undefined` still writes a package.json — just one with no "version"
+      // field, to exercise readPackedVersion's error path.
       writeFileSync(
         path.join(pkgRoot, "package.json"),
-        JSON.stringify({ version: spec.pkgVersion }),
+        JSON.stringify(spec.pkgVersion === undefined ? {} : { version: spec.pkgVersion }),
       );
       return pkgRoot;
     };
   }
 
-  function seedProvenanceAndManifest(): void {
+  function seedProvenanceAndManifest(paths: string[] = ["tracked/"]): void {
     mkdirSync(path.join(repoRoot, ".factory"), { recursive: true });
     writeFileSync(
       path.join(repoRoot, ".factory", "config.json"),
@@ -374,13 +157,12 @@ describe("runSync", () => {
     );
     writeFileSync(
       path.join(repoRoot, ".factory", "sync-manifest.json"),
-      JSON.stringify({ version: 1, paths: ["tracked/"] }),
+      JSON.stringify({ version: 1, paths }),
     );
   }
 
-  function readStampedVersion(): unknown {
-    return JSON.parse(readFileSync(path.join(repoRoot, ".factory", "config.json"), "utf8"))
-      .factoryVersion;
+  function readConfigJson(): unknown {
+    return JSON.parse(readFileSync(path.join(repoRoot, ".factory", "config.json"), "utf8"));
   }
 
   it("conflicted apply: stamps factoryVersion to the target and exits 1", () => {
@@ -402,17 +184,28 @@ describe("runSync", () => {
     expect(result.conflicts).toEqual(["tracked/foo.ts"]);
     expect(result.exitCode).toBe(1);
     expect(result.stampedVersion).toBe("0.5.0");
-    expect(readStampedVersion()).toBe("0.5.0");
+    // Conflict markers land in the merged file on disk (mergeFile's real `git merge-file`
+    // path, exercised for real here).
+    const merged = readFileSync(path.join(repoRoot, "tracked", "foo.ts"), "utf8");
+    expect(merged).toContain("<<<<<<<");
+    expect(merged).toContain("=======");
+    expect(merged).toContain(">>>>>>>");
+    // stampFactoryVersion updates factoryVersion in place while preserving every other
+    // field already in .factory/config.json.
+    expect(readConfigJson()).toEqual({ stage: "prototype", preset, factoryVersion: "0.5.0" });
   });
 
-  it("clean apply: stamps factoryVersion to the target and exits 0", () => {
+  it("clean apply: three-way-merges non-overlapping changes and stamps the target version", () => {
     seedProvenanceAndManifest();
     mkdirSync(path.join(repoRoot, "tracked"), { recursive: true });
-    writeFileSync(path.join(repoRoot, "tracked", "foo.ts"), "line1\n");
+    writeFileSync(path.join(repoRoot, "tracked", "foo.ts"), "line1-local\nline2\nline3\n");
 
     const fetchPackedVersion = fakeFetchPackedVersion({
-      "0.3.0": { files: { "tracked/foo.ts": "line1\n" }, pkgVersion: "0.3.0" },
-      "0.5.0": { files: { "tracked/foo.ts": "line1\nline2-upstream\n" }, pkgVersion: "0.5.0" },
+      "0.3.0": { files: { "tracked/foo.ts": "line1\nline2\nline3\n" }, pkgVersion: "0.3.0" },
+      "0.5.0": {
+        files: { "tracked/foo.ts": "line1\nline2\nline3-upstream\n" },
+        pkgVersion: "0.5.0",
+      },
     });
 
     const result = runSync(
@@ -425,7 +218,10 @@ describe("runSync", () => {
     expect(result.applied).toEqual(["tracked/foo.ts"]);
     expect(result.exitCode).toBe(0);
     expect(result.stampedVersion).toBe("0.5.0");
-    expect(readStampedVersion()).toBe("0.5.0");
+    expect(readFileSync(path.join(repoRoot, "tracked", "foo.ts"), "utf8")).toBe(
+      "line1-local\nline2\nline3-upstream\n",
+    );
+    expect(readConfigJson()).toEqual({ stage: "prototype", preset, factoryVersion: "0.5.0" });
   });
 
   it("zero-action no-op: still stamps factoryVersion to the target", () => {
@@ -449,17 +245,16 @@ describe("runSync", () => {
     expect(result.conflicts).toEqual([]);
     expect(result.exitCode).toBe(0);
     expect(result.stampedVersion).toBe("0.5.0");
-    expect(readStampedVersion()).toBe("0.5.0");
   });
 
-  it("dry run never stamps factoryVersion", () => {
+  it("dry run never stamps factoryVersion and never writes to disk", () => {
     seedProvenanceAndManifest();
     mkdirSync(path.join(repoRoot, "tracked"), { recursive: true });
     writeFileSync(path.join(repoRoot, "tracked", "foo.ts"), "line1-local\n");
 
     const fetchPackedVersion = fakeFetchPackedVersion({
       "0.3.0": { files: { "tracked/foo.ts": "line1\n" }, pkgVersion: "0.3.0" },
-      "0.5.0": { files: { "tracked/foo.ts": "line1-upstream\n" }, pkgVersion: "0.5.0" },
+      "0.5.0": { files: { "tracked/new.ts": "new content\n" }, pkgVersion: "0.5.0" },
     });
 
     const result = runSync(
@@ -469,6 +264,215 @@ describe("runSync", () => {
     );
 
     expect(result.stampedVersion).toBeUndefined();
-    expect(readStampedVersion()).toBe("0.3.0");
+    expect((readConfigJson() as { factoryVersion: string }).factoryVersion).toBe("0.3.0");
+    // "add" action was planned (tracked/new.ts is upstream-only) but dry-run must not
+    // write it.
+    expect(result.applied).toContain("tracked/new.ts");
+    expect(existsSync(path.join(repoRoot, "tracked", "new.ts"))).toBe(false);
+  });
+
+  it("treats a missing base as empty for a file added independently on both sides", () => {
+    seedProvenanceAndManifest();
+    mkdirSync(path.join(repoRoot, "tracked"), { recursive: true });
+    writeFileSync(path.join(repoRoot, "tracked", "both.ts"), "upstream content\n");
+
+    const fetchPackedVersion = fakeFetchPackedVersion({
+      // "from" (base) never had tracked/both.ts at all.
+      "0.3.0": { files: {}, pkgVersion: "0.3.0" },
+      "0.5.0": { files: { "tracked/both.ts": "upstream content\n" }, pkgVersion: "0.5.0" },
+    });
+
+    const result = runSync(
+      repoRoot,
+      { to: "0.5.0", dryRun: false, allowDirty: true },
+      { fetchPackedVersion },
+    );
+
+    expect(result.conflicts).toEqual([]);
+    expect(readFileSync(path.join(repoRoot, "tracked", "both.ts"), "utf8")).toBe(
+      "upstream content\n",
+    );
+  });
+
+  it("ignores node_modules/dist/.next/.turbo under a directory prefix, on both the fetched and local trees", () => {
+    seedProvenanceAndManifest();
+    mkdirSync(path.join(repoRoot, "tracked"), { recursive: true });
+    writeFileSync(path.join(repoRoot, "tracked", "foo.ts"), "unchanged\n");
+    mkdirSync(path.join(repoRoot, "tracked", "node_modules", "dep"), { recursive: true });
+    writeFileSync(path.join(repoRoot, "tracked", "node_modules", "dep", "index.js"), "installed");
+
+    const fetchPackedVersion = fakeFetchPackedVersion({
+      "0.3.0": { files: { "tracked/foo.ts": "unchanged\n" }, pkgVersion: "0.3.0" },
+      "0.5.0": {
+        files: {
+          "tracked/foo.ts": "unchanged\n",
+          // Present only in the upstream tarball's excluded dir — must never be diffed
+          // or written into the repo.
+          "tracked/node_modules/dep/index.js": "upstream installed",
+        },
+        pkgVersion: "0.5.0",
+      },
+    });
+
+    const result = runSync(
+      repoRoot,
+      { to: "0.5.0", dryRun: false, allowDirty: true },
+      { fetchPackedVersion },
+    );
+
+    expect(result.applied).not.toContain("tracked/node_modules/dep/index.js");
+    expect(result.skipped).not.toContain("tracked/node_modules/dep/index.js");
+    expect(result.conflicts).toEqual([]);
+    // The local node_modules content is untouched — never overwritten by the "upstream"
+    // fixture content that was correctly excluded from the diff.
+    expect(
+      readFileSync(path.join(repoRoot, "tracked", "node_modules", "dep", "index.js"), "utf8"),
+    ).toBe("installed");
+  });
+
+  it("skips a symlinked exact-file entry instead of following it into the diff", () => {
+    seedProvenanceAndManifest(["config.mjs"]);
+    const secretPath = path.join(repoRoot, "secret.txt");
+    writeFileSync(secretPath, "top secret local content\n");
+    symlinkSync(secretPath, path.join(repoRoot, "config.mjs"));
+
+    const fetchPackedVersion = fakeFetchPackedVersion({
+      "0.3.0": { files: {}, pkgVersion: "0.3.0" },
+      "0.5.0": { files: { "config.mjs": "target content\n" }, pkgVersion: "0.5.0" },
+    });
+
+    const result = runSync(
+      repoRoot,
+      { to: "0.5.0", dryRun: false, allowDirty: true },
+      { fetchPackedVersion },
+    );
+
+    // Symlink correctly excluded from the local snapshot -> local reads as "absent" ->
+    // "add" (never a "merge" that could pull the secret's real content into the diff).
+    expect(result.conflicts).toEqual([]);
+    expect(result.applied).toEqual(["config.mjs"]);
+    const written = readFileSync(path.join(repoRoot, "config.mjs"), "utf8");
+    expect(written).toBe("target content\n");
+    expect(written).not.toContain("top secret");
+  });
+
+  it("throws an actionable error when preset/factoryVersion can't be determined and no overrides are given", () => {
+    mkdirSync(path.join(repoRoot, ".factory"), { recursive: true });
+    writeFileSync(
+      path.join(repoRoot, ".factory", "sync-manifest.json"),
+      JSON.stringify({ version: 1, paths: ["tracked/"] }),
+    );
+
+    expect(() => runSync(repoRoot, { dryRun: false, allowDirty: true })).toThrow(
+      /couldn't determine this repo's preset\/factoryVersion/,
+    );
+  });
+
+  it("throws when .factory/sync-manifest.json is missing entirely", () => {
+    mkdirSync(path.join(repoRoot, ".factory"), { recursive: true });
+    writeFileSync(
+      path.join(repoRoot, ".factory", "config.json"),
+      JSON.stringify({ preset, factoryVersion: "0.3.0" }),
+    );
+
+    expect(() => runSync(repoRoot, { to: "0.5.0", dryRun: false, allowDirty: true })).toThrow(
+      /predates the factory:sync channel/,
+    );
+  });
+
+  it("throws when the fetched target package.json has no version field", () => {
+    seedProvenanceAndManifest();
+    mkdirSync(path.join(repoRoot, "tracked"), { recursive: true });
+
+    const fetchPackedVersion = fakeFetchPackedVersion({
+      "0.3.0": { files: {}, pkgVersion: "0.3.0" },
+      "0.5.0": { files: {} }, // no pkgVersion -> package.json has no "version" field
+    });
+
+    expect(() =>
+      runSync(repoRoot, { to: "0.5.0", dryRun: false, allowDirty: true }, { fetchPackedVersion }),
+    ).toThrow(/no "version" field/);
+  });
+
+  it("degrades to needing explicit --from/--preset when .factory/config.json is missing, and creates it on stamp", () => {
+    mkdirSync(path.join(repoRoot, ".factory"), { recursive: true });
+    writeFileSync(
+      path.join(repoRoot, ".factory", "sync-manifest.json"),
+      JSON.stringify({ version: 1, paths: ["tracked/"] }),
+    );
+    mkdirSync(path.join(repoRoot, "tracked"), { recursive: true });
+
+    const fetchPackedVersion = fakeFetchPackedVersion({
+      "0.3.0": { files: {}, pkgVersion: "0.3.0" },
+      "0.5.0": { files: {}, pkgVersion: "0.5.0" },
+    });
+
+    const result = runSync(
+      repoRoot,
+      { from: "0.3.0", to: "0.5.0", preset, dryRun: false, allowDirty: true },
+      { fetchPackedVersion },
+    );
+
+    expect(result.stampedVersion).toBe("0.5.0");
+    expect(readConfigJson()).toEqual({ factoryVersion: "0.5.0" });
+  });
+
+  describe.skipIf(!hasGit)("dirty working tree", () => {
+    function initGitRepo(): void {
+      execFileSync("git", ["init"], { cwd: repoRoot, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: repoRoot });
+      execFileSync("git", ["config", "user.name", "Test"], { cwd: repoRoot });
+    }
+
+    it("refuses to run on a dirty tree without --allow-dirty", () => {
+      initGitRepo();
+      seedProvenanceAndManifest();
+      writeFileSync(path.join(repoRoot, "untracked.txt"), "dirty");
+
+      expect(() => runSync(repoRoot, { to: "0.5.0", dryRun: false, allowDirty: false })).toThrow(
+        /refuses to run on a dirty working tree/,
+      );
+    });
+
+    it("proceeds on a dirty tree when --allow-dirty is passed", () => {
+      initGitRepo();
+      seedProvenanceAndManifest();
+      writeFileSync(path.join(repoRoot, "untracked.txt"), "dirty");
+      mkdirSync(path.join(repoRoot, "tracked"), { recursive: true });
+
+      const fetchPackedVersion = fakeFetchPackedVersion({
+        "0.3.0": { files: {}, pkgVersion: "0.3.0" },
+        "0.5.0": { files: {}, pkgVersion: "0.5.0" },
+      });
+
+      const result = runSync(
+        repoRoot,
+        { to: "0.5.0", dryRun: false, allowDirty: true },
+        { fetchPackedVersion },
+      );
+
+      expect(result.exitCode).toBe(0);
+    });
+
+    it("proceeds on a clean tree without --allow-dirty", () => {
+      initGitRepo();
+      seedProvenanceAndManifest();
+      execFileSync("git", ["add", "-A"], { cwd: repoRoot });
+      execFileSync("git", ["commit", "-m", "seed"], { cwd: repoRoot, stdio: "ignore" });
+      mkdirSync(path.join(repoRoot, "tracked"), { recursive: true });
+
+      const fetchPackedVersion = fakeFetchPackedVersion({
+        "0.3.0": { files: {}, pkgVersion: "0.3.0" },
+        "0.5.0": { files: {}, pkgVersion: "0.5.0" },
+      });
+
+      const result = runSync(
+        repoRoot,
+        { to: "0.5.0", dryRun: false, allowDirty: false },
+        { fetchPackedVersion },
+      );
+
+      expect(result.exitCode).toBe(0);
+    });
   });
 });

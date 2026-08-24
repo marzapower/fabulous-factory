@@ -33,15 +33,37 @@ export interface EnvVarSpec {
    * `required`/`secret` below.
    */
   enables: boolean;
+  /**
+   * How this var combines with the other `enables: true` vars in its `group` to light up
+   * the service — the single source of truth `capabilities.ts`'s `deriveX` functions and
+   * `doctor.ts`'s `enableWith` hint both read instead of separately re-encoding the same
+   * AND/OR shape (previously: capabilities.ts hand-coded each service's boolean logic,
+   * doctor.ts reverse-engineered a hint string from array order — nothing kept the two in
+   * sync). `null` for every var that doesn't participate in a multi-var enablement rule
+   * (including every var with `enables: false`). REQUIRED (not optional) for the same
+   * uniform-literal-shape reason as `required`/`secret`/`enables` above.
+   *
+   * - `"allOf"` — part of an AND-group: every `"allOf"` var in the group must be present
+   *   together (e.g. STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET). A single `"allOf"` var
+   *   alone in its group is simply "this var enables the service by itself" (RESEND_API_KEY,
+   *   POSTHOG_KEY, SENTRY_DSN).
+   * - `"oneOf"` — a standalone alternative to the group's `"allOf"` AND-group: present
+   *   alone, it enables the service even when the AND-group isn't satisfied (INNGEST_DEV,
+   *   alongside the INNGEST_EVENT_KEY + INNGEST_SIGNING_KEY pair).
+   * - `"anyOf"` — one of several mutually-independent alternatives, ANY single one of which
+   *   enables the service on its own (the four LLM credential vars).
+   */
+  combinator: "allOf" | "oneOf" | "anyOf" | null;
 }
 
-// Every entry declares `required`, `secret`, and `enables` explicitly (never omitted),
-// even when `false`. With `as const`, an omitted optional key disappears from that
-// literal's type entirely rather than becoming `key?: undefined` — the resulting union of
-// differently shaped literals would then reject uniform `.required`/`.secret`/`.enables`
-// access (TS2339) from code that iterates `ENV_REGISTRY` generically (env.ts, doctor.ts,
-// tests). Explicit booleans on every entry keep the literal shapes uniform and the
-// registry the honest single source of truth for all three fields.
+// Every entry declares `required`, `secret`, `enables`, and `combinator` explicitly
+// (never omitted), even when `false`/`null`. With `as const`, an omitted optional key
+// disappears from that literal's type entirely rather than becoming `key?: undefined` —
+// the resulting union of differently shaped literals would then reject uniform
+// `.required`/`.secret`/`.enables`/`.combinator` access (TS2339) from code that iterates
+// `ENV_REGISTRY` generically (env.ts, doctor.ts, capabilities.ts, tests). Explicit values
+// on every entry keep the literal shapes uniform and the registry the honest single
+// source of truth for all four fields.
 export const ENV_REGISTRY = [
   {
     name: "DATABASE_URL",
@@ -53,6 +75,7 @@ export const ENV_REGISTRY = [
     // A Postgres connection string embeds credentials — doctor must mask it too.
     secret: true,
     enables: false,
+    combinator: null,
   },
   {
     name: "APP_URL",
@@ -63,6 +86,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: false,
+    combinator: null,
   },
   {
     name: "FACTORY_SKIP_MIGRATIONS",
@@ -73,6 +97,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: false,
+    combinator: null,
   },
   {
     name: "BETTER_AUTH_SECRET",
@@ -88,6 +113,7 @@ export const ENV_REGISTRY = [
     required: true,
     secret: true,
     enables: false,
+    combinator: null,
   },
   {
     name: "GOOGLE_CLIENT_ID",
@@ -98,6 +124,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: false,
+    combinator: null,
   },
   {
     name: "GOOGLE_CLIENT_SECRET",
@@ -107,6 +134,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: true,
     enables: false,
+    combinator: null,
   },
   {
     name: "GITHUB_CLIENT_ID",
@@ -117,6 +145,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: false,
+    combinator: null,
   },
   {
     name: "GITHUB_CLIENT_SECRET",
@@ -126,6 +155,18 @@ export const ENV_REGISTRY = [
     required: false,
     secret: true,
     enables: false,
+    combinator: null,
+  },
+  {
+    name: "TRUSTED_PROXIES",
+    group: "auth",
+    description:
+      "Comma-separated list of trusted reverse-proxy IPs/CIDR ranges (e.g. '10.0.0.0/24,192.0.2.10'), wired into Better Auth's advanced.ipAddress.trustedProxies. Unset means every proxy hop in X-Forwarded-For is trusted (Better Auth's own default) — set this whenever the app sits behind a reverse proxy so client IPs (used for rate limiting) resolve correctly instead of collapsing every client behind the proxy into one shared bucket.",
+    example: "10.0.0.0/24,192.0.2.10",
+    required: false,
+    secret: false,
+    enables: false,
+    combinator: null,
   },
   {
     name: "BILLING_PROVIDER",
@@ -136,6 +177,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: false,
+    combinator: null,
   },
   {
     name: "STRIPE_SECRET_KEY",
@@ -146,6 +188,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: true,
     enables: true,
+    combinator: "allOf",
   },
   {
     name: "STRIPE_WEBHOOK_SECRET",
@@ -155,6 +198,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: true,
     enables: true,
+    combinator: "allOf",
   },
   {
     name: "LLM_PROFILE",
@@ -165,6 +209,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: false,
+    combinator: null,
   },
   {
     name: "LLM_LOCAL_BASE_URL",
@@ -175,6 +220,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: true,
+    combinator: "anyOf",
   },
   {
     name: "OPENROUTER_API_KEY",
@@ -185,6 +231,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: true,
     enables: true,
+    combinator: "anyOf",
   },
   {
     name: "ANTHROPIC_API_KEY",
@@ -194,6 +241,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: true,
     enables: true,
+    combinator: "anyOf",
   },
   {
     name: "OPENAI_API_KEY",
@@ -204,6 +252,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: true,
     enables: true,
+    combinator: "anyOf",
   },
   {
     name: "LLM_MODEL_CHEAP",
@@ -214,6 +263,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: false,
+    combinator: null,
   },
   {
     name: "LLM_MODEL_BALANCED",
@@ -224,6 +274,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: false,
+    combinator: null,
   },
   {
     name: "LLM_MODEL_HIGH",
@@ -234,6 +285,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: false,
+    combinator: null,
   },
   {
     name: "RESEND_API_KEY",
@@ -244,6 +296,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: true,
     enables: true,
+    combinator: "allOf",
   },
   {
     name: "EMAIL_FROM",
@@ -253,6 +306,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: false,
+    combinator: null,
   },
   {
     name: "INNGEST_EVENT_KEY",
@@ -262,6 +316,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: true,
     enables: true,
+    combinator: "allOf",
   },
   {
     name: "INNGEST_SIGNING_KEY",
@@ -271,6 +326,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: true,
     enables: true,
+    combinator: "allOf",
   },
   {
     name: "INNGEST_DEV",
@@ -281,6 +337,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: true,
+    combinator: "oneOf",
   },
   {
     name: "INNGEST_BASE_URL",
@@ -291,6 +348,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: false,
+    combinator: null,
   },
   {
     name: "POSTHOG_KEY",
@@ -301,6 +359,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: true,
+    combinator: "allOf",
   },
   {
     name: "POSTHOG_HOST",
@@ -310,6 +369,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: false,
+    combinator: null,
   },
   {
     name: "SENTRY_DSN",
@@ -319,6 +379,7 @@ export const ENV_REGISTRY = [
     required: false,
     secret: false,
     enables: true,
+    combinator: "allOf",
   },
 ] as const satisfies readonly EnvVarSpec[];
 

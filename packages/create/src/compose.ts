@@ -119,6 +119,29 @@ function assertDomainPackagesExist(repoRoot: string, preset: PresetMeta): void {
   }
 }
 
+/**
+ * Shared existence/optional/throw check used by every compose entry point that reads a
+ * copy source directly (`copyEntry`, `composeNpmrc`, `composeDockerfile`) — each still runs
+ * its own actual read/write afterward; this only centralizes the "does the source exist,
+ * and if not, is that tolerated" decision. Returns the resolved absolute source path when
+ * `src` exists; returns `undefined` (after recording a warning in `warnings`) when it's
+ * missing and `optional`; throws when it's missing and required.
+ */
+export function ensureCopySource(
+  repoRoot: string,
+  src: string,
+  optional: boolean | undefined,
+  warnings: string[],
+): string | undefined {
+  const absSrc = path.join(repoRoot, src);
+  if (existsSync(absSrc)) return absSrc;
+  if (optional) {
+    warnings.push(`Skipped missing (optional) compose source: ${src}`);
+    return undefined;
+  }
+  throw new Error(`Missing required compose source: ${src}`);
+}
+
 function copyEntry(
   repoRoot: string,
   outDir: string,
@@ -126,14 +149,8 @@ function copyEntry(
   warnings: string[],
   excludeAbsolutePaths?: ReadonlySet<string>,
 ): void {
-  const absSrc = path.join(repoRoot, entry.src);
-  if (!existsSync(absSrc)) {
-    if (entry.optional) {
-      warnings.push(`Skipped missing (optional) compose source: ${entry.src}`);
-      return;
-    }
-    throw new Error(`Missing required compose source: ${entry.src}`);
-  }
+  const absSrc = ensureCopySource(repoRoot, entry.src, entry.optional, warnings);
+  if (!absSrc) return;
   copyRecursive(absSrc, path.join(outDir, entry.dest), { excludeAbsolutePaths });
 }
 
@@ -227,6 +244,38 @@ function composeLaunchMd(repoRoot: string, outDir: string, preset: PresetMeta): 
  * because `compose.ts` doesn't copy it fully verbatim: see `composePackageJson`. */
 const VARIANT_PACKAGE_JSON_DEST = "package.json";
 
+/**
+ * Attaches `entry`'s `transform` (per `CopyEntry`'s contract) for the three
+ * `VARIANT_ENTRIES` dests that need more than a verbatim copy — the single place this
+ * compose run's dest-to-behavior mapping is decided, closing over this call's own
+ * `warnings` array (why this can't be baked into the static `VARIANT_ENTRIES` list itself —
+ * see `compose.config.ts`'s file-level comment). `composeVariants`'s loop then only ever
+ * checks `entry.transform`, never `entry.dest`.
+ */
+function withVariantTransform(entry: CopyEntry, warnings: string[]): CopyEntry {
+  if (entry.dest === VARIANT_DOCKERFILE_DEST) {
+    return {
+      ...entry,
+      transform: (repoRoot, outDir, preset) =>
+        composeDockerfile(repoRoot, outDir, preset, entry, warnings),
+    };
+  }
+  if (entry.dest === VARIANT_PACKAGE_JSON_DEST) {
+    return {
+      ...entry,
+      transform: (repoRoot, outDir, preset) =>
+        composePackageJson(repoRoot, outDir, preset, entry, warnings),
+    };
+  }
+  if (entry.dest === VARIANT_NPMRC_DEST) {
+    return {
+      ...entry,
+      transform: (repoRoot, outDir) => composeNpmrc(repoRoot, outDir, entry, warnings),
+    };
+  }
+  return entry;
+}
+
 function composeVariants(
   repoRoot: string,
   outDir: string,
@@ -234,14 +283,11 @@ function composeVariants(
   warnings: string[],
 ): void {
   for (const entry of VARIANT_ENTRIES) {
-    if (entry.dest === VARIANT_DOCKERFILE_DEST) {
-      composeDockerfile(repoRoot, outDir, preset, entry, warnings);
-    } else if (entry.dest === VARIANT_PACKAGE_JSON_DEST) {
-      composePackageJson(repoRoot, outDir, preset, entry, warnings);
-    } else if (entry.dest === VARIANT_NPMRC_DEST) {
-      composeNpmrc(repoRoot, outDir, entry, warnings);
+    const resolved = withVariantTransform(entry, warnings);
+    if (resolved.transform) {
+      resolved.transform(repoRoot, outDir, preset);
     } else {
-      copyEntry(repoRoot, outDir, entry, warnings);
+      copyEntry(repoRoot, outDir, resolved, warnings);
     }
   }
 }
@@ -298,14 +344,8 @@ function composeNpmrc(
   entry: CopyEntry,
   warnings: string[],
 ): void {
-  const absSrc = path.join(repoRoot, entry.src);
-  if (!existsSync(absSrc)) {
-    if (entry.optional) {
-      warnings.push(`Skipped missing (optional) compose source: ${entry.src}`);
-      return;
-    }
-    throw new Error(`Missing required compose source: ${entry.src}`);
-  }
+  const absSrc = ensureCopySource(repoRoot, entry.src, entry.optional, warnings);
+  if (!absSrc) return;
   const dest = path.join(outDir, entry.dest);
   mkdirSync(path.dirname(dest), { recursive: true });
   writeFileSync(dest, readFileSync(absSrc, "utf8"));
@@ -321,14 +361,8 @@ function composeDockerfile(
   entry: CopyEntry,
   warnings: string[],
 ): void {
-  const absSrc = path.join(repoRoot, entry.src);
-  if (!existsSync(absSrc)) {
-    if (entry.optional) {
-      warnings.push(`Skipped missing (optional) compose source: ${entry.src}`);
-      return;
-    }
-    throw new Error(`Missing required compose source: ${entry.src}`);
-  }
+  const absSrc = ensureCopySource(repoRoot, entry.src, entry.optional, warnings);
+  if (!absSrc) return;
   const raw = readFileSync(absSrc, "utf8");
   const stamped = stampDockerfileDomainPackages(raw, preset.packages);
   const dest = path.join(outDir, entry.dest);

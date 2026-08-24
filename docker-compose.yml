@@ -17,6 +17,26 @@ services:
     environment: { DATABASE_URL: postgres://postgres:postgres@db:5432/postgres }
     depends_on: { db: { condition: service_healthy } }
 
+  seed: # profile: demo, one-shot — populates the demo workspace with a
+    # publicly-known-password account (demo@fabulous.dev / see README). NEVER enable this
+    # profile on a deployment reachable from the internet — `docker compose --profile demo
+    # up` is for local/dev use only. Needs BOTH @factory/auth (to create the demo account)
+    # and @factory/untangle (to run its sample capture through the real pipeline), so it
+    # can't reuse the `migrate` image (only bundles @factory/db's dependency tree) — it
+    # reuses `runner-seed` instead (the lean `runner` image plus a ./repo subtree the
+    # `app` service never reads; see the Dockerfile's `runner-seed` stage for what that
+    # adds and why). apps/untangle/scripts/seed-demo.ts's own doc comment covers the rest
+    # (idempotency, the "server-only" runtime note).
+    build: { context: ., target: runner-seed }
+    profiles: [demo]
+    restart: "no"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?required — generate with `openssl rand -hex 32` and put it in .env}
+    working_dir: /app/repo
+    command: ["node_modules/.bin/tsx", "apps/untangle/scripts/seed-demo.ts"]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+
   app: # always on
     build: { context: ., target: runner }
     ports: ["${APP_PORT:-3000}:3000"]

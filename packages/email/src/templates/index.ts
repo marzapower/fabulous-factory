@@ -18,12 +18,19 @@ export interface TemplateProps {
 
 export type TemplateName = keyof TemplateProps;
 
-/** name → (props) => JSX. `send()` looks up the renderer by template name. */
-export const TEMPLATES: { [K in TemplateName]: (props: TemplateProps[K]) => ReactElement } = {
-  "verify-email": VerifyEmailTemplate,
-  "magic-link": MagicLinkTemplate,
-  "reset-password": ResetPasswordTemplate,
-  "delete-account": DeleteAccountTemplate,
+/** A template's renderer and its one subject line, kept together so callers never look
+ * the two up independently by name — `send()` (src/send.ts) reads both from one entry. */
+export interface TemplateEntry<K extends TemplateName> {
+  Component: (props: TemplateProps[K]) => ReactElement;
+  subject: string;
+}
+
+/** name → { Component, subject }. `send()` looks up both by template name in one place. */
+export const TEMPLATES: { [K in TemplateName]: TemplateEntry<K> } = {
+  "verify-email": { Component: VerifyEmailTemplate, subject: "Verify your email address" },
+  "magic-link": { Component: MagicLinkTemplate, subject: "Your sign-in link" },
+  "reset-password": { Component: ResetPasswordTemplate, subject: "Reset your password" },
+  "delete-account": { Component: DeleteAccountTemplate, subject: "Confirm account deletion" },
 };
 
 export type { DeleteAccountProps, MagicLinkProps, ResetPasswordProps, VerifyEmailProps };

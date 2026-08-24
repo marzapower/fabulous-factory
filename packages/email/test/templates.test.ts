@@ -17,7 +17,7 @@ const PROPS: { [K in TemplateName]: TemplateProps[K] } = {
 // call uses); a small generic helper — indexed by its own type param `K`, not the outer
 // union — restores the per-key correlation.
 function renderElement<K extends TemplateName>(name: K): ReactElement {
-  return TEMPLATES[name](PROPS[name]);
+  return TEMPLATES[name].Component(PROPS[name]);
 }
 
 describe.each(Object.keys(TEMPLATES) as TemplateName[])("templates — %s", (name) => {
