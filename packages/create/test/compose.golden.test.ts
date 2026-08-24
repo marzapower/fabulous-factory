@@ -300,6 +300,19 @@ describe.each(availablePresets)("compose $id — other root variants", (preset) 
   it("ships .nvmrc pinning Node 24, so nvm/fnm users comply automatically (payload/variants/.nvmrc)", () => {
     expect(read(preset.id, ".nvmrc")).toBe("24\n");
   });
+
+  // Regression guard: the root vitest config's "benchmarks" project is factory-dev-only and
+  // never ships, and vitest hard-fails at startup on a projects entry that doesn't resolve —
+  // an unconditional entry killed the scaffold's `pnpm test` before a single test ran, so
+  // every non-glob project must be gated on the directory actually being present.
+  it("ships a vitest config with no unconditional project that the scaffold lacks", () => {
+    // Whitespace-normalized so the assertion pins the gate itself, not prettier's wrapping.
+    const config = read(preset.id, "vitest.config.ts").replace(/\s+/g, "");
+    expect(existsSync(path.join(outDirs.get(preset.id)!, "benchmarks"))).toBe(false);
+    expect(config).toContain(
+      'projects:["packages/*","apps/*",...(existsSync(benchmarksDir)?["benchmarks"]:[])]',
+    );
+  });
 });
 
 describe.each(availablePresets)("compose $id — compose warnings", (preset) => {
