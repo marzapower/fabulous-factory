@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -7,9 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertEmptyTarget,
   derivePickerDefault,
+  install,
   warnIfNodeTooOld,
   type PresetManifestEntry,
 } from "../src/install";
+import { MissingToolError, type ToolProbe } from "../src/lib/tool-preflight";
 
 const TWO_AVAILABLE: PresetManifestEntry[] = [
   {
@@ -118,5 +120,126 @@ describe("warnIfNodeTooOld", () => {
   it("never throws on an unparseable version string", () => {
     expect(() => warnIfNodeTooOld("bogus")).not.toThrow();
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+// `install()`'s injectable `probe` argument lets these tests force specific preflight
+// outcomes without depending on what's actually installed on the machine running the
+// suite — including proving that a missing-pnpm failure happens early enough that
+// nothing is scaffolded, even though a valid `--dir`/preset were given.
+describe("install (preflight)", () => {
+  let templatesDir: string;
+  let scratchDir: string;
+  let previousTemplatesDirEnv: string | undefined;
+  let stdoutSpy: ReturnType<typeof vi.spyOn>;
+  let stdoutWrites: string[];
+
+  function stdoutOutput(): string {
+    return stdoutWrites.join("");
+  }
+
+  beforeEach(() => {
+    templatesDir = mkdtempSync(path.join(tmpdir(), "install-preflight-templates-"));
+    const presetDir = path.join(templatesDir, "demo");
+    mkdirSync(presetDir, { recursive: true });
+    writeFileSync(
+      path.join(presetDir, "package.json"),
+      `${JSON.stringify({ name: "fabulous-factory-app", version: "0.0.0" }, null, 2)}\n`,
+    );
+    // `stampProvenance` writes into `.factory/config.json` post-copy without creating the
+    // directory itself — the real templates always ship it (the compose-time seed), so the
+    // fixture needs it too for any test that reaches the copy step.
+    mkdirSync(path.join(presetDir, ".factory"), { recursive: true });
+    writeFileSync(
+      path.join(presetDir, ".factory", "config.json"),
+      `${JSON.stringify({ stage: "prototype" }, null, 2)}\n`,
+    );
+    writeFileSync(
+      path.join(templatesDir, "presets.json"),
+      `${JSON.stringify(
+        [{ id: "demo", label: "Demo", description: "d", status: "available" }],
+        null,
+        2,
+      )}\n`,
+    );
+
+    scratchDir = mkdtempSync(path.join(tmpdir(), "install-preflight-scratch-"));
+
+    previousTemplatesDirEnv = process.env.FABULOUS_FACTORY_TEMPLATES_DIR;
+    process.env.FABULOUS_FACTORY_TEMPLATES_DIR = templatesDir;
+
+    // Preflight and the final next-steps message both print via clack (intro / reportTools
+    // / note / outro) straight to stdout — collect the writes instead of letting them hit
+    // the real terminal, so tests can assert on the rendered text.
+    stdoutWrites = [];
+    stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+      stdoutWrites.push(typeof chunk === "string" ? chunk : String(chunk));
+      return true;
+    });
+  });
+
+  afterEach(() => {
+    if (previousTemplatesDirEnv === undefined) {
+      delete process.env.FABULOUS_FACTORY_TEMPLATES_DIR;
+    } else {
+      process.env.FABULOUS_FACTORY_TEMPLATES_DIR = previousTemplatesDirEnv;
+    }
+    rmSync(templatesDir, { recursive: true, force: true });
+    rmSync(scratchDir, { recursive: true, force: true });
+    stdoutSpy.mockRestore();
+  });
+
+  it("rejects with MissingToolError and scaffolds nothing when pnpm is missing", async () => {
+    const target = path.join(scratchDir, "x");
+    const fakeProbe: ToolProbe = (tool) =>
+      tool === "pnpm" ? { status: "missing" } : { status: "ok", version: "1.0.0" };
+
+    await expect(
+      install(
+        { yes: true, installDeps: false, gitInit: false, dir: target, preset: "demo" },
+        fakeProbe,
+      ),
+    ).rejects.toThrow(MissingToolError);
+
+    expect(existsSync(target)).toBe(false);
+  });
+
+  it("scaffolds without git and prints the git-not-installed hint when git is missing", async () => {
+    const target = path.join(scratchDir, "x");
+    const fakeProbe: ToolProbe = (tool) =>
+      tool === "git" ? { status: "missing" } : { status: "ok", version: "1.0.0" };
+
+    await install(
+      { yes: true, installDeps: false, gitInit: true, dir: target, preset: "demo" },
+      fakeProbe,
+    );
+
+    expect(existsSync(path.join(target, ".git"))).toBe(false);
+    expect(stdoutOutput()).toContain("git isn't installed");
+  });
+
+  it("shows the docker step only when docker is available", async () => {
+    const target = path.join(scratchDir, "with-docker");
+    const dockerOk: ToolProbe = () => ({ status: "ok", version: "1.0.0" });
+
+    await install(
+      { yes: true, installDeps: false, gitInit: false, dir: target, preset: "demo" },
+      dockerOk,
+    );
+
+    expect(stdoutOutput()).toContain("start Docker first");
+  });
+
+  it("shows the generic Postgres hint, not the docker step, when docker is missing", async () => {
+    const target = path.join(scratchDir, "without-docker");
+    const dockerMissing: ToolProbe = (tool) =>
+      tool === "docker" ? { status: "missing" } : { status: "ok", version: "1.0.0" };
+
+    await install(
+      { yes: true, installDeps: false, gitInit: false, dir: target, preset: "demo" },
+      dockerMissing,
+    );
+
+    expect(stdoutOutput()).toContain("any reachable Postgres");
   });
 });

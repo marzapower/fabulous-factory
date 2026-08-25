@@ -67,13 +67,22 @@ function requireValue(argv: string[], index: number, flag: string): string {
 /**
  * Entry point, exported so both the published bin (`dist/cli.js`, invoked directly by
  * node — see the `isInvokedDirectly` check below) and `packages/create-alias/bin.js` (a
- * dynamic `import()` that calls this explicitly) can run it identically.
+ * dynamic `import()` that does a bare `await main()`, with no `.catch` of its own) can run
+ * it identically. The try/catch lives IN HERE, not around the call below, so the
+ * `npm create`/`npm init` alias path also gets the printed hint + exit code instead of an
+ * unhandled-rejection stack trace.
  */
 export async function main(): Promise<void> {
-  // `parseArgs` already throws on anything outside `KNOWN_COMMANDS` (currently just
-  // "install"), so `command` is guaranteed to be "install" here — no further check needed.
-  const { options } = parseArgs(process.argv.slice(2));
-  await install(options);
+  try {
+    // `parseArgs` already throws on anything outside `KNOWN_COMMANDS` (currently just
+    // "install"), so `command` is guaranteed to be "install" here — no further check
+    // needed.
+    const { options } = parseArgs(process.argv.slice(2));
+    await install(options);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  }
 }
 
 /**
@@ -95,8 +104,5 @@ function isInvokedDirectly(): boolean {
 }
 
 if (isInvokedDirectly()) {
-  main().catch((error: unknown) => {
-    console.error(error instanceof Error ? error.message : error);
-    process.exitCode = 1;
-  });
+  void main();
 }
