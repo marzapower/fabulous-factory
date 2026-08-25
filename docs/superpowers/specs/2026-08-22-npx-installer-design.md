@@ -223,6 +223,16 @@ $ npx fabulous-factory@latest install
   proactive `dag-create-imports-no-workspace-package` rule enforcing the v1 target
   that `packages/create` imports no workspace package (it manipulates files, not
   factory code).
+- **Tool preflight:** before any prompt or write, `install()` probes `pnpm`, `git`, and
+  `docker compose` on `PATH`. `pnpm` is the only hard requirement — missing or broken,
+  the install aborts with nothing scaffolded and exits 1; a `pnpm` major below the
+  scaffold's `packageManager` pin warns (corepack won't auto-switch on an older major)
+  but doesn't fail. `git` and `docker` are optional and degrade: unavailable, their
+  install step is skipped and the interactive "Initialize git repository?" prompt isn't
+  even asked. The end-of-run next-steps message adapts to what actually happened —
+  distinguishing git never attempted (declined or unavailable) from git attempted and
+  failing, and showing the Docker Compose step only when Docker was actually probed
+  working — rather than assuming the best case.
 
 ## 7. Retirement of the promotion machinery
 

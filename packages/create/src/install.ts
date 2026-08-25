@@ -15,12 +15,20 @@ import { existsSync, lstatSync, readdirSync, readFileSync, writeFileSync } from 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { cancel, confirm, intro, isCancel, select, text } from "@clack/prompts";
+import { cancel, confirm, intro, isCancel, note, outro, select, text } from "@clack/prompts";
 
 import { copyRecursive } from "./lib/fs";
 import { renameGitignoreFiles } from "./lib/gitignore";
 import { stampProjectName, toKebabCase, validateProjectName } from "./lib/name-stamp";
+import { OUTRO_LINE, renderNextSteps, type GitStatus } from "./lib/next-steps";
 import { stampProvenance } from "./lib/provenance-stamp";
+import {
+  assertRequiredTools,
+  checkTools,
+  hasTool,
+  reportTools,
+  type ToolProbe,
+} from "./lib/tool-preflight";
 
 export interface InstallOptions {
   preset?: string;
@@ -183,9 +191,8 @@ interface Answers {
 async function promptAnswers(
   manifest: PresetManifestEntry[],
   options: InstallOptions,
+  gitAvailable: boolean,
 ): Promise<Answers> {
-  intro("fabulous-factory");
-
   const rawName = await unwrap(
     text({
       message: "Project name",
@@ -214,9 +221,13 @@ async function promptAnswers(
     confirm({ message: "Install dependencies with pnpm?", initialValue: options.installDeps }),
   );
 
-  const gitInit = await unwrap(
-    confirm({ message: "Initialize git repository?", initialValue: options.gitInit }),
-  );
+  // Not asked at all when git isn't available — asking, then silently overriding the
+  // answer to `false` below, would be a confusing prompt to sit through.
+  const gitInit = gitAvailable
+    ? await unwrap(
+        confirm({ message: "Initialize git repository?", initialValue: options.gitInit }),
+      )
+    : false;
 
   return { projectName, presetId, installDeps, gitInit };
 }
@@ -234,25 +245,47 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Runs `fn`, downgrading a thrown error to a printed warning instead of failing install. */
-function tryRun(warningPrefix: string, fn: () => void): void {
+/** Runs `fn`, downgrading a thrown error to a printed warning instead of failing install.
+ * Returns whether it succeeded, so callers can report accurate state (`depsInstalled`,
+ * `gitStatus`) in the final next-steps message instead of assuming the best case. */
+function tryRun(warningPrefix: string, fn: () => void): boolean {
   try {
     fn();
+    return true;
   } catch (error) {
     console.warn(`⚠ ${warningPrefix}: ${errorMessage(error)}`);
+    return false;
   }
 }
 
-function printNextSteps(projectName: string): void {
-  console.log("");
-  console.log(
-    `Done. cd ${projectName} → cp .env.example .env → set DATABASE_URL + BETTER_AUTH_SECRET → pnpm dev`,
-  );
-  console.log('   Then ask your agent: "what\'s left to make this mine?"');
-}
-
-export async function install(options: InstallOptions): Promise<void> {
+/**
+ * `probe` is a test-only seam overriding the real tool preflight — production callers
+ * (`cli.ts`) never pass it, so `checkTools()` runs against the actual machine. Nothing
+ * else about `install()` is injectable; this is the one non-obvious piece of state (what's
+ * on `PATH`) a test can't otherwise control without depending on what's actually installed
+ * on the machine running the suite.
+ */
+export async function install(options: InstallOptions, probe?: ToolProbe): Promise<void> {
   warnIfNodeTooOld();
+  intro("fabulous-factory");
+
+  // Preflight BEFORE any prompt, manifest load, or file write (spec §6 item 1) — a missing
+  // `pnpm` must leave nothing behind. `reportTools` prints all three lines (including the
+  // failing one) before `assertRequiredTools` throws, so the thrown message isn't the only
+  // thing the user sees.
+  const checks = checkTools(probe);
+  reportTools(checks);
+  try {
+    assertRequiredTools(checks);
+  } catch (error) {
+    // Closes clack's bar cleanly before the caller (`cli.ts`) prints the error and exits —
+    // without this, the box is left open/dangling above the printed message.
+    cancel("Install aborted — fix the tool above, then re-run.");
+    throw error;
+  }
+  const gitAvailable = hasTool(checks, "git");
+  const dockerAvailable = hasTool(checks, "docker");
+
   const manifest = loadManifest();
 
   let answers: Answers;
@@ -266,8 +299,11 @@ export async function install(options: InstallOptions): Promise<void> {
       gitInit: options.gitInit,
     };
   } else {
-    answers = await promptAnswers(manifest, options);
+    answers = await promptAnswers(manifest, options, gitAvailable);
   }
+  // Belt-and-suspenders for the `--yes` path (interactive already never asks — see
+  // `promptAnswers` above): git unavailable always wins over whatever was requested.
+  if (!gitAvailable) answers.gitInit = false;
 
   const targetDir = options.dir
     ? path.resolve(options.dir)
@@ -294,8 +330,16 @@ export async function install(options: InstallOptions): Promise<void> {
     );
   }
 
-  if (answers.gitInit) {
-    tryRun("git init failed — run it yourself", () => {
+  // Order matters: `!gitAvailable` beats `!answers.gitInit` — `answers.gitInit` was already
+  // forced to `false` above when git is unavailable, so without this ordering the two
+  // cases would be indistinguishable to the next-steps message.
+  let gitStatus: GitStatus;
+  if (!gitAvailable) {
+    gitStatus = "unavailable";
+  } else if (!answers.gitInit) {
+    gitStatus = "declined";
+  } else {
+    const succeeded = tryRun("git init failed — run it yourself", () => {
       execFileSync("git", ["init"], { cwd: targetDir, stdio: "ignore" });
       execFileSync("git", ["add", "-A"], { cwd: targetDir, stdio: "ignore" });
       execFileSync("git", ["commit", "-m", "chore: scaffold from fabulous-factory"], {
@@ -303,13 +347,23 @@ export async function install(options: InstallOptions): Promise<void> {
         stdio: "ignore",
       });
     });
+    gitStatus = succeeded ? "initialized" : "failed";
   }
 
-  if (answers.installDeps) {
-    tryRun("pnpm install failed — run it yourself", () => {
-      execFileSync("pnpm", ["install"], { cwd: targetDir, stdio: "inherit" });
-    });
-  }
+  const depsInstalled = answers.installDeps
+    ? tryRun("pnpm install failed — run it yourself", () => {
+        execFileSync("pnpm", ["install"], { cwd: targetDir, stdio: "inherit" });
+      })
+    : false;
 
-  printNextSteps(answers.projectName);
+  note(
+    renderNextSteps({
+      projectName: answers.projectName,
+      depsInstalled,
+      gitStatus,
+      dockerAvailable,
+    }),
+    "Next steps",
+  );
+  outro(OUTRO_LINE);
 }
