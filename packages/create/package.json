@@ -1,6 +1,6 @@
 {
   "name": "fabulous-factory",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Scaffold a new product repo from the fabulous-factory template — npx fabulous-factory@latest install",
   "license": "MIT",
   "author": "Daniele Di Bernardo",
