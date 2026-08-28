@@ -6,11 +6,14 @@
 import type { ServiceName } from "@factory/config";
 import { useClientConfig } from "@factory/config/client";
 
+import { useTranslations } from "@factory/i18n";
+
 import { cn } from "../lib/utils";
 
 // Boolean only, by design (see capability-panel.tsx): the deployment's on/off state for
 // a service is legitimate UI, which adapter resolved it is not (spec §12).
 export function StatusLight({ service }: { service: ServiceName }) {
+  const t = useTranslations("ui.marketing.statusLight");
   const { capabilities } = useClientConfig();
   const enabled = capabilities[service];
 
@@ -26,7 +29,7 @@ export function StatusLight({ service }: { service: ServiceName }) {
       <span
         className={enabled ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}
       >
-        {enabled ? "online" : "standby"}
+        {enabled ? t("online") : t("standby")}
       </span>
     </span>
   );

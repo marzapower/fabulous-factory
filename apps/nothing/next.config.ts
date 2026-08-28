@@ -1,5 +1,11 @@
 import type { NextConfig } from "next";
 import path from "path";
+import createNextIntlPlugin from "next-intl/plugin";
+
+// The one unavoidable next-intl import outside packages/i18n itself (plan D1): the
+// request-config path is app-owned (apps/nothing/i18n/request.ts), so the plugin wiring
+// has to live here, at build time, per app.
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 // Env-file note: the documented quickstart puts `.env` at the WORKSPACE ROOT (spec §8.1),
 // which Next's own env loading never reads (it only loads from the app directory). That
@@ -20,6 +26,9 @@ const nextConfig: NextConfig = {
     // The shared UI layer (primitives, auth forms, marketing components) extracted from
     // the three preset apps — TS source, same as every other workspace package here.
     "@factory/ui",
+    // Locale routing/catalog package (source, same reason as every entry above) — needed
+    // for `output: "standalone"` tracing to pick it up (M3).
+    "@factory/i18n",
     // db/email/analytics/observability/llm/jobs/billing are deliberately absent: this
     // preset's package.json doesn't declare them (it has no db-backed or paid-feature
     // pages), and Turbopack transpiles workspace packages this app DOES depend on
@@ -63,4 +72,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

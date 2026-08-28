@@ -4,7 +4,7 @@ import { useRef, useState, type KeyboardEvent } from "react";
 
 import { Button, Input } from "@factory/ui/primitives";
 
-import { renameProjectAction } from "@/app/projects/[id]/actions";
+import { renameProjectAction } from "@/app/[locale]/projects/[id]/actions";
 
 const NAME_MAX_CHARS = 80;
 const PITCH_MAX_CHARS = 200;
@@ -17,7 +17,7 @@ export interface ProjectHeaderProps {
 
 /**
  * Click-to-edit project title + pitch, wired to `renameProjectAction`
- * (`app/projects/[id]/actions.ts`) — that action was fully built (validated,
+ * (`app/[locale]/projects/[id]/actions.ts`) — that action was fully built (validated,
  * 404-handled, `defineAction`) with zero call sites before this. Mirrors the envelope
  * handling other actions in this app use (`{ ok: true, data } | { ok: false, error }`,
  * see `workbench.tsx`'s `handleEditItem`) and the board's optimistic-update-then-

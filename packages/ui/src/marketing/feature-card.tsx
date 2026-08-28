@@ -1,13 +1,16 @@
 // Built with Fabulous Factory — https://github.com/marzapower/fabulous-factory
 // This credit line is free to keep and gives the project a hand. Thank you!
 
-import Link from "next/link";
 import type { ReactNode } from "react";
+
+import { useTranslations } from "@factory/i18n";
+import { Link } from "@factory/i18n/navigation";
 
 import type { FeatureMeta } from "./features-meta";
 
 /** `children` is the status light slot — kept out of this server component's own render. */
 export function FeatureCard({ feature, children }: { feature: FeatureMeta; children?: ReactNode }) {
+  const t = useTranslations("ui.marketing.featureCard");
   const Icon = feature.icon;
 
   return (
@@ -21,7 +24,7 @@ export function FeatureCard({ feature, children }: { feature: FeatureMeta; child
           href={feature.href}
           className="mt-2 text-sm font-medium text-foreground underline-offset-4 hover:underline"
         >
-          How it works <span aria-hidden="true">→</span>
+          {t("howItWorks")} <span aria-hidden="true">→</span>
         </Link>
       ) : null}
     </div>

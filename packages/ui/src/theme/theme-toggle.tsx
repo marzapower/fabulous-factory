@@ -5,6 +5,8 @@
 
 import { Moon, Sun } from "lucide-react";
 
+import { useTranslations } from "@factory/i18n";
+
 import { buttonVariants } from "../primitives/button";
 import { cn } from "../lib/utils";
 import { THEME_STORAGE_KEY } from "./script";
@@ -15,6 +17,8 @@ import { THEME_STORAGE_KEY } from "./script";
 // mismatch is possible: there is nothing for the server and client renders to disagree
 // on until a click happens.
 export function ThemeToggle() {
+  const t = useTranslations("ui.theme.themeToggle");
+
   function handleClick() {
     const root = document.documentElement;
     const next = root.classList.contains("dark") ? "light" : "dark";
@@ -31,7 +35,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={handleClick}
-      aria-label="Toggle theme"
+      aria-label={t("ariaLabel")}
       className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
     >
       <Sun className="dark:hidden" aria-hidden="true" />

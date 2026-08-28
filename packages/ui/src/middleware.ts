@@ -1,11 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
+import { isLocale, localizeHref, stripLocale } from "@factory/i18n/routing";
+import type { LocaleRoutingHandler } from "@factory/i18n/middleware";
+
 /**
- * Optimistic allowlist proxy (design spec §8.5, plan D.6 + D.9.14). Shared by every
- * preset app — each app's `proxy.ts` calls `createAuthProxy()` with only its own extra
- * exact-allowlist entries; this file owns the logic that used to be duplicated
- * byte-for-byte across every app's own `middleware.ts`.
+ * Optimistic allowlist proxy (design spec §8.5, plan D.6 + D.9.14; locale composition per
+ * i18n plan D7/§2.2). Shared by every preset app — each app's `proxy.ts` calls
+ * `createAuthProxy({ i18n: createLocaleRouting(i18n), extraExactAllowlist? })` with its own
+ * `i18n/config.ts` routing and only its own extra exact-allowlist entries; this file owns
+ * the logic that used to be duplicated byte-for-byte across every app's own
+ * `middleware.ts`, now composed with next-intl's own locale routing (D4: `i18n` is
+ * required — there is no off switch, a single-locale app is the degraded state).
  *
  * THIS IS NOT THE SECURITY BOUNDARY. cf. CVE-2025-29927 (the Next.js middleware-bypass
  * class): a crafted `x-middleware-subrequest` header could skip middleware entirely on
@@ -14,8 +20,9 @@ import { getSessionCookie } from "better-auth/cookies";
  * `defineHandler`/`defineAction` (`packages/core`), whose mandatory `auth` mode runs
  * inside the route handler itself, on every request, regardless of what happened (or
  * didn't) upstream. This proxy exists only as a first, cheap layer: it redirects
- * obviously-unauthenticated page loads to `/login` before they render, so a signed-out
- * visitor doesn't see a flash of protected UI. It performs NO database lookup — see below.
+ * obviously-unauthenticated page loads to `/login` (or its localized `/<locale>/login`)
+ * before they render, so a signed-out visitor doesn't see a flash of protected UI. It
+ * performs NO database lookup — see below.
  *
  * Cookie-presence-only check, no DB call: `getSessionCookie` only checks whether a
  * plausibly-valid session cookie is present, it does not validate the session against the
@@ -25,6 +32,19 @@ import { getSessionCookie } from "better-auth/cookies";
  * `edge` — a DB round trip here is avoidable latency on every request, not merely
  * something the runtime used to be unable to do; the rule is a design choice, not a
  * runtime limitation.
+ *
+ * Locale composition (i18n plan §2.2): `app/api/**` stays at root, outside `[locale]`, and
+ * is handled with today's byte-identical logic on the raw pathname — no locale handling
+ * applies there, and `/it/api/...` can never reach an API allowlist entry through a locale
+ * prefix (see the `isApiPath` guard below, M14). Every other path is first handed to
+ * next-intl's own middleware (`i18n.handle`); a redirect it returns (`/en/x` -> `/x`,
+ * trailing-slash normalisation, …) is passed through unchanged, since the redirected
+ * request is proxied again on its next hop. The `NEXT_LOCALE` cookie written by the
+ * locale switcher is untrusted input whose only sanctioned effect is selecting a member of
+ * the declared `locales` array — never a source of any part of a URL path (M15); the
+ * cookie-driven redirect below validates the resulting path's shape and asserts the
+ * redirect target stays on this origin before ever constructing a `Response` from it (M4),
+ * and only fires once per hop (M5).
  */
 
 // Exact entries, not prefixes (H.10 review fix): every entry below is a single flat route
@@ -67,6 +87,10 @@ const PREFIX_ALLOWLIST = ["/api/auth/", "/features/"];
  * routes). `extraExact` entries are exact-only, deliberately: an app that needs a public
  * prefix of its own belongs in a shared `PREFIX_ALLOWLIST` entry instead, not a
  * per-app escape hatch that could grow into a loosely-matched hole.
+ *
+ * Called on locale-less paths only: the raw pathname for `/api/**` (step 1, below), and
+ * `bare` (the locale-stripped pathname) everywhere else (step 4) — never on a
+ * still-prefixed pathname.
  */
 export function isPublicPath(pathname: string, extraExact?: readonly string[]): boolean {
   if (EXACT_ALLOWLIST.has(pathname)) return true;
@@ -75,42 +99,99 @@ export function isPublicPath(pathname: string, extraExact?: readonly string[]): 
 }
 
 /**
- * Builds an app's `proxy` export. `extraExactAllowlist` entries are appended to the
+ * Builds an app's `proxy` export. `i18n` (required, D4) is the app's own
+ * `createLocaleRouting(i18n)` handler; `extraExactAllowlist` entries are appended to the
  * shared exact allowlist, unioned with the shared prefix allowlist — same semantics as
  * `isPublicPath`'s `extraExact` parameter, above.
+ *
+ * Always returns a `Response` (never `undefined`, unlike the pre-i18n signature): every
+ * path is either the API branch's own pass-through/redirect, next-intl's rewrite/redirect
+ * response (page branch), or this proxy's own locale/login redirect built on top of it.
  */
-export function createAuthProxy(opts?: {
+export function createAuthProxy(opts: {
+  i18n: LocaleRoutingHandler;
   extraExactAllowlist?: readonly string[];
-}): (req: NextRequest) => Response | undefined {
-  const extraExact = opts?.extraExactAllowlist;
+}): (req: NextRequest) => Response {
+  const { i18n } = opts;
+  const extraExact = opts.extraExactAllowlist;
 
-  return function proxy(request: NextRequest): Response | undefined {
+  return function proxy(request: NextRequest): Response {
     const { pathname } = request.nextUrl;
 
-    if (isPublicPath(pathname, extraExact)) {
-      return undefined;
+    // Step 1 — API branch: exactly today's logic on the raw, unlocalized pathname.
+    // `app/api/**` stays at root, outside `[locale]`, so no locale handling applies here.
+    if (pathname === "/api" || pathname.startsWith("/api/")) {
+      if (isPublicPath(pathname, extraExact)) {
+        return NextResponse.next();
+      }
+      if (getSessionCookie(request)) {
+        return NextResponse.next();
+      }
+      return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    // Cookie-name finding (verified in the installed better-auth 1.7.1 dist, plan D.9.14):
-    // `getSessionCookie`'s internal cookie lookup
-    // (node_modules/better-auth/dist/cookies/index.mjs, `getSessionCookie`) already checks
-    // BOTH the plain name and the `__Secure-`-prefixed name for every candidate —
-    // `parsedCookie.get(`__Secure-${name}`) ?? parsedCookie.get(name)` — before falling
-    // back to the legacy `-` separator form. There is nothing environment-specific for us
-    // to configure here: the same `getSessionCookie(request)` call transparently covers the
-    // dev cookie (`better-auth.session_token`) and the prod-https cookie
-    // (`__Secure-better-auth.session_token`, set when `useSecureCookies`/an `https://`
-    // baseURL apply) without a protocol check on our side.
-    const sessionCookie = getSessionCookie(request);
-
-    if (sessionCookie) {
-      return undefined;
+    // Step 2 — page branch: hand off to next-intl's own middleware first. `intl.ok` is
+    // false only for a redirect (`/en/x` -> `/x`, trailing-slash normalisation, …) —
+    // return it unchanged; the redirected request is proxied again on its next hop, so
+    // nothing downstream needs to special-case it. A rewrite is a 200 carrying the
+    // resolved locale in the `x-middleware-rewrite` header, and is safe to keep composing.
+    const intl = i18n.handle(request);
+    if (!intl.ok) {
+      // Same-origin assertion on next-intl's OWN redirect, belt-and-braces: step 3 below
+      // owns its own origin guards (M4) for the cookie-driven redirect this file builds
+      // itself, but this one is entirely borrowed from `i18n.handle()`. Today it's always
+      // same-origin (relative redirects built from `request.nextUrl`), so this can never
+      // fire — it exists so a future next-intl change, or a `domains` config that honours
+      // an attacker-controlled `x-forwarded-host`, can never turn that borrowed redirect
+      // into an open redirect without this proxy silently forwarding it.
+      const loc = intl.headers.get("location");
+      if (loc && new URL(loc, request.url).origin !== request.nextUrl.origin) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+      return intl;
     }
 
-    // Deliberately no `?next=` param (YAGNI): login/signup both hard-code the
-    // post-auth redirect to /dashboard, so nothing reads it — reintroduce the param
-    // together with a guarded consumer, not before.
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+    // Step 3 — cookie-driven locale redirect (D3): the switcher's `NEXT_LOCALE` cookie
+    // bounces an unprefixed page URL to its prefixed equivalent.
+    const { locale, pathname: bare, prefixed } = stripLocale(i18n, pathname);
+    const cookieLocale = request.cookies.get(i18n.cookieName)?.value;
+    if (isLocale(i18n, cookieLocale) && cookieLocale !== i18n.defaultLocale && !prefixed) {
+      // Path-shape guard (M4): `bare` must be a single, absolute, backslash-free path —
+      // "/x", never "//evil.com/x" or "/\evil.com" — before it is ever handed to
+      // `localizeHref`, whose "external href -> untouched" branch is an open-redirect
+      // gadget for exactly those shapes. Anything else falls through to step 3b.
+      if (bare.startsWith("/") && bare[1] !== "/" && bare[1] !== "\\") {
+        const target = localizeHref(i18n, cookieLocale, bare) + request.nextUrl.search;
+        // Loop guard (M5): only redirect if the target actually differs from the
+        // current request URL, so a no-op localization never causes an infinite bounce.
+        if (target !== pathname + request.nextUrl.search) {
+          const url = new URL(target, request.url);
+          // Origin assertion (M4): belt-and-braces alongside the path-shape guard above
+          // — the redirect target must resolve to this same origin.
+          if (url.origin === request.nextUrl.origin) {
+            return NextResponse.redirect(url);
+          }
+        }
+      }
+    }
+
+    // Step 3b (M14): API entries are unreachable from the page branch — a locale prefix
+    // can never smuggle a request into the API allowlist. `extraExactAllowlist` is
+    // server-to-server only and was never meant to be reachable through `/it/api/...`.
+    const isApiPath = bare === "/api" || bare.startsWith("/api/");
+
+    // Step 4 — public page: pass next-intl's response through untouched.
+    if (!isApiPath && isPublicPath(bare, extraExact)) {
+      return intl;
+    }
+
+    // Step 5 — cookie-presence-only check (see file-level doc comment) -> pass through.
+    if (getSessionCookie(request)) {
+      return intl;
+    }
+
+    // Step 6 — redirect to the locale-appropriate /login (default locale -> "/login",
+    // "it" -> "/it/login"; existing pass-through tests at the default locale stay valid).
+    return NextResponse.redirect(new URL(localizeHref(i18n, locale, "/login"), request.url));
   };
 }

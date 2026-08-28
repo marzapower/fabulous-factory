@@ -291,7 +291,7 @@ Two audiences with opposite goals — contributors building the template, adopte
 
 ## 11. Explicitly out of scope for v1
 
-Multi-tenancy/organizations, admin panel, i18n, usage-metered billing, marketing-site builder, Terraform/IaC, a standalone project-creation CLI (`create-fabulous`-style bootstrapper — distinct from the in-repo `pnpm gen` scaffolds of §8.3, which ARE in scope), second stack variant, and **downstream template updates** (propagating core fixes to already-born products — a template copy is a fork by design; revisit later via published packages if demand proves it).
+Multi-tenancy/organizations, admin panel, usage-metered billing, marketing-site builder, Terraform/IaC, a standalone project-creation CLI (`create-fabulous`-style bootstrapper — distinct from the in-repo `pnpm gen` scaffolds of §8.3, which ARE in scope), second stack variant, and **downstream template updates** (propagating core fixes to already-born products — a template copy is a fork by design; revisit later via published packages if demand proves it). ~~i18n~~ — struck: shipped via `@factory/i18n`, locale-prefix routing (`docs/adr/0007-i18n-locale-prefix-routing.md`).
 
 **Cut from v1 by the second review round** (each gets a "future direction" note in docs, and the seam it would fill is named):
 

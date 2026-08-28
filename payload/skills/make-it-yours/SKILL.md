@@ -36,7 +36,7 @@ on purpose:
 - **Keep, verbatim.** `packages/untangle/src/runs/` (the domain-agnostic run engine:
   steps, drivers, `runs`/`run_steps` persistence), `packages/untangle/src/schema/run.ts`,
   the SSE route (`apps/web/app/api/runs/route.ts`), and the run-history page
-  (`apps/web/app/runs/page.tsx`, `apps/web/lib/sse.ts`). Anything AI-shaped you build
+  (`apps/web/app/[locale]/runs/page.tsx`, `apps/web/lib/sse.ts`). Anything AI-shaped you build
   next rides on this unchanged — you only ever swap the step list it runs.
 - **Rename to your own noun.** `packages/untangle/src/tasks/` (the pipeline, heuristics,
   prompts, queries, constants — everything riding on the engine), and
@@ -66,7 +66,7 @@ directories/files, easy to miss because nothing above names them:
   registration follows the rename too; `packages/jobs`' generic array stays empty by
   construction, since it owns no domain code of its own — the merge happens at the mount
   (`apps/web/app/api/inngest/route.ts`).
-- `apps/web/app/dashboard/actions.ts` — `toggleTaskAction`, `createManualTaskAction`,
+- `apps/web/app/[locale]/dashboard/actions.ts` — `toggleTaskAction`, `createManualTaskAction`,
   `deleteTaskAction` follow your renamed nouns.
 - `packages/untangle/src/email/daily-plan.tsx` and its subject (a local const in
   `packages/untangle/src/tasks/daily-plan.ts`, not `SUBJECTS` — that map now holds only
@@ -86,12 +86,12 @@ directories/files, easy to miss because nothing above names them:
   downstream of the rename, and the least obvious of the three: it renders the real
   `DumpPanel` (imported from `@/components/workspace/dump-panel`) in read-only mode over
   a fixed note, so it needs the same treatment as `hero.tsx` and `three-passes.tsx`.
-- `apps/web/app/layout.tsx` — the root `metadata.title` is an object, not a string
+- `apps/web/app/[locale]/layout.tsx` — the root `metadata.title` is an object, not a string
   (`{ default: "Untangle — …", template: "%s · Untangle" }`); rename both halves. Two
   more pages lean on that template rather than setting their own full title:
-  `apps/web/app/(legal)/terms/page.tsx` and `.../privacy/page.tsx` set only bare
+  `apps/web/app/[locale]/(legal)/terms/page.tsx` and `.../privacy/page.tsx` set only bare
   `title: "Terms of Service"` / `"Privacy Policy"` and rely on the `%s · Untangle` suffix,
-  and `apps/web/app/(auth)/login/page.tsx` and `.../signup/page.tsx` carry their own
+  and `apps/web/app/[locale]/(auth)/login/page.tsx` and `.../signup/page.tsx` carry their own
   `metadata` with product-flavoured descriptions. All four follow the rename.
 - `apps/web/components/marketing/site-header.tsx` — brands the site by name (plus an
   emoji); update it alongside the rename.
@@ -116,7 +116,7 @@ names.
 
 **If you want no run engine at all** (rare — most products in this shape want to keep
 it): the deletion recipe is `rm -rf packages/untangle/`, plus deleting
-`apps/web/app/api/runs/route.ts` and `apps/web/app/runs/page.tsx`, and the same barrel
+`apps/web/app/api/runs/route.ts` and `apps/web/app/[locale]/runs/page.tsx`, and the same barrel
 cleanup as above except removing the touchpoints instead of renaming them. The
 cron/worker entries live in `packages/untangle/src/functions/index.ts`, so
 `rm -rf packages/untangle/` removes them along with everything else — there is nothing
@@ -144,7 +144,7 @@ to Phase 3.
 
 ## Phase 3 — Template showcase (Template showcase)
 
-`apps/web/app/page.tsx` runs in two acts, on purpose: act one is your product's own
+`apps/web/app/[locale]/page.tsx` runs in two acts, on purpose: act one is your product's own
 landing page (its hero, feature highlights, and any inline "what it won't do" section —
 keep this shape, it's yours) and act two is the factory's own reveal (a "built on the
 factory" section and a link into the `/features` showcase — delete this with the
@@ -156,12 +156,12 @@ role, not by these exact names. The two directories below make up the rest of th
 showcase — real for the factory repo, convincing a developer evaluating it, not relevant
 once you have a real product:
 
-- **The component-docs pages** under `apps/web/app/features/` — one page per factory
+- **The component-docs pages** under `apps/web/app/[locale]/features/` — one page per factory
   primitive (auth, billing, llm, jobs, email, observability, security, config, kernel),
   plus the directory's own index. Delete the whole directory:
 
   ```bash
-  rm -rf apps/web/app/features/
+  rm -rf apps/web/app/[locale]/features/
   ```
 
   Then delete the marketing components that exist solely to power those pages — the
@@ -175,7 +175,7 @@ once you have a real product:
   Any public API route those pages wired up for a live example (under
   `apps/web/app/api/demo/`, if present) goes with them.
 
-  (`apps/web/app/features/page.tsx` sets `title: { absolute: … }` on purpose, to opt out
+  (`apps/web/app/[locale]/features/page.tsx` sets `title: { absolute: … }` on purpose, to opt out
   of the product's `%s · Untangle` title template — that's deliberate, not a bug to fix,
   and it goes away with the rest of the directory.)
 
@@ -195,7 +195,7 @@ once you have a real product:
   **`recorded-run.ts` is not an unconditional delete.** It's the fixture both those
   `/features` pages (`llm`, `jobs`) _and_ `hero.tsx` use — the landing page's hero
   replays it (imported relatively, as `./recorded-run`) so its demo runs through real
-  fixture data instead of a mock. Deleting `app/features/` removes two of its three
+  fixture data instead of a mock. Deleting `app/[locale]/features/` removes two of its three
   consumers; `hero.tsx` still imports it. Only delete `recorded-run.ts` once you've also
   stripped the replay out of `hero.tsx` — otherwise leave it in place, since act one of
   the landing page (Phase 3's intro above) is yours to keep.
@@ -247,7 +247,7 @@ act two — the factory reveal — and go with the rest of this item.
 **Dead link**: `features-link.tsx` is a full-width card on the home page pointing at
 `/features`, and `built-on-factory.tsx` is the section above it (act two of `page.tsx`)
 that leads into it. Once `/features` is gone both are dead ends — remove them from
-`apps/web/app/page.tsx` and delete the components, or repoint `features-link` at your own
+`apps/web/app/[locale]/page.tsx` and delete the components, or repoint `features-link` at your own
 docs.
 
 **The shared proxy allowlist** (`packages/ui/src/middleware.ts` — every app's
@@ -283,7 +283,7 @@ way, on the same trigger (deleting its backing fixture/data).
 
 ## Phase 4 — Legal pages (Legal pages)
 
-**Replace, don't delete.** `apps/web/app/(legal)/terms/page.tsx` and `.../privacy/page.tsx`
+**Replace, don't delete.** `apps/web/app/[locale]/(legal)/terms/page.tsx` and `.../privacy/page.tsx`
 are placeholder copy, not placeholder routes — the site footer (`site-footer.tsx`, shared
 across the public pages and the dashboard) links them, and deleting the pages without also
 removing those footer links leaves dead links. Write real terms and a real privacy policy

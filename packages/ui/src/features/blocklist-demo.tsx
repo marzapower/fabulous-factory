@@ -5,6 +5,8 @@
 
 import { useState } from "react";
 
+import { useTranslations } from "@factory/i18n";
+
 import { LiveExample } from "../marketing";
 
 // K.16 N1: labeled "IP address", never "hostname" or "URL" — isBlockedAddress takes an
@@ -31,6 +33,7 @@ type CheckResult =
  * literals rather than an open text field for a hostname (K.16 N1).
  */
 export function SecurityBlocklistDemo() {
+  const t = useTranslations("ui.featurePages.blocklistDemo");
   const [address, setAddress] = useState(SEED_ADDRESSES[0]!);
   const [result, setResult] = useState<CheckResult | null>(null);
   const [pending, setPending] = useState(false);
@@ -61,7 +64,7 @@ export function SecurityBlocklistDemo() {
   }
 
   return (
-    <LiveExample kind="live" title="Check an IP address">
+    <LiveExample kind="live" title={t("liveExampleTitle")}>
       <div className="flex flex-wrap gap-2">
         {SEED_ADDRESSES.map((candidate) => (
           <button
@@ -81,7 +84,7 @@ export function SecurityBlocklistDemo() {
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
         <label className="sr-only" htmlFor="security-address">
-          IP address to check
+          {t("addressLabel")}
         </label>
         <input
           id="security-address"
@@ -96,25 +99,22 @@ export function SecurityBlocklistDemo() {
           disabled={pending}
           className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
         >
-          {pending ? "Checking…" : "Check"}
+          {pending ? t("checking") : t("checkButton")}
         </button>
       </div>
       {result ? (
         <p className="font-mono text-sm">
           {result.kind === "network-error"
-            ? `network error: ${result.message}`
+            ? t("networkError", { message: result.message })
             : result.kind === "error"
-              ? `HTTP ${result.status}`
+              ? t("httpStatus", { status: result.status })
               : result.blocked
-                ? "BLOCKED"
-                : "allowed"}
+                ? t("blocked")
+                : t("allowed")}
         </p>
       ) : null}
       <p className="text-xs text-muted-foreground">
-        DNS-free — no fetch is ever performed by this check. It evaluates the same pure predicate{" "}
-        <code className="font-mono">isBlockedAddress</code> that gates
-        <code className="font-mono"> safeFetch</code>&rsquo;s DNS-resolved address before a
-        connection is attempted.
+        {t.rich("hint", { code: (chunks) => <code className="font-mono">{chunks}</code> })}
       </p>
     </LiveExample>
   );

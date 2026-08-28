@@ -12,6 +12,8 @@
     "./dashboard": "./src/dashboard/top-bar.tsx",
     "./features": "./src/features/index.ts",
     "./feedback": "./src/feedback/index.ts",
+    "./messages": "./src/messages/index.ts",
+    "./locale-switcher": "./src/locale-switcher.tsx",
     "./middleware": "./src/middleware.ts",
     "./sse": "./src/sse.ts",
     "./theme": "./src/theme/index.ts",
@@ -23,6 +25,7 @@
   "dependencies": {
     "@factory/auth": "workspace:*",
     "@factory/config": "workspace:*",
+    "@factory/i18n": "workspace:*",
     "better-auth": "1.7.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

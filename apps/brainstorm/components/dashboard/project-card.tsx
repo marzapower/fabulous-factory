@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+
+import { Link } from "@factory/i18n/navigation";
 
 import type { ProjectSummary } from "@factory/brainstorm";
 
-import { deleteProjectAction } from "@/app/dashboard/actions";
+import { deleteProjectAction } from "@/app/[locale]/dashboard/actions";
 import {
   Button,
   Card,

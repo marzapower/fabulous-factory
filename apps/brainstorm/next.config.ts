@@ -1,5 +1,12 @@
 import type { NextConfig } from "next";
 import path from "path";
+// The one unavoidable seam (i18n plan D1): next-intl/plugin is bundled at build time
+// only, never at runtime — packages/i18n is otherwise the sole legal next-intl import
+// site. See i18n/request.ts, handed to the plugin below as the app's own request-config
+// path (a per-app relative filesystem path Turbopack needs, not importable across apps).
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 // Env-file note: the documented quickstart puts `.env` at the WORKSPACE ROOT (spec §8.1),
 // which Next's own env loading never reads (it only loads from the app directory). That
@@ -17,6 +24,10 @@ const nextConfig: NextConfig = {
     "@factory/config",
     "@factory/auth",
     "@factory/core",
+    // The i18n leaf (`@factory/i18n`, wraps next-intl) this app's package.json now
+    // depends on directly (i18n plan §2.1/M3) — Turbopack traces it at build time same
+    // as every other workspace package here.
+    "@factory/i18n",
     // The shared UI layer (primitives, auth forms, marketing components) extracted from
     // the three preset apps — TS source, same as every other workspace package here.
     "@factory/ui",
@@ -80,4 +91,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

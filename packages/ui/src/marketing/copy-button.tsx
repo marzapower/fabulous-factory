@@ -6,9 +6,12 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
+import { useTranslations } from "@factory/i18n";
+
 import { cn } from "../lib/utils";
 
 export function CopyButton({ text }: { text: string }) {
+  const t = useTranslations("ui.marketing.copyButton");
   const [copied, setCopied] = useState(false);
 
   async function handleClick() {
@@ -25,7 +28,7 @@ export function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={handleClick}
-      aria-label="Copy to clipboard"
+      aria-label={t("ariaLabel")}
       className={cn(
         "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors",
         "hover:bg-accent hover:text-accent-foreground",

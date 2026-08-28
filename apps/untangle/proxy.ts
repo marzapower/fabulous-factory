@@ -1,4 +1,7 @@
+import { createLocaleRouting } from "@factory/i18n/middleware";
 import { createAuthProxy } from "@factory/ui/middleware";
+
+import { i18n } from "./i18n/config";
 
 // `/api/billing/webhook` (Stripe) and `/api/inngest` (Inngest cloud/dev invocations) are
 // server-to-server routes — cookie-less by nature, since the caller is Stripe or Inngest,
@@ -17,8 +20,11 @@ import { createAuthProxy } from "@factory/ui/middleware";
 // same-prefix sibling route added later would slip through unauthenticated for free).
 // `/api/inngest` closes a gap that has existed since M6 (the route shipped without this
 // entry); found live during the M7 billing-webhook verify, which hit the identical failure
-// mode on the new `/api/billing/webhook` route.
+// mode on the new `/api/billing/webhook` route. `app/api/**` stays outside `[locale]` and
+// unprefixed (i18n plan §2.2 step 1 — the API branch), so these two entries are matched
+// on the raw pathname, unaffected by locale routing.
 export const proxy = createAuthProxy({
+  i18n: createLocaleRouting(i18n),
   extraExactAllowlist: ["/api/billing/webhook", "/api/inngest"],
 });
 

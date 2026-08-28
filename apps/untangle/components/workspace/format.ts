@@ -25,6 +25,22 @@ export function formatDuration(durationMs: number | null | undefined): string {
   return `${(durationMs / 1000).toFixed(1)}s`;
 }
 
+const DATETIME_FORMAT = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "UTC",
+});
+
+/** Renders a run's `startedAt` for the run-history list (`app/[locale]/runs/page.tsx`).
+ * Pinned `en-US`/UTC, like every other formatter in this module — deliberately NOT
+ * `Date.prototype.toLocaleString()`, whose output depends on the server/runtime's own
+ * default locale AND timezone rather than anything declared in code, so the same run
+ * could render a different timestamp shape depending on where the process happens to
+ * run. */
+export function formatDateTime(date: Date): string {
+  return DATETIME_FORMAT.format(date);
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function startOfDay(date: Date): Date {

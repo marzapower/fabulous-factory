@@ -1,0 +1,393 @@
+{
+  "auth": {
+    "loginForm": {
+      "orContinueWithEmail": "oppure continua con l'email",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "forgotPassword": "Password dimenticata?",
+      "signIn": "Accedi",
+      "signingIn": "Accesso in corso…",
+      "signInError": "Impossibile accedere. Controlla email e password.",
+      "continueWithProvider": "Continua con {provider}",
+      "redirecting": "Reindirizzamento…",
+      "socialError": "Impossibile accedere con {provider}.",
+      "unverifiedNotice": "La tua email non è ancora verificata. Verificala per accedere.",
+      "resendButton": "Invia di nuovo l'email di verifica",
+      "resendSending": "Invio in corso…",
+      "resendSent": "Email di verifica inviata — controlla la tua casella a {email}.",
+      "resendError": "Impossibile inviare di nuovo l'email di verifica.",
+      "magicLinkPrompt": "Inviami invece un link di accesso via email",
+      "magicLinkSent": "Link di accesso inviato — controlla la tua casella a {email}.",
+      "magicLinkEmailLabel": "Email",
+      "magicLinkSendButton": "Invia link",
+      "magicLinkSending": "Invio in corso…",
+      "magicLinkError": "Impossibile inviare un link di accesso."
+    },
+    "signupForm": {
+      "orContinueWithEmail": "oppure continua con l'email",
+      "nameLabel": "Nome",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "createAccount": "Crea account",
+      "creatingAccount": "Creazione account…",
+      "signUpError": "Impossibile creare il tuo account.",
+      "continueWithProvider": "Continua con {provider}",
+      "redirecting": "Reindirizzamento…",
+      "socialError": "Impossibile registrarsi con {provider}.",
+      "verifyPendingTitle": "Controlla la tua email per verificare l'account",
+      "verifyPendingBody": "Ti abbiamo inviato un link di verifica a {email}. Clicca per completare la configurazione del tuo account."
+    },
+    "forgotPasswordForm": {
+      "disabledTitle": "Il reset della password non è disponibile",
+      "disabledBody": "Reimpostare una password richiede l'invio di email, non configurato per questo deployment. Contatta chi gestisce il tuo account per un altro modo di accedere.",
+      "sentMessage": "Se esiste un account per {email}, ti abbiamo inviato un link per reimpostare la password. Controlla la tua casella.",
+      "emailLabel": "Email",
+      "sendButton": "Invia link di reset",
+      "sending": "Invio in corso…",
+      "fallbackError": "Impossibile inviare il link di reset."
+    },
+    "forgotPasswordPage": {
+      "title": "Reimposta la tua password",
+      "description": "Ti invieremo via email un link per sceglierne una nuova.",
+      "rememberedIt": "L'hai ricordata?",
+      "signIn": "Accedi"
+    },
+    "resetPasswordForm": {
+      "invalidMessage": "Questo link non è valido o è scaduto.",
+      "requestNewOne": "Richiedine uno nuovo",
+      "doneMessage": "La tua password è stata reimpostata",
+      "signIn": "Accedi",
+      "newPasswordLabel": "Nuova password",
+      "confirmPasswordLabel": "Conferma nuova password",
+      "mismatchError": "Le password non coincidono.",
+      "fallbackError": "Impossibile reimpostare la tua password.",
+      "submitButton": "Reimposta password",
+      "resetting": "Reimpostazione in corso…"
+    },
+    "resetPasswordPage": {
+      "title": "Scegli una nuova password",
+      "description": "Scegli qualcosa che non hai già usato."
+    },
+    "signOutButton": {
+      "signOut": "Esci",
+      "signingOut": "Uscita in corso…"
+    }
+  },
+  "account": {
+    "profileCard": {
+      "title": "Profilo",
+      "description": "Il tuo nome e la tua email su questo account.",
+      "nameLabel": "Nome",
+      "emailLabel": "Email",
+      "verified": "Verificata",
+      "notVerified": "Non verificata",
+      "error": "Impossibile aggiornare il tuo profilo.",
+      "saved": "Profilo aggiornato.",
+      "saveButton": "Salva modifiche",
+      "saving": "Salvataggio in corso…"
+    },
+    "dataExportCard": {
+      "title": "Esporta i tuoi dati",
+      "description": "Scarica tutto ciò che questo account ha memorizzato, in formato JSON.",
+      "downloadButton": "Scarica i tuoi dati"
+    },
+    "dangerZoneCard": {
+      "title": "Elimina account",
+      "description": "Elimina definitivamente il tuo account e tutto ciò che vi è collegato. Non può essere annullato.",
+      "emailSent": "Controlla la tua email per un link che conferma l'eliminazione dell'account.",
+      "deleteButton": "Elimina account",
+      "passwordLabel": "Conferma la tua password",
+      "emailConfirmationNotice": "Ti invieremo via email un link di conferma — il tuo account resta attivo finché non lo clicchi.",
+      "immediateWithPasswordNotice": "Questo elimina il tuo account immediatamente.",
+      "immediateNoPasswordNotice": "Questo elimina il tuo account immediatamente. Se hai effettuato l'accesso tempo fa, potresti dover accedere di nuovo prima.",
+      "emailErrorFallback": "Impossibile avviare l'eliminazione dell'account.",
+      "immediateErrorFallback": "Impossibile eliminare il tuo account.",
+      "emailConfirmButton": "Inviami un link di conferma via email",
+      "emailConfirmSending": "Invio in corso…",
+      "immediateConfirmButton": "Conferma eliminazione",
+      "immediateConfirmSending": "Eliminazione in corso…",
+      "cancelButton": "Annulla"
+    }
+  },
+  "capabilityPanel": {
+    "title": "Funzionalità",
+    "services": {
+      "billing": "Fatturazione",
+      "llm": "LLM",
+      "email": "Email",
+      "jobs": "Jobs",
+      "analytics": "Analytics",
+      "errors": "Errori"
+    },
+    "enabled": "Attiva",
+    "disabled": "Disattiva",
+    "localizationLabel": "Localizzazione",
+    "localizationOnly": "solo {locale}",
+    "localizationDefault": "(predefinita {locale})"
+  },
+  "dashboard": {
+    "topBar": {
+      "accountActionsLabel": "Azioni account per {userEmail}",
+      "settings": "Impostazioni"
+    }
+  },
+  "marketing": {
+    "alreadyWorks": {
+      "eyebrow": "// cosa funziona già",
+      "heading": "Le cose che ogni prodotto richiede, già presenti",
+      "subheading": "Non parti da zero. Queste funzionano già dal primo giorno.",
+      "items": {
+        "signingIn": {
+          "title": "Accesso",
+          "body": "Le persone possono creare un account e accedere di nuovo. Niente da configurare in più."
+        },
+        "takingPayments": {
+          "title": "Ricevere pagamenti",
+          "body": "Fai pagare l'accesso a piani diversi. Upgrade, downgrade e cancellazioni funzionano già."
+        },
+        "sendingEmail": {
+          "title": "Invio email",
+          "body": "Conferme indirizzo, link di accesso, e tutto ciò che ti serve inviare."
+        },
+        "workOnSchedule": {
+          "title": "Lavoro pianificato",
+          "body": "Imposta qualcosa da eseguire ogni notte, ogni ora, o dopo un ritardo — e fidati che accadrà."
+        },
+        "aiFeatures": {
+          "title": "Funzionalità AI",
+          "body": "Aggiungi funzionalità basate su AI — riassumere, generare, decidere — con l'utilizzo tracciato automaticamente."
+        }
+      }
+    },
+    "controlPanel": {
+      "header": "factory/status",
+      "liveMarker": "· in diretta",
+      "stations": {
+        "billing": "Fatturazione",
+        "llm": "LLM",
+        "jobs": "Jobs",
+        "email": "Email",
+        "analytics": "Analytics",
+        "errors": "Tracciamento errori"
+      },
+      "footer": "In diretta dal runtime di questo deployment — rimuovi una env var e una postazione va in standby; le lingue sono dichiarate nel codice. Niente si rompe.",
+      "localizationLabel": "Localizzazione",
+      "localizationOnly": "solo {locale}",
+      "localizationDefault": "(predefinita {locale})"
+    },
+    "codeBlock": {
+      "defaultAriaLabel": "Esempio di codice"
+    },
+    "copyButton": {
+      "ariaLabel": "Copia negli appunti"
+    },
+    "envTable": {
+      "regionLabel": "Variabili d'ambiente",
+      "caption": "Variabili d'ambiente che abilitano questa funzionalità",
+      "colVariable": "Variabile",
+      "colRequired": "Obbligatoria",
+      "colDescription": "Descrizione",
+      "colExample": "Esempio",
+      "required": "obbligatoria",
+      "optional": "opzionale",
+      "noExample": "—"
+    },
+    "featureCard": {
+      "howItWorks": "Come funziona"
+    },
+    "featurePageShell": {
+      "breadcrumbHome": "Home",
+      "breadcrumbFeatures": "Funzionalità",
+      "breadcrumbNavLabel": "Breadcrumb"
+    },
+    "kernelCode": {
+      "eyebrow": "// il kernel, in codice",
+      "heading": "Non esiste altro modo di scrivere una route",
+      "body": "<code>defineHandler</code> e <code>defineAction</code> sono l'unico modo legale di dichiarare una route o una server action. Un handler grezzo non viene revisionato e respinto — semplicemente non supera il lint.",
+      "illegalCaption": "Handler grezzo — illustrativo, non un file reale",
+      "illegalNote": "non passa il lint, non viene unito",
+      "legalCaption": "app/api/health/route.ts — reale, in produzione",
+      "legalNote": "modalità auth e rate limit, dichiarati"
+    },
+    "liveExample": {
+      "kindLive": "In diretta — chiama questo deployment",
+      "kindReplay": "Replay registrato — nessuna chiamata dal vivo",
+      "kindStatic": "Statico — sorgente reale, nessuna richiesta"
+    },
+    "quickstartStrip": {
+      "steps": {
+        "install": "Scegli un preset — ottieni un nuovo repo, nato come TUO prodotto, non un clone da promuovere.",
+        "run": "Sei operativo — Postgres e un secret sono gli unici requisiti.",
+        "askAgent": "Chiedi al tuo agente — ti guida attraverso ogni impostazione predefinita rimanente, un'abilità guidata alla volta."
+      }
+    },
+    "siteFooter": {
+      "terms": "Termini",
+      "privacy": "Privacy",
+      "builtWith": "Realizzato con",
+      "factoryLinkText": "Fabulous Factory",
+      "legalNavLabel": "Legale"
+    },
+    "siteHeader": {
+      "underTheHood": "Sotto il cofano",
+      "github": "GitHub",
+      "signIn": "Accedi",
+      "dashboard": "Dashboard",
+      "primaryNavLabel": "Principale"
+    },
+    "statusLight": {
+      "online": "attivo",
+      "standby": "standby"
+    },
+    "whyItHolds": {
+      "eyebrow": "// perché non si rompe",
+      "heading": "La rete di sicurezza è integrata, non da ricordare",
+      "paragraph1": "Le regole importanti — verificare chi può fare cosa, non far trapelare mai un secret, proteggere un pagamento — sono applicate automaticamente. Nessuno deve ricordarsi di aggiungerle, perché non c'è modo di ometterle.",
+      "paragraph2": "Se un pezzo non è ancora configurato — nessun account email collegato, nessuna chiave AI aggiunta — niente si rompe. Quella singola funzionalità aspetta semplicemente in silenzio finché non la attivi."
+    }
+  },
+  "features": {
+    "auth": {
+      "title": "Accesso già pronto",
+      "blurb": "Email e password funzionano dal primo giorno; OAuth e magic link si attivano non appena aggiungi le chiavi."
+    },
+    "kernel": {
+      "title": "Una forma di handler che non puoi sbagliare",
+      "blurb": "Ogni route e action dichiara la sua modalità auth, il suo schema di input, il suo rate limit — un handler grezzo fallisce il lint per costruzione."
+    },
+    "config": {
+      "title": "Un registro unico, non un process.env sparso",
+      "blurb": "Ogni env var è dichiarata una sola volta — obbligatoria, segreta, cosa abilita — e il doctor, la documentazione e il codice non possono mai essere in disaccordo."
+    },
+    "billing": {
+      "title": "Pagamenti che sbloccano cose",
+      "blurb": "Checkout e webhook Stripe, collegati end to end — modalità gratuita quando è disattivata, così niente blocca una demo."
+    },
+    "llm": {
+      "title": "Un gateway AI, non un vincolo a un fornitore",
+      "blurb": "Local, OpenRouter, o una chiave diretta — cambia provider senza toccare un solo punto di chiamata."
+    },
+    "jobs": {
+      "title": "Cron di cui il tuo agente può fidarsi",
+      "blurb": "Cron, fan-out e retry per ogni step quando sono attivi — e ogni esecuzione on-demand funziona esattamente allo stesso modo quando sono disattivi."
+    },
+    "security": {
+      "title": "SSRF protetto, non solo documentato",
+      "blurb": "Una fetch di un URL fornito dall'utente viene controllata per schema, bloccata per range, e rivalidata dopo la connessione — vedi il rifiuto accadere, non solo leggerlo."
+    },
+    "email": {
+      "title": "Email che non blocca mai una registrazione",
+      "blurb": "Resend in produzione, la console in sviluppo — niente aspetta un provider che non c'è."
+    },
+    "observability": {
+      "title": "Scoprilo prima dei tuoi utenti",
+      "blurb": "Product analytics e tracciamento errori, entrambi un no-op silenzioso finché non li configuri."
+    }
+  },
+  "featurePages": {
+    "common": {
+      "whatItDoes": "Cosa fa",
+      "ruleItEnforces": "La regola che applica",
+      "realSource": "Sorgente reale",
+      "workingExample": "Un esempio funzionante",
+      "turnItOn": "Attivalo"
+    },
+    "auth": {
+      "statusAlwaysOn": "email + password: sempre attivo",
+      "statusNoOptional": "nessun metodo di accesso opzionale configurato",
+      "statusMagicLink": "Magic link",
+      "whatItDoesBody": "Dal lato del chiamante: ogni route e server action protetta da sessione riceve un <code>session.user</code> risolto e reale, oppure non viene mai eseguita — non c'è uno stato intermedio da gestire.",
+      "ruleBody": "La modalità auth è obbligatoria, senza default. Ogni chiamata a <code>defineAction</code> dichiara esplicitamente <code>auth: \"required\"</code> o <code>\"public\"</code> — non c'è modo di omettere la decisione, quindi un'action pubblica non può mai finire in produzione senza una scelta esplicita.",
+      "workingExampleBody": "L'auth è l'unica base che non è opzionale — imposta <code>BETTER_AUTH_SECRET</code> e l'accesso con email/password funziona immediatamente; tutto il resto qui è un upgrade, non un requisito.",
+      "ctaParagraph": "<link>Crea un account</link>, poi apri la dashboard — è <code>requireSession</code> che fa il suo lavoro."
+    },
+    "billing": {
+      "whatItDoesBody": "Dal lato di un'action a pagamento: una sola chiamata, <code>getEntitlement(userId)</code>, risponde a \"cosa può fare oggi questo utente\" — un id di piano e un limite <code>runsPerDay</code>, che la fatturazione sia configurata o meno.",
+      "ruleBody": "<code>getEntitlement()</code> non parla mai direttamente con il provider di fatturazione — solo con la riga di abbonamento in cache in Postgres — così un provider lento o offline non può mai rallentare o interrompere una richiesta che deve solo conoscere il limite di un piano. Con la fatturazione disattivata, niente è bloccato: ogni account ottiene il limite del piano gratuito completamente rimosso."
+    },
+    "config": {
+      "whatItDoesBody": "Dal lato del chiamante: una sola funzione, <code>getClientConfig()</code>, riduce lo stato runtime di ogni servizio alla piccola e sicura porzione che un browser può vedere — un booleano per funzionalità, niente di più.",
+      "ruleBody": "Il confine client porta solo booleani on/off. Le identità degli adapter — quale provider è realmente dietro \"llm\" o \"email\" — non lo attraversano mai, perché sono dati di ricognizione per un attaccante che sonda cosa gira su un deployment. Un componente che deve mostrare \"la fatturazione è attiva\" può farlo; nessuno può chiedere \"è Stripe\" dal browser.",
+      "realSourceIntro": "Il tipo da cui è costruita la mappa delle funzionalità in tempo reale qui sotto:",
+      "workingExampleIntro": "Non un mockup — questa è la mappa delle funzionalità di questo stesso deployment, letta al momento della richiesta.",
+      "liveExampleTitle": "La mappa delle funzionalità di questo deployment"
+    },
+    "email": {
+      "whatItDoesBody": "Dal lato del chiamante: una sola chiamata <code>send()</code>, indicando un template e le sue props tipizzate, funziona allo stesso modo che Resend sia configurato, mancante, o che tu sia in sviluppo locale — il chiamante non fa mai branch su quale caso.",
+      "ruleBody": "<code>send()</code> legge la funzionalità email una volta e sceglie esattamente un percorso — disattivata, console, o Resend — e l'SDK di Resend viene importato solo in quest'ultimo ramo. Una registrazione non può mai restare in attesa di un provider non configurato; senza uno, semplicemente si segnala come non consegnata in silenzio.",
+      "sendSnippetCaption": "Semplificato da packages/email/src/send.ts",
+      "templatesIntro": "Ogni template abbina il suo componente all'oggetto della sua email in un'unica mappa, mai sparso tra i punti di chiamata:",
+      "workingExampleIntro": "Qui non viene renderizzata alcuna anteprima — <code>apps/web</code> deliberatamente non ha alcuna dipendenza da <code>@factory/email</code>, così niente al di fuori del pacchetto adapter a cui appartiene può importare il renderer del vendor.",
+      "turnItOnLabel": "Attivalo",
+      "turnItOnBody": "Imposta <code>RESEND_API_KEY</code> (e <code>EMAIL_FROM</code>) e la consegna va live. Lascialo non impostato: in sviluppo ogni email viene stampata sulla console; in produzione, l'email è completamente disattivata e la registrazione salta semplicemente il passaggio di verifica invece di bloccarsi su di esso."
+    },
+    "kernel": {
+      "whatItDoesBody": "Dal lato del chiamante: ogni route e server action in questo repo dichiara la sua modalità auth, il suo schema di input, e (quando pubblica) la sua policy di rate limit in anticipo, in un unico posto, prima che venga eseguito qualsiasi codice del tuo handler.",
+      "ruleBody": "<code>defineHandler</code> e <code>defineAction</code> sono l'UNICO modo legale di dichiarare un route handler o una server action. Un grezzo <code>export async function GET/POST/...</code>, o una funzione esportata grezza in un file <code>\"use server\"</code>, fallisce il lint per costruzione — non resta modo di dimenticare un controllo auth, saltare la validazione dell'input, o spedire per errore un endpoint pubblico senza limiti.",
+      "realSourceIntro": "L'handler dietro l'esempio dal vivo qui sotto, dichiarato nell'unico modo legale, accanto alla forma di handler grezzo che sostituisce:",
+      "illegalCaption": "Cosa fallisce il lint — non viene mai unito",
+      "workingExampleBody": "Questo chiama il vero endpoint echo qui sopra, su questo deployment. Non costa niente, non richiede alcun account, e non fa alcuna richiesta in uscita — l'handler si limita a fare l'eco di una porzione limitata di ciò che gli invii.",
+      "asymmetryNote": "Un'asimmetria degna di nota: il controllo dell'origine sopra (il passo 4 di <code>defineHandler</code>) viene eseguito solo per i metodi che modificano lo stato, e permette una richiesta senza alcun header <code>Origin</code> mentre rifiuta una il cui <code>sec-fetch-site</code> è <code>cross-site</code>. Questo significa che un comando <code>curl</code> copiabile riesce contro questa route dove una chiamata browser cross-origin da un altro sito viene rifiutata — il controllo mira al modello di minaccia del browser (CSRF da una tab già autenticata), non ai chiamanti server-to-server, ed è esattamente per questo che funziona così anziché essere una falla."
+    },
+    "llm": {
+      "whatItDoesBody": "Dal lato del chiamante: <code>streamArray()</code> prende uno schema zod per UN elemento dell'array e passa al tuo codice un elemento completamente tipizzato ogni volta che il modello ne completa uno — nessun oggetto parziale, nessun tipo di SDK del vendor che trapela fuori da <code>@factory/llm</code>.",
+      "ruleBody": "Ogni chiamata — in streaming o no — passa attraverso lo stesso controllo di budget, contabilità dei costi, e riga <code>llm_calls</code>, qualunque profilo di provider sia configurato (local, OpenRouter, o una chiave diretta). Un punto di chiamata non spende mai denaro che non gli è stato detto di poter spendere, e una chiamata disattivata o oltre budget lancia un'eccezione prima ancora che venga caricato l'SDK di un provider.",
+      "turnItOnBody": "Imposta le credenziali per un profilo qualsiasi e si accende. Lasciale tutte non impostate e <code>streamArray()</code>/<code>generate()</code> lanciano un'eccezione prima che venga caricato l'SDK di un provider; ogni punto di chiamata in questo template è scritto per ricadere su un risultato non-AI invece di lasciare che quell'eccezione raggiunga un utente."
+    },
+    "observability": {
+      "statusAnalytics": "analytics",
+      "statusErrors": "errori",
+      "whatItDoesBody": "Dal lato del chiamante: <code>track()</code> genera un evento analytics e <code>captureException()</code> segnala un errore — entrambe sono chiamate incondizionate che non devi mai avvolgere tu stesso in un controllo di funzionalità.",
+      "ruleBody": "Due seam indipendenti sotto un unico ombrello: product analytics via PostHog e tracciamento errori via Sentry, più il tracing OpenTelemetry sotto le pipeline LLM e jobs. Ognuno può essere attivo, disattivo, o entrambi — nessuno dipende dall'altro, e nessuno dipende da altri servizi del template. <code>track()</code> è fire-and-forget per contratto: non blocca mai il chiamante e non lancia mai eccezioni, che analytics sia attivo, disattivo, o che la chiamata stessa fallisca.",
+      "workingExampleBody": "Imposta <code>POSTHOG_KEY</code> per analytics e/o <code>SENTRY_DSN</code> per la segnalazione errori — ognuno si accende indipendentemente. Lascia uno dei due non impostato e le sue funzioni diventano no-op silenziosi: nessun SDK del vendor viene mai importato, e nulla che chiama <code>track()</code> o <code>captureException()</code> cambia comportamento."
+    },
+    "security": {
+      "whatItDoesBody": "Dal lato di una funzionalità: qualsiasi codice che deve fare fetch di un URL fornito dall'utente chiama <code>safeFetch()</code> invece della <code>fetch</code> globale, e ottiene protezione SSRF gratis — nessun codice di controllo range per singola funzionalità da sbagliare.",
+      "ruleBody": "Un URL fornito dall'utente può puntare a un hostname che si risolve in modo sicuro al momento della lookup DNS e verso qualcosa di interno (un endpoint di metadata cloud, un servizio di rete privata) nel momento in cui la connessione viene effettivamente stabilita — DNS-rebinding. La regola che <code>safeFetch</code> applica è: non fidarti mai della risposta DNS pre-connessione. Valida il socket che hai effettivamente ottenuto.",
+      "realSourceIntro": "Il predicato puro che l'esempio dal vivo qui sotto chiama — un controllo di range IP, niente di più:",
+      "realSourceIntro2": "La vera difesa contro il DNS-rebinding è il controllo post-connessione che chiama questo predicato sul socket reale e connesso, non sulla risposta DNS:",
+      "workingExampleBody": "<code>isBlockedAddress</code> prende un indirizzo IP letterale, non un hostname — fallisce in modo chiuso (bloccato) per qualsiasi cosa che non sia un letterale IPv4/IPv6 valido, ed è per questo che il campo qui sotto prende un IP, non un URL. Questo è privo di DNS: nessuna lookup, nessuna fetch viene mai eseguita da questa pagina."
+    },
+    "index": {
+      "eyebrow": "// fabulous factory",
+      "heading": "I meccanismi dietro al prodotto",
+      "argumentParagraph": "L'argomentazione, end to end: cosa ottieni dal primo giorno, la regola che rende impossibile una scorciatoia, la prova che è applicata su questo esatto deployment, la prova che il prodotto continua a funzionare quando manca un pezzo, come eseguirlo tu stesso, e ogni pezzo su cui puoi costruire in seguito.",
+      "liveEyebrow": "// questo deployment, in diretta",
+      "liveHeading": "Spie di funzionalità, non un claim di marketing",
+      "liveBody": "Questo pannello legge il runtime di questo stesso deployment — rimuovi una env var e una postazione va in standby, dal vivo, proprio qui.",
+      "builtEyebrow": "// cosa è già costruito",
+      "builtHeading": "Nove pezzi, quattro dei quali portanti",
+      "builtBody": "Auth, il kernel, config e security funzionano incondizionatamente — non c'è env var che li disattivi. Il resto viene verificato dal vivo contro il runtime di questo deployment, lo stesso segnale che legge il pannello di controllo qui sopra."
+    },
+    "echoDemo": {
+      "liveExampleTitle": "Prova l'endpoint echo",
+      "defaultMessage": "Ciao dalla pagina della documentazione",
+      "messageLabel": "Messaggio da inviare",
+      "placeholder": "Scrivi un messaggio, o svuotalo per vedere il 400",
+      "sendButton": "Invia",
+      "sending": "Invio in corso…",
+      "hint": "Inviane 9 entro un minuto per vedere il 429 — la policy di rate-limit di questa route è <rateLimit></rateLimit>. Il limite è una mitigazione degli abusi che fallisce aperto su un errore del database, non una garanzia di sicurezza.",
+      "networkError": "errore di rete: {message}",
+      "httpStatus": "HTTP {status}"
+    },
+    "blocklistDemo": {
+      "liveExampleTitle": "Controlla un indirizzo IP",
+      "addressLabel": "Indirizzo IP da controllare",
+      "checkButton": "Controlla",
+      "checking": "Controllo in corso…",
+      "networkError": "errore di rete: {message}",
+      "httpStatus": "HTTP {status}",
+      "blocked": "BLOCCATO",
+      "allowed": "consentito",
+      "hint": "Privo di DNS — nessuna fetch viene mai eseguita da questo controllo. Valuta lo stesso predicato puro <code>isBlockedAddress</code> che protegge l'indirizzo risolto via DNS di <code>safeFetch</code> prima che venga tentata una connessione."
+    }
+  },
+  "theme": {
+    "themeToggle": {
+      "ariaLabel": "Cambia tema"
+    }
+  },
+  "localeSwitcher": {
+    "label": "Lingua"
+  }
+}

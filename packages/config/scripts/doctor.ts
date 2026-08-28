@@ -13,7 +13,7 @@
  * parser (no dotenv dependency) merged under real `process.env`, so shell-exported vars
  * always win over the file. Always exits 0 — this is a report, not a gate.
  */
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -379,6 +379,76 @@ function printFactorySection(): void {
   console.log("");
 }
 
+/** `<dir>/<locale>.json` basenames present in `dir`, or `[]` if `dir` doesn't exist. */
+function listLocalesIn(dir: string): string[] {
+  try {
+    return readdirSync(dir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .map((entry) => entry.name.replace(/\.json$/, ""));
+  } catch {
+    return [];
+  }
+}
+
+/** "en" first (the conventional base locale, i18n plan §2.1), then alphabetical. */
+function sortLocales(locales: Iterable<string>): string[] {
+  return [...locales].sort((a, b) => {
+    if (a === "en") return -1;
+    if (b === "en") return 1;
+    return a.localeCompare(b);
+  });
+}
+
+/**
+ * i18n section (i18n plan §2.6) — filesystem only, no `@factory/*` import (packages/i18n
+ * itself is out of packages/config's DAG reach, and doctor never needs `defineI18n` to
+ * report what's on disk). Scans `packages/ui/messages/*.json` (the shared `ui` catalog)
+ * and every `apps/<name>/messages/*.json` (each app's own `app` catalog — `apps/web` in a
+ * scaffolded product, `apps/untangle`/`apps/nothing`/`apps/brainstorm` here) for
+ * `<locale>.json` files. Prints the union of locale codes found across every catalog,
+ * plus which catalogs ("ui", "app") actually contributed one. A workspace with no
+ * `messages/` directories yet (pre-i18n-migration apps, or an app that ships one locale
+ * with no on-disk catalog at all) degrades to a quiet one-liner, never a crash.
+ */
+export function printI18nSection(repoRoot: string): void {
+  const locales = new Set<string>();
+  const catalogs: string[] = [];
+
+  const uiLocales = listLocalesIn(path.join(repoRoot, "packages/ui/messages"));
+  if (uiLocales.length > 0) {
+    catalogs.push("ui");
+    for (const locale of uiLocales) locales.add(locale);
+  }
+
+  let appNames: string[];
+  try {
+    appNames = readdirSync(path.join(repoRoot, "apps"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+  } catch {
+    appNames = [];
+  }
+
+  let appCatalogFound = false;
+  for (const appName of appNames) {
+    const appLocales = listLocalesIn(path.join(repoRoot, "apps", appName, "messages"));
+    if (appLocales.length > 0) {
+      appCatalogFound = true;
+      for (const locale of appLocales) locales.add(locale);
+    }
+  }
+  if (appCatalogFound) catalogs.push("app");
+
+  console.log("i18n:");
+  if (locales.size === 0) {
+    console.log("    no messages/ catalogs found on disk");
+  } else {
+    console.log(`    ${sortLocales(locales).join(", ")} (catalogs: ${catalogs.join(", ")})`);
+  }
+  console.log("");
+}
+
 function main(): void {
   const env = readMergedEnv();
   const mode = resolveMode();
@@ -392,6 +462,7 @@ function main(): void {
     printServiceLine(service, capabilities, env, mode);
   }
 
+  printI18nSection(REPO_ROOT);
   printFactorySection();
 }
 

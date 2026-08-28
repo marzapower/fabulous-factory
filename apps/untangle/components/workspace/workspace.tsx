@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 
 import type { TaskTree } from "@factory/untangle";
 
-import { createManualTaskAction } from "@/app/dashboard/actions";
+import { Link } from "@factory/i18n/navigation";
+
+import { createManualTaskAction } from "@/app/[locale]/dashboard/actions";
 import { Button } from "@factory/ui/primitives";
 import { cn } from "@/lib/utils";
 

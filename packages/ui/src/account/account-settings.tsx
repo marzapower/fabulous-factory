@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+
+import { useTranslations } from "@factory/i18n";
+import { useLocalizedHref } from "@factory/i18n/client";
+import { useRouter } from "@factory/i18n/navigation";
 
 import { authClient } from "@factory/auth/client";
 import { Button } from "../primitives/button";
@@ -52,6 +55,7 @@ export function AccountSettings({
 }
 
 function ProfileCard({ user }: { user: AccountSettingsProps["user"] }) {
+  const t = useTranslations("ui.account.profileCard");
   const router = useRouter();
   const [name, setName] = useState(user.name);
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
@@ -66,7 +70,7 @@ function ProfileCard({ user }: { user: AccountSettingsProps["user"] }) {
 
     if (updateError) {
       setState("idle");
-      setError(describeAuthError(updateError, "Unable to update your profile."));
+      setError(describeAuthError(updateError, t("error")));
       return;
     }
 
@@ -77,13 +81,13 @@ function ProfileCard({ user }: { user: AccountSettingsProps["user"] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Profile</CardTitle>
-        <CardDescription>Your name and email on this account.</CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <div className="grid gap-2">
-            <Label htmlFor="account-name">Name</Label>
+            <Label htmlFor="account-name">{t("nameLabel")}</Label>
             <Input
               id="account-name"
               name="name"
@@ -98,7 +102,7 @@ function ProfileCard({ user }: { user: AccountSettingsProps["user"] }) {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="account-email">Email</Label>
+            <Label htmlFor="account-email">{t("emailLabel")}</Label>
             <div className="flex items-center gap-2">
               <Input id="account-email" type="email" value={user.email} readOnly disabled />
               <span
@@ -109,7 +113,7 @@ function ProfileCard({ user }: { user: AccountSettingsProps["user"] }) {
                     : "bg-muted text-muted-foreground",
                 )}
               >
-                {user.emailVerified ? "Verified" : "Not verified"}
+                {user.emailVerified ? t("verified") : t("notVerified")}
               </span>
             </div>
           </div>
@@ -120,7 +124,7 @@ function ProfileCard({ user }: { user: AccountSettingsProps["user"] }) {
           )}
           {state === "saved" && (
             <p className="text-sm text-muted-foreground" role="status">
-              Profile updated.
+              {t("saved")}
             </p>
           )}
           <Button
@@ -128,7 +132,7 @@ function ProfileCard({ user }: { user: AccountSettingsProps["user"] }) {
             className="justify-self-start"
             disabled={state === "saving" || name.trim().length === 0 || name === user.name}
           >
-            {state === "saving" ? "Saving…" : "Save changes"}
+            {state === "saving" ? t("saving") : t("saveButton")}
           </Button>
         </form>
       </CardContent>
@@ -137,18 +141,20 @@ function ProfileCard({ user }: { user: AccountSettingsProps["user"] }) {
 }
 
 function DataExportCard({ exportHref }: { exportHref: string }) {
+  const t = useTranslations("ui.account.dataExportCard");
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Export your data</CardTitle>
-        <CardDescription>Download everything this account has stored, as JSON.</CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardFooter>
         <a
           href={exportHref}
           className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium shadow-xs transition-all outline-none hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
         >
-          Download your data
+          {t("downloadButton")}
         </a>
       </CardFooter>
     </Card>
@@ -164,7 +170,9 @@ function DangerZoneCard({
   emailEnabled: boolean;
   hasPasswordAccount: boolean;
 }) {
+  const t = useTranslations("ui.account.dangerZoneCard");
   const router = useRouter();
+  const localizeHref = useLocalizedHref();
   const plan = resolveDeleteAccountPlan({ hasPasswordAccount, emailEnabled });
 
   const [step, setStep] = useState<DeleteState>("idle");
@@ -182,16 +190,14 @@ function DangerZoneCard({
     // means "link sent", never "deleted".
     const { error: deleteError } = await authClient.deleteUser({
       ...(plan.collectPassword ? { password } : {}),
-      ...(plan.confirmation === "email" ? { callbackURL: "/" } : {}),
+      ...(plan.confirmation === "email" ? { callbackURL: localizeHref("/") } : {}),
     });
     if (deleteError) {
       setStep("confirming");
       setError(
         describeAuthError(
           deleteError,
-          plan.confirmation === "email"
-            ? "Unable to start account deletion."
-            : "Unable to delete your account.",
+          plan.confirmation === "email" ? t("emailErrorFallback") : t("immediateErrorFallback"),
         ),
       );
       return;
@@ -207,25 +213,23 @@ function DangerZoneCard({
   return (
     <Card className="border-destructive/50">
       <CardHeader>
-        <CardTitle className="text-destructive">Delete account</CardTitle>
-        <CardDescription>
-          Permanently deletes your account and everything tied to it. This can&apos;t be undone.
-        </CardDescription>
+        <CardTitle className="text-destructive">{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent>
         {step === "email-sent" ? (
           <p className="text-sm text-muted-foreground" role="status">
-            Check your email for a link to confirm deleting your account.
+            {t("emailSent")}
           </p>
         ) : step === "idle" ? (
           <Button type="button" variant="destructive" onClick={() => setStep("confirming")}>
-            Delete account
+            {t("deleteButton")}
           </Button>
         ) : (
           <form className="grid gap-4" onSubmit={handleConfirm}>
             {plan.collectPassword && (
               <div className="grid gap-2">
-                <Label htmlFor="delete-password">Confirm your password</Label>
+                <Label htmlFor="delete-password">{t("passwordLabel")}</Label>
                 <Input
                   id="delete-password"
                   name="password"
@@ -238,15 +242,12 @@ function DangerZoneCard({
               </div>
             )}
             {plan.confirmation === "email" ? (
-              <p className="text-sm text-muted-foreground">
-                We&apos;ll email you a link to confirm — your account stays active until you click
-                it.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("emailConfirmationNotice")}</p>
             ) : (
               <p className="text-sm text-muted-foreground">
                 {plan.collectPassword
-                  ? "This deletes your account immediately."
-                  : "This deletes your account immediately. If you signed in a while ago, you may need to sign in again first."}
+                  ? t("immediateWithPasswordNotice")
+                  : t("immediateNoPasswordNotice")}
               </p>
             )}
             {error && (
@@ -258,11 +259,11 @@ function DangerZoneCard({
               <Button type="submit" variant="destructive" disabled={step === "pending"}>
                 {plan.confirmation === "email"
                   ? step === "pending"
-                    ? "Sending…"
-                    : "Email me a confirmation link"
+                    ? t("emailConfirmSending")
+                    : t("emailConfirmButton")
                   : step === "pending"
-                    ? "Deleting…"
-                    : "Confirm delete"}
+                    ? t("immediateConfirmSending")
+                    : t("immediateConfirmButton")}
               </Button>
               <Button
                 type="button"
@@ -274,7 +275,7 @@ function DangerZoneCard({
                   setPassword("");
                 }}
               >
-                Cancel
+                {t("cancelButton")}
               </Button>
             </div>
           </form>

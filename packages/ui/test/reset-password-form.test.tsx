@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@factory/auth/client", () => ({
@@ -13,6 +13,7 @@ vi.mock("next/navigation", () => ({
 
 import { authClient } from "@factory/auth/client";
 import { ResetPasswordForm, resolveResetPasswordView } from "../src/auth/reset-password-form";
+import { renderI18n } from "./render";
 
 const mockedResetPassword = vi.mocked(authClient.resetPassword);
 
@@ -38,7 +39,7 @@ describe("resolveResetPasswordView", () => {
 describe("ResetPasswordForm", () => {
   it("renders the invalid/expired state with a link back to /forgot-password when the URL has no token — covers both 'never had one' and the ?error=INVALID_TOKEN redirect", () => {
     withToken(null);
-    render(<ResetPasswordForm />);
+    renderI18n(<ResetPasswordForm />);
 
     expect(screen.getByRole("alert").textContent).toMatch(/invalid or has expired/i);
     const link = screen.getByRole("link", { name: /request a new one/i });
@@ -49,7 +50,7 @@ describe("ResetPasswordForm", () => {
   it("submits the token from the URL together with the typed new password — never a client-typed token", async () => {
     withToken("token-from-url");
     mockedResetPassword.mockResolvedValue({ data: { status: true }, error: null });
-    render(<ResetPasswordForm />);
+    renderI18n(<ResetPasswordForm />);
 
     fireEvent.change(screen.getByLabelText(/^new password$/i), {
       target: { value: "correct horse battery staple" },
@@ -72,7 +73,7 @@ describe("ResetPasswordForm", () => {
 
   it("blocks submission client-side and never calls resetPassword when the confirmation doesn't match", () => {
     withToken("token-from-url");
-    render(<ResetPasswordForm />);
+    renderI18n(<ResetPasswordForm />);
 
     fireEvent.change(screen.getByLabelText(/^new password$/i), {
       target: { value: "correct horse battery staple" },
@@ -92,7 +93,7 @@ describe("ResetPasswordForm", () => {
       data: null,
       error: { code: "INVALID_TOKEN", message: "raw" },
     });
-    render(<ResetPasswordForm />);
+    renderI18n(<ResetPasswordForm />);
 
     fireEvent.change(screen.getByLabelText(/^new password$/i), {
       target: { value: "correct horse battery staple" },

@@ -3,6 +3,8 @@
 
 import type { ReactNode } from "react";
 
+import { useTranslations } from "@factory/i18n";
+
 import { getClientConfig } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
 
@@ -17,6 +19,7 @@ import {
   SiteHeader,
   StatusLight,
   WhyItHolds,
+  featureMeta,
 } from "../marketing";
 
 export function FeaturesIndexShell({
@@ -35,6 +38,8 @@ export function FeaturesIndexShell({
    * only renders whatever the app hands it). */
   degradationStrip: ReactNode;
 }) {
+  const t = useTranslations("ui.featurePages.index");
+  const tf = useTranslations("ui.features");
   const config = getClientConfig();
 
   return (
@@ -45,17 +50,12 @@ export function FeaturesIndexShell({
         <main className="flex-1">
           <section className="mx-auto max-w-6xl px-6 pt-16 pb-4">
             <div className="max-w-2xl">
-              <p className="font-mono text-sm text-fab-marker">// fabulous factory</p>
+              <p className="font-mono text-sm text-fab-marker">{t("eyebrow")}</p>
               <h1 className="mt-2 text-4xl font-bold tracking-tight text-balance text-foreground">
-                The machinery behind the product
+                {t("heading")}
               </h1>
               <p className="mt-4 text-lg text-muted-foreground">{heroParagraph}</p>
-              <p className="mt-4 text-lg text-muted-foreground">
-                The argument, end to end: what you get on day one, the rule that makes a shortcut
-                impossible, proof it&rsquo;s enforced on this exact deployment, proof the product
-                keeps working when a piece is missing, how to run it yourself, and every piece you
-                can build on next.
-              </p>
+              <p className="mt-4 text-lg text-muted-foreground">{t("argumentParagraph")}</p>
             </div>
           </section>
 
@@ -67,14 +67,11 @@ export function FeaturesIndexShell({
 
           <section className="mx-auto max-w-6xl px-6 py-20">
             <div className="mb-10 max-w-2xl">
-              <p className="font-mono text-sm text-fab-marker">// this deployment, live</p>
+              <p className="font-mono text-sm text-fab-marker">{t("liveEyebrow")}</p>
               <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground">
-                Capability lights, not a marketing claim
+                {t("liveHeading")}
               </h2>
-              <p className="mt-3 text-muted-foreground">
-                This panel reads this deployment&rsquo;s own runtime — unset an env var and a
-                station goes to standby, live, right here.
-              </p>
+              <p className="mt-3 text-muted-foreground">{t("liveBody")}</p>
             </div>
             <ControlPanel />
           </section>
@@ -85,20 +82,16 @@ export function FeaturesIndexShell({
 
           <section className="mx-auto max-w-6xl px-6 py-20">
             <div className="mb-10 max-w-2xl">
-              <p className="font-mono text-sm text-fab-marker">// what&rsquo;s already built</p>
+              <p className="font-mono text-sm text-fab-marker">{t("builtEyebrow")}</p>
               <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground">
-                Nine pieces, four of them load-bearing
+                {t("builtHeading")}
               </h2>
-              <p className="mt-3 text-muted-foreground">
-                Auth, the kernel, config, and security ship unconditionally — there&rsquo;s no env
-                var that turns them off. The rest are checked live against this deployment&rsquo;s
-                own runtime, the same signal the control panel above reads.
-              </p>
+              <p className="mt-3 text-muted-foreground">{t("builtBody")}</p>
             </div>
 
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {FEATURE_LIST.map((feature) => (
-                <FeatureCard key={feature.key} feature={feature}>
+                <FeatureCard key={feature.key} feature={featureMeta(tf, feature.key)}>
                   <div className="flex flex-col gap-1">
                     {feature.services.map((s) => (
                       <StatusLight key={s} service={s} />

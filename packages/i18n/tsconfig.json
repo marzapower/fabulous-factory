@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // This package reads node: builtins (scripts/i18n-check.ts) and needs DOM types for
+    // its "use client" subpaths (src/client.tsx, src/navigation.tsx) and jsdom-environment
+    // tests — same rationale as packages/config/tsconfig.json and packages/ui/tsconfig.json.
+    "types": ["node"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src", "test", "scripts"]
+}

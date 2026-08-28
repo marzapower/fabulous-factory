@@ -4,10 +4,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 
 import type { RunEvent } from "@factory/untangle";
 
+import { Link } from "@factory/i18n/navigation";
 import { buttonVariants } from "@factory/ui/primitives";
 import { DumpPanel } from "@/components/workspace/dump-panel";
 import { PriorityChip } from "@/components/workspace/priority-chip";

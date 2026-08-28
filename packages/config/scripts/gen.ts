@@ -77,16 +77,34 @@ export const GET = defineHandler({
 `;
 }
 
-/** `<appDir>/app/<name>/page.tsx` — minimal server component, layout-consistent wrapper. */
+/**
+ * `<appDir>/app/[locale]/<name>/page.tsx` — minimal server component, layout-consistent
+ * wrapper. Every page under `[locale]` starts with `setRequestLocale` (i18n plan §2.3);
+ * `getTranslations` is pulled in ready to use, so the TODO is "add the key," not "wire
+ * the plumbing."
+ */
 function renderPageTemplate(name: string): string {
   const pascal = toPascalCase(name);
+  const camel = toCamelCase(name);
   const title = toTitleCase(name);
-  return `export default function ${pascal}Page() {
+  return `import { getTranslations, setRequestLocale } from "@factory/i18n/server";
+
+export default async function ${pascal}Page({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations("app");
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
       <h1 className="text-3xl font-bold tracking-tight">${title}</h1>
       <p className="mt-2 text-lg leading-relaxed text-muted-foreground">
-        {/* TODO: replace this placeholder copy. */}
+        {/* TODO: replace this placeholder copy — add an "app.${camel}" key to
+            messages/en.json (and messages/it.json) and swap in t("${camel}") below. */}
+        {t("${camel}")}
       </p>
     </main>
   );
@@ -205,24 +223,26 @@ export function targetPath(kind: GenKind, name: string, appDir: string): string 
     case "handler":
       return `${appDir}/app/api/${name}/route.ts`;
     case "page":
-      return `${appDir}/app/${name}/page.tsx`;
+      return `${appDir}/app/[locale]/${name}/page.tsx`;
     case "job":
       return `packages/jobs/src/functions/${name}.ts`;
   }
 }
 
 /**
- * `gen page <name>` collision check (plan §J.12.9): a plain `<appDir>/app/<name>/
- * page.tsx` would otherwise silently coexist with the SAME route already served from a
- * route group (e.g. `(auth)/login`) — Next only catches the duplicate at `next build`.
- * Single-level scan of parenthesized dirs directly under `<appDir>/app`. Returns the
- * repo-relative path of the colliding file, or `null`.
+ * `gen page <name>` collision check (plan §J.12.9; re-pathed under `[locale]` per the
+ * i18n plan §2.6 — every preset page moved under `app/[locale]/`): a plain
+ * `<appDir>/app/[locale]/<name>/page.tsx` would otherwise silently coexist with the SAME
+ * route already served from a route group (e.g. `(auth)/login`) — Next only catches the
+ * duplicate at `next build`. Single-level scan of parenthesized dirs directly under
+ * `<appDir>/app/[locale]`. Returns the repo-relative path of the colliding file, or
+ * `null`.
  */
 function findPageCollision(rootDir: string, name: string, appDir: string): string | null {
-  const pagesRoot = path.join(rootDir, appDir, "app");
+  const pagesRoot = path.join(rootDir, appDir, "app", "[locale]");
 
   const direct = path.join(pagesRoot, name, "page.tsx");
-  if (existsSync(direct)) return `${appDir}/app/${name}/page.tsx`;
+  if (existsSync(direct)) return `${appDir}/app/[locale]/${name}/page.tsx`;
 
   let groups: string[];
   try {
@@ -235,7 +255,7 @@ function findPageCollision(rootDir: string, name: string, appDir: string): strin
 
   for (const group of groups) {
     const candidate = path.join(pagesRoot, group, name, "page.tsx");
-    if (existsSync(candidate)) return `${appDir}/app/${group}/${name}/page.tsx`;
+    if (existsSync(candidate)) return `${appDir}/app/[locale]/${group}/${name}/page.tsx`;
   }
 
   return null;

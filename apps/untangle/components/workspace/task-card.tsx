@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
 
-import { deleteTaskAction, toggleTaskAction } from "@/app/dashboard/actions";
+import { deleteTaskAction, toggleTaskAction } from "@/app/[locale]/dashboard/actions";
 import { cn } from "@/lib/utils";
 
 import { formatDue } from "./format";

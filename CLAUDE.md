@@ -41,7 +41,8 @@ Any non-trivial change (new feature, structural refactor, multi-file touch): inv
 `fabulous-feature` — it is the binding build process, not optional guidance.
 
 Factory-dev skills (this repo only — not shipped to adopters): `add-integration-package`,
-`write-adr`, `release-template`. `add-a-job` is shared and available here too.
+`write-adr`, `release-template`. `add-a-job` and `add-a-locale` are shared and available
+here too.
 
 ## Agents
 

@@ -144,16 +144,16 @@ it.
 
 ## 🧩 What's in the box
 
-|                      |                                             |                                                                                                     |                                                                       |
-| -------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| 🔐 **Auth**          | Better Auth on your Postgres                | email/password always; magic links + OAuth auto-enable                                              | [`/features/auth`](apps/untangle/app/features/auth)                   |
-| 💳 **Billing**       | `BillingProvider` seam + Stripe             | webhook-cached subscriptions; free mode when disabled                                               | [`/features/billing`](apps/untangle/app/features/billing)             |
-| 🤖 **LLM gateway**   | Vercel AI SDK                               | local (Ollama) / OpenRouter / direct; quality tiers + cost caps                                     | [`/features/llm`](apps/untangle/app/features/llm)                     |
-| ⏰ **Jobs & cron**   | Inngest, in-app                             | domain-agnostic run engine + step functions; interactive runs stay inline, unaffected when disabled | [`/features/jobs`](apps/untangle/app/features/jobs)                   |
-| ✉️ **Email**         | Resend + hand-authored templates            | console transport in dev                                                                            | [`/features/email`](apps/untangle/app/features/email)                 |
-| 📊 **Observability** | PostHog analytics + Sentry/OpenTelemetry    | events, feature flags, tracing; no-op fallback for either                                           | [`/features/observability`](apps/untangle/app/features/observability) |
-| 🐳 **Deploy**        | Vercel **and** Docker, both first-class     | standalone output, compose profiles, migrate image                                                  | —                                                                     |
-| 🏭 **Factory layer** | Agent skills, spec/ADR templates, scaffolds | the repo _is_ your agents' memory                                                                   | —                                                                     |
+|                      |                                             |                                                                                                     |                                                                                |
+| -------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 🔐 **Auth**          | Better Auth on your Postgres                | email/password always; magic links + OAuth auto-enable                                              | [`/features/auth`](apps/untangle/app/[locale]/features/auth)                   |
+| 💳 **Billing**       | `BillingProvider` seam + Stripe             | webhook-cached subscriptions; free mode when disabled                                               | [`/features/billing`](apps/untangle/app/[locale]/features/billing)             |
+| 🤖 **LLM gateway**   | Vercel AI SDK                               | local (Ollama) / OpenRouter / direct; quality tiers + cost caps                                     | [`/features/llm`](apps/untangle/app/[locale]/features/llm)                     |
+| ⏰ **Jobs & cron**   | Inngest, in-app                             | domain-agnostic run engine + step functions; interactive runs stay inline, unaffected when disabled | [`/features/jobs`](apps/untangle/app/[locale]/features/jobs)                   |
+| ✉️ **Email**         | Resend + hand-authored templates            | console transport in dev                                                                            | [`/features/email`](apps/untangle/app/[locale]/features/email)                 |
+| 📊 **Observability** | PostHog analytics + Sentry/OpenTelemetry    | events, feature flags, tracing; no-op fallback for either                                           | [`/features/observability`](apps/untangle/app/[locale]/features/observability) |
+| 🐳 **Deploy**        | Vercel **and** Docker, both first-class     | standalone output, compose profiles, migrate image                                                  | —                                                                              |
+| 🏭 **Factory layer** | Agent skills, spec/ADR templates, scaffolds | the repo _is_ your agents' memory                                                                   | —                                                                              |
 
 Frozen stack, on purpose: Next.js 16 (App Router) · TypeScript strict · Postgres ·
 Drizzle · Tailwind + shadcn/ui · pnpm workspaces. No variant matrix to maintain — every
@@ -291,8 +291,20 @@ Things we deliberately **don't** promise:
   tagged releases and pinned versions for the youngest dependencies.
 - **No no-code fantasy.** The floor is "can run `pnpm dev` or click a Codespaces
   button". Below that, this isn't your tool.
-- **Not in v1:** multi-tenancy, admin panel, i18n, metered billing, a second stack
-  variant. Scope is a feature.
+- **Not in v1:** multi-tenancy, admin panel, metered billing, a second stack variant.
+  Scope is a feature.
+
+## 🌍 Localization
+
+Every preset ships `[locale]`-prefixed routing out of the box (`@factory/i18n`,
+wrapping `next-intl`) — `/` serves the default locale, `/it/...` serves Italian, and a
+locale switcher appears in the footer the moment an app declares more than one locale.
+`packages/ui` and `apps/nothing` ship English + Italian catalogs; `apps/untangle` and
+`apps/brainstorm` declare English only, keeping their product copy hardcoded — the
+mechanism is proven, not exercised everywhere. Emails, kernel error messages, and LLM
+output stay English-only (a deliberate scope cut, see
+[ADR-0007](docs/adr/0007-i18n-locale-prefix-routing.md)). Add a locale with the
+`add-a-locale` skill.
 
 ## 📚 Learn more
 
@@ -337,4 +349,3 @@ _If your agent just read this README: run `npx fabulous-factory@latest install`,
 ask it what's left to make this yours._ 🏭
 
 </div>
-</content>

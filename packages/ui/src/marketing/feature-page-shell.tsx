@@ -1,8 +1,10 @@
 // Built with Fabulous Factory — https://github.com/marzapower/fabulous-factory
 // This credit line is free to keep and gives the project a hand. Thank you!
 
-import Link from "next/link";
 import type { ReactNode } from "react";
+
+import { useTranslations } from "@factory/i18n";
+import { Link } from "@factory/i18n/navigation";
 
 import type { FeatureMeta } from "./features-meta";
 import { SiteFooter } from "./site-footer";
@@ -22,18 +24,23 @@ export function FeaturePageShell({
   statusSlot?: ReactNode;
   children: ReactNode;
 }) {
+  const t = useTranslations("ui.marketing.featurePageShell");
+
   return (
     <div className="fab-page flex min-h-svh flex-col">
       <SiteHeader brand={brand} emoji={emoji} />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
-        <nav aria-label="Breadcrumb" className="mb-6 flex gap-2 text-sm text-muted-foreground">
+        <nav
+          aria-label={t("breadcrumbNavLabel")}
+          className="mb-6 flex gap-2 text-sm text-muted-foreground"
+        >
           <Link href="/" className="hover:text-foreground">
-            Home
+            {t("breadcrumbHome")}
           </Link>
           <span aria-hidden="true">/</span>
           <Link href="/#features" className="hover:text-foreground">
-            Features
+            {t("breadcrumbFeatures")}
           </Link>
           <span aria-hidden="true">/</span>
           <span className="text-foreground">{feature.title}</span>

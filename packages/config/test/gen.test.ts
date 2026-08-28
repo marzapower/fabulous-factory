@@ -154,8 +154,8 @@ describe("targetPath", () => {
     expect(targetPath("handler", "ping", "apps/demo")).toBe("apps/demo/app/api/ping/route.ts");
   });
 
-  it("maps page to <appDir>/app/<name>/page.tsx", () => {
-    expect(targetPath("page", "about", "apps/demo")).toBe("apps/demo/app/about/page.tsx");
+  it("maps page to <appDir>/app/[locale]/<name>/page.tsx", () => {
+    expect(targetPath("page", "about", "apps/demo")).toBe("apps/demo/app/[locale]/about/page.tsx");
   });
 
   it("maps job to packages/jobs/src/functions/<name>.ts regardless of appDir", () => {
@@ -170,9 +170,20 @@ describe("renderTemplate", () => {
     expect(output).toContain("export const GET = defineHandler({");
   });
 
-  it("page template default-exports <PascalName>Page", () => {
+  it("page template default-exports an async <PascalName>Page", () => {
     const output = renderTemplate("page", "sample-sync");
-    expect(output).toContain("export default function SampleSyncPage()");
+    expect(output).toContain("export default async function SampleSyncPage(");
+  });
+
+  it("page template emits the setRequestLocale + getTranslations skeleton (i18n plan §2.6)", () => {
+    const output = renderTemplate("page", "sample-sync");
+    expect(output).toContain(
+      'import { getTranslations, setRequestLocale } from "@factory/i18n/server";',
+    );
+    expect(output).toContain("params: Promise<{ locale: string }>");
+    expect(output).toContain("setRequestLocale(locale)");
+    expect(output).toContain('const t = await getTranslations("app");');
+    expect(output).toContain('t("sampleSync")');
   });
 
   it("job template is a direct inngest.createFunction(...) call with derived identifiers", () => {
@@ -209,7 +220,7 @@ describe("writeScaffold", () => {
     makeApps(rootDir, "demo");
     const result = writeScaffold(rootDir, "page", "about");
     expect(result.ok).toBe(true);
-    expect(result.messages).toContain("Created apps/demo/app/about/page.tsx");
+    expect(result.messages).toContain("Created apps/demo/app/[locale]/about/page.tsx");
   });
 
   it("multi-app + --app: writes a handler scaffold into the named app", () => {
@@ -223,7 +234,7 @@ describe("writeScaffold", () => {
     makeApps(rootDir, "demo", "service");
     const result = writeScaffold(rootDir, "page", "about", "demo");
     expect(result.ok).toBe(true);
-    expect(result.messages).toContain("Created apps/demo/app/about/page.tsx");
+    expect(result.messages).toContain("Created apps/demo/app/[locale]/about/page.tsx");
   });
 
   it("multi-app without --app: errors instead of guessing, for a handler", () => {
@@ -275,24 +286,26 @@ describe("writeScaffold", () => {
     expect(writeScaffold(rootDir, "page", "about").ok).toBe(true);
     const second = writeScaffold(rootDir, "page", "about");
     expect(second.ok).toBe(false);
-    expect(second.messages.join("\n")).toContain("apps/demo/app/about/page.tsx already exists");
+    expect(second.messages.join("\n")).toContain(
+      "apps/demo/app/[locale]/about/page.tsx already exists",
+    );
   });
 
   it("refuses a page colliding with a route-group page of the same name (§J.12.9)", () => {
     // Fixture mirrors the real (auth)/login shape.
     makeApps(rootDir, "demo");
-    const groupDir = path.join(rootDir, "apps/demo/app/(auth)/login");
+    const groupDir = path.join(rootDir, "apps/demo/app/[locale]/(auth)/login");
     mkdirSync(groupDir, { recursive: true });
     writeFileSync(path.join(groupDir, "page.tsx"), "export default function LoginPage() {}\n");
 
     const result = writeScaffold(rootDir, "page", "login");
     expect(result.ok).toBe(false);
-    expect(result.messages.join("\n")).toContain("apps/demo/app/(auth)/login/page.tsx");
+    expect(result.messages.join("\n")).toContain("apps/demo/app/[locale]/(auth)/login/page.tsx");
   });
 
   it("does not flag a route-group collision for an unrelated name", () => {
     makeApps(rootDir, "demo");
-    const groupDir = path.join(rootDir, "apps/demo/app/(auth)/login");
+    const groupDir = path.join(rootDir, "apps/demo/app/[locale]/(auth)/login");
     mkdirSync(groupDir, { recursive: true });
     writeFileSync(path.join(groupDir, "page.tsx"), "export default function LoginPage() {}\n");
 

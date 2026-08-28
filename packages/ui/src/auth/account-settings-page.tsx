@@ -1,3 +1,5 @@
+import { localizedHref } from "@factory/i18n/server";
+
 import { hasCredentialAccount, requireSession } from "@factory/auth";
 import { isEnabled } from "@factory/config";
 
@@ -19,7 +21,7 @@ export interface AccountSettingsPageProps {
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- appName reserved for a future per-app greeting; kept in the signature so every call site already passes it.
 export async function AccountSettingsPage({ appName }: AccountSettingsPageProps) {
-  const session = await requireSession({ redirectTo: "/login" });
+  const session = await requireSession({ redirectTo: await localizedHref("/login") });
   const hasPasswordAccount = await hasCredentialAccount(session.user.id);
 
   return (

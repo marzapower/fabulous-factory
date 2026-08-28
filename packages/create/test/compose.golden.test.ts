@@ -127,12 +127,13 @@ describe.each(availablePresets)("compose $id — LAUNCH.md merge", (preset) => {
 });
 
 describe.each(availablePresets)("compose $id — skills and agents tiering", (preset) => {
-  it("ships exactly the 7 adopter + 2 shared skills, none of the 3 factory-dev skills", () => {
+  it("ships exactly the 7 adopter + 3 shared skills, none of the 3 factory-dev skills", () => {
     const skills = readdirSync(path.join(outDirs.get(preset.id)!, ".claude/skills")).sort();
     expect(skills).toEqual(
       [
         "add-a-feature",
         "add-a-job",
+        "add-a-locale",
         "brand-it",
         "define-product",
         "enable-billing",
