@@ -46,6 +46,18 @@ export function expectPassThrough(
 }
 
 /**
+ * Asserts `result` is a pass-through for an `/api/**` route: HTTP 200 with NO
+ * `x-middleware-rewrite` header at all. The API branch (i18n plan §2.2 step 1) runs on
+ * the raw, unprefixed pathname and never touches next-intl's locale routing — unlike
+ * `expectPassThrough` (page routes), a rewrite header here would mean an `/api/**`
+ * request accidentally fell through to the locale-aware page branch.
+ */
+export function expectApiPassThrough(result: Response): void {
+  expect(result.status).toBe(200);
+  expect(result.headers.get("x-middleware-rewrite")).toBeNull();
+}
+
+/**
  * Asserts `result` is a redirect to the locale-appropriate `/login` — HTTP 307, with the
  * `Location` header's pathname exactly `/login` (default locale) or `/<locale>/login`.
  */

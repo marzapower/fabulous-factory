@@ -3,7 +3,6 @@
 // file) so the dual-environment implementation (react-server vs. client) is selected by
 // whichever graph imports THIS file — re-exporting a hook from a "use client" module would
 // turn it into a client reference that throws when a server component imports it.
-import { flattenKeys } from "./check";
 import type { LocaleRouting } from "./routing";
 
 export type Locale = string;
@@ -34,11 +33,10 @@ export interface I18nConfig<
   routing: LocaleRouting;
   /**
    * Merged, namespaced messages for `locale`, with per-key fallback to defaultLocale.
-   * Throws RangeError for an unknown locale.
+   * Throws RangeError for an unknown locale. Memoized per locale — repeat calls for the
+   * same locale return the same object reference.
    */
   messagesFor(locale: Locale): Messages;
-  /** Keys present in defaultLocale but missing in `locale`, as "ns.a.b" paths. Empty for defaultLocale. */
-  missingKeys(locale: Locale): string[];
 }
 
 const DEFAULT_COOKIE_NAME = "NEXT_LOCALE";
@@ -100,35 +98,29 @@ export function defineI18n<L extends readonly [Locale, ...Locale[]]>(
     }
   }
 
+  // Memoized per locale (M8-equivalent review fix): messagesFor is called on every
+  // request via createRequestConfig, and missingKeys's removal leaves messagesFor as the
+  // only consumer of the merged catalogs, so there's no other reason to recompute the
+  // same deep-merge on every call for a locale already seen.
+  const messagesCache = new Map<Locale, Messages>();
+
   function messagesFor(locale: Locale): Messages {
     if (!locales.includes(locale)) {
       throw new RangeError(
         `messagesFor: unknown locale "${locale}"; declared locales are [${locales.join(", ")}].`,
       );
     }
+    const cached = messagesCache.get(locale);
+    if (cached) return cached;
+
     const merged: Messages = {};
     for (const catalog of catalogs) {
       const base = catalog.messages[defaultLocale] ?? {};
       merged[catalog.namespace] =
         locale === defaultLocale ? base : deepMerge(base, catalog.messages[locale] ?? {});
     }
+    messagesCache.set(locale, merged);
     return merged;
-  }
-
-  function missingKeys(locale: Locale): string[] {
-    if (locale === defaultLocale) return [];
-    const missing: string[] = [];
-    for (const catalog of catalogs) {
-      const base = catalog.messages[defaultLocale] ?? {};
-      const localeMessages = catalog.messages[locale] ?? {};
-      const localeKeys = new Set(flattenKeys(localeMessages));
-      for (const key of flattenKeys(base)) {
-        if (!localeKeys.has(key)) {
-          missing.push(`${catalog.namespace}.${key}`);
-        }
-      }
-    }
-    return missing;
   }
 
   const routing: LocaleRouting = { locales, defaultLocale, cookieName };
@@ -139,7 +131,6 @@ export function defineI18n<L extends readonly [Locale, ...Locale[]]>(
     cookieName,
     routing,
     messagesFor,
-    missingKeys,
   };
 
   currentConfig = config;

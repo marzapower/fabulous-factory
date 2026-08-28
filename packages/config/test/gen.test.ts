@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   findCatalogKeyCollision,
+  findUnparsableCatalog,
   insertCatalogKey,
   isValidName,
   listCatalogFiles,
@@ -358,7 +359,7 @@ describe("writeScaffold", () => {
     expect(pageResult.messages.join("\n")).not.toContain("functions array");
   });
 
-  it("page scaffold inserts app.<camel> keys into every locale catalog present (i18n plan §2.6)", () => {
+  it("page scaffold inserts app.<camel> only into the default en.json, hints for other locales (i18n plan §2.6)", () => {
     makeApps(rootDir, "demo");
     makeCatalog(rootDir, "apps/demo", "en", { existing: "x" });
     makeCatalog(rootDir, "apps/demo", "it", { existing: "y" });
@@ -369,6 +370,9 @@ describe("writeScaffold", () => {
       'Added "app.sampleSync" to apps/demo/messages/en.json',
     );
     expect(result.messages.join("\n")).toContain(
+      'Add "app.sampleSync" to messages/it.json — pnpm i18n:check fails until every locale has it.',
+    );
+    expect(result.messages.join("\n")).not.toContain(
       'Added "app.sampleSync" to apps/demo/messages/it.json',
     );
 
@@ -384,10 +388,24 @@ describe("writeScaffold", () => {
       body: "Placeholder copy for Sample Sync.",
     });
     expect(itCatalog.existing).toBe("y");
-    expect(itCatalog.sampleSync).toEqual({
-      title: "Sample Sync",
-      body: "Placeholder copy for Sample Sync.",
-    });
+    expect(itCatalog.sampleSync).toBeUndefined();
+  });
+
+  it("page scaffold refuses, writing nothing at all, when a catalog file fails to parse (i18n plan §2.6 preflight)", () => {
+    makeApps(rootDir, "demo");
+    makeCatalog(rootDir, "apps/demo", "en", { existing: "x" });
+    const messagesDir = path.join(rootDir, "apps/demo/messages");
+    writeFileSync(path.join(messagesDir, "it.json"), "{ not valid json", "utf8");
+
+    const result = writeScaffold(rootDir, "page", "sample-sync");
+    expect(result.ok).toBe(false);
+    expect(result.messages.join("\n")).toContain("apps/demo/messages/it.json");
+    expect(existsSync(path.join(rootDir, "apps/demo/app/[locale]/sample-sync/page.tsx"))).toBe(
+      false,
+    );
+
+    const en = readFileSync(path.join(rootDir, "apps/demo/messages/en.json"), "utf8");
+    expect(en).toBe(`${JSON.stringify({ existing: "x" }, null, 2)}\n`);
   });
 
   it("page scaffold refuses, writing nothing at all, when the key already exists in a catalog", () => {
@@ -442,6 +460,31 @@ describe("findCatalogKeyCollision", () => {
     expect(findCatalogKeyCollision(rootDir, files, "sampleSync")).toBe(
       "apps/demo/messages/en.json",
     );
+  });
+
+  it("surfaces (throws on) a catalog file that fails to parse, rather than silently skipping it", () => {
+    const messagesDir = path.join(rootDir, "apps/demo/messages");
+    mkdirSync(messagesDir, { recursive: true });
+    writeFileSync(path.join(messagesDir, "en.json"), "{ not valid json", "utf8");
+    expect(() =>
+      findCatalogKeyCollision(rootDir, ["apps/demo/messages/en.json"], "sampleSync"),
+    ).toThrow();
+  });
+});
+
+describe("findUnparsableCatalog", () => {
+  it("returns null when every catalog file parses as JSON", () => {
+    makeCatalog(rootDir, "apps/demo", "en", { existing: "x" });
+    const files = listCatalogFiles(rootDir, "apps/demo");
+    expect(findUnparsableCatalog(rootDir, files)).toBeNull();
+  });
+
+  it("returns the repo-relative path of the first catalog file that fails to parse", () => {
+    makeCatalog(rootDir, "apps/demo", "en", { existing: "x" });
+    const messagesDir = path.join(rootDir, "apps/demo/messages");
+    writeFileSync(path.join(messagesDir, "it.json"), "{ not valid json", "utf8");
+    const files = listCatalogFiles(rootDir, "apps/demo");
+    expect(findUnparsableCatalog(rootDir, files)).toBe("apps/demo/messages/it.json");
   });
 });
 

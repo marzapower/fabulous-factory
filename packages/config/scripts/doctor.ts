@@ -31,6 +31,7 @@ import {
 import { PLANS, type Plan } from "../src/plans";
 import { type AppMode, type EnvVarName, type EnvVarSpec, type RawEnv } from "../src/registry";
 import { loadStage } from "./factory-stage";
+import { listJsonFileNames } from "./lib/catalogs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -381,13 +382,7 @@ function printFactorySection(): void {
 
 /** `<dir>/<locale>.json` basenames present in `dir`, or `[]` if `dir` doesn't exist. */
 function listLocalesIn(dir: string): string[] {
-  try {
-    return readdirSync(dir, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-      .map((entry) => entry.name.replace(/\.json$/, ""));
-  } catch {
-    return [];
-  }
+  return listJsonFileNames(dir).map((name) => name.replace(/\.json$/, ""));
 }
 
 /** "en" first (the conventional base locale, i18n plan §2.1), then alphabetical. */

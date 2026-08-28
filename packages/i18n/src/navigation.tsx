@@ -13,16 +13,17 @@ import { localizeHref, stripLocale, type Locale } from "./routing";
 // app) and reaches the client through I18nProvider context rather than a module built
 // once at the package level.
 
-/** `next/link`, with `href` localized by `props.locale ?? useLocale()`. String hrefs
- *  only — a `UrlObject` href is passed through unchanged. */
+/** `next/link`, with `href` localized by `props.locale ?? useLocale()`. `href` is typed
+ *  `string` only — a `UrlObject` href can't be localized (`localizeHref` operates on a
+ *  path string), so the type itself rules it out rather than silently passing it through
+ *  unlocalized. */
 export const Link = forwardRef<
   HTMLAnchorElement,
-  ComponentProps<typeof NextLink> & { locale?: Locale }
+  Omit<ComponentProps<typeof NextLink>, "href"> & { href: string; locale?: Locale }
 >(function Link({ href, locale, ...props }, ref) {
   const routing = useI18nRouting();
   const currentLocale = useLocale();
-  const resolvedHref =
-    typeof href === "string" ? localizeHref(routing, locale ?? currentLocale, href) : href;
+  const resolvedHref = localizeHref(routing, locale ?? currentLocale, href);
   return <NextLink ref={ref} href={resolvedHref} {...props} />;
 });
 

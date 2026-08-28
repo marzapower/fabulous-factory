@@ -55,14 +55,9 @@ describe("defineI18n / getI18nConfig", () => {
     expect(() => i18n.messagesFor("fr")).toThrow(RangeError);
   });
 
-  it("missingKeys reports keys present in defaultLocale but absent in locale", () => {
+  it("messagesFor is memoized per locale — repeat calls return the same object reference", () => {
     const i18n = defineI18n({ locales: ["en", "it"], defaultLocale: "en", catalogs: [uiCatalog] });
-    expect(i18n.missingKeys("it")).toEqual(["ui.auth.login.cta"]);
-  });
-
-  it("missingKeys is empty for the default locale", () => {
-    const i18n = defineI18n({ locales: ["en", "it"], defaultLocale: "en", catalogs: [uiCatalog] });
-    expect(i18n.missingKeys("en")).toEqual([]);
+    expect(i18n.messagesFor("it")).toBe(i18n.messagesFor("it"));
   });
 
   it("defaults cookieName to NEXT_LOCALE", () => {

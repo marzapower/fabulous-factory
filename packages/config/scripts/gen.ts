@@ -17,12 +17,18 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { listJsonFileNames } from "./lib/catalogs";
+
 export type GenKind = "handler" | "page" | "job";
 
 const KINDS: readonly GenKind[] = ["handler", "page", "job"];
 
 /** Single kebab-case segment: lowercase start, no leading/trailing/double hyphens. */
 const NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+
+/** The default/base locale catalog file name (convention shared with
+ * packages/i18n/scripts/i18n-check.ts) — the only catalog `gen page` writes into. */
+const BASE_CATALOG_FILE = "en.json";
 
 /** Pure — exported for tests. */
 export function isValidName(name: string): boolean {
@@ -268,14 +274,7 @@ function findPageCollision(rootDir: string, name: string, appDir: string): strin
  */
 export function listCatalogFiles(rootDir: string, appDir: string): string[] {
   const messagesDir = path.join(rootDir, appDir, "messages");
-  try {
-    return readdirSync(messagesDir, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-      .map((entry) => `${appDir}/messages/${entry.name}`)
-      .sort();
-  } catch {
-    return [];
-  }
+  return listJsonFileNames(messagesDir).map((name) => `${appDir}/messages/${name}`);
 }
 
 /**
@@ -293,18 +292,39 @@ export function findCatalogKeyCollision(
   camel: string,
 ): string | null {
   for (const relPath of catalogFiles) {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(readFileSync(path.join(rootDir, relPath), "utf8"));
-    } catch {
-      continue;
-    }
+    // No try/catch here (i18n plan §2.6 review fix): a catalog file that fails to parse
+    // is a preflight refusal (see `findUnparsableCatalog`, called before this in
+    // `writeScaffold`), never a silently-skipped file — a `catch { continue }` here would
+    // let a corrupt catalog hide a real key collision.
+    const parsed: unknown = JSON.parse(readFileSync(path.join(rootDir, relPath), "utf8"));
     if (
       typeof parsed === "object" &&
       parsed !== null &&
       !Array.isArray(parsed) &&
       Object.prototype.hasOwnProperty.call(parsed, camel)
     ) {
+      return relPath;
+    }
+  }
+  return null;
+}
+
+/**
+ * `gen page <name>` preflight (i18n plan §2.6 review fix): every catalog file
+ * `listCatalogFiles` found must be valid JSON *before* anything is written — a malformed
+ * `<locale>.json` must refuse the whole scaffold (no page, no catalog writes), not fail
+ * partway through `insertCatalogKey` after the page file already landed. Pure — exported
+ * for tests. Returns the repo-relative path of the first file that fails to parse, or
+ * `null` when every file parses.
+ */
+export function findUnparsableCatalog(
+  rootDir: string,
+  catalogFiles: readonly string[],
+): string | null {
+  for (const relPath of catalogFiles) {
+    try {
+      JSON.parse(readFileSync(path.join(rootDir, relPath), "utf8"));
+    } catch {
       return relPath;
     }
   }
@@ -391,6 +411,15 @@ export function writeScaffold(
   const camel = toCamelCase(name);
   const catalogFiles = kind === "page" ? listCatalogFiles(rootDir, appDir) : [];
   if (kind === "page") {
+    // Preflight (i18n plan §2.6 review fix): every catalog file must parse as JSON before
+    // anything — page or catalog — is written.
+    const unparsable = findUnparsableCatalog(rootDir, catalogFiles);
+    if (unparsable !== null) {
+      return {
+        ok: false,
+        messages: [`Refusing to write — ${unparsable} is not valid JSON and could not be parsed.`],
+      };
+    }
     const catalogCollision = findCatalogKeyCollision(rootDir, catalogFiles, camel);
     if (catalogCollision !== null) {
       return {
@@ -423,8 +452,19 @@ export function writeScaffold(
     } else {
       const title = toTitleCase(name);
       for (const relPath of catalogFiles) {
-        insertCatalogKey(rootDir, relPath, camel, title);
-        messages.push(`Added "app.${camel}" to ${relPath}`);
+        // The base catalog is en.json by convention (packages/i18n/scripts/i18n-check.ts)
+        // — the new key is inserted there only; every other locale gets a hint instead of
+        // a silent write, since only the app author knows the translation (i18n plan §2.6).
+        if (path.basename(relPath) === BASE_CATALOG_FILE) {
+          insertCatalogKey(rootDir, relPath, camel, title);
+          messages.push(`Added "app.${camel}" to ${relPath}`);
+        } else {
+          const locale = path.basename(relPath).slice(0, -".json".length);
+          messages.push(
+            `Add "app.${camel}" to messages/${locale}.json — pnpm i18n:check fails until every ` +
+              "locale has it.",
+          );
+        }
       }
     }
   }

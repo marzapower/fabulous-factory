@@ -44,7 +44,8 @@ export function LocaleSwitcher() {
     // tree, so a soft re-render of the root layout logs "Encountered a script tag while
     // rendering React component". A full navigation (new document) sidesteps that
     // entirely, so this must be `window.location.assign`, never the i18n router.
-    const target = localizeHref(routing, next, pathname) + window.location.search;
+    const target =
+      localizeHref(routing, next, pathname) + window.location.search + window.location.hash;
     window.location.assign(target);
   }
 

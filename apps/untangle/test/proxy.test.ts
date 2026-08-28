@@ -10,6 +10,7 @@ import { createAuthProxy } from "@factory/ui/middleware";
 // helper isn't exported. dependency-cruiser's DAG table allows a preset app to "import
 // anything", so this crosses no boundary.
 import {
+  expectApiPassThrough,
   expectPassThrough,
   expectRedirectToLogin,
 } from "../../../packages/ui/test/proxy-assertions";
@@ -40,7 +41,7 @@ describe("untangle proxy — extraExactAllowlist (default locale)", () => {
     "treats %s as public (server-to-server route)",
     (pathname) => {
       const result = proxy(request(pathname));
-      expect(result.status).toBe(200);
+      expectApiPassThrough(result);
     },
   );
 

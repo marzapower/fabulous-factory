@@ -87,6 +87,19 @@ describe("LocaleSwitcher", () => {
     expect(assignSpy).toHaveBeenCalledWith("/settings");
   });
 
+  it("preserves both the query string and the hash across a locale switch", () => {
+    mockUsePathname.mockReturnValue("/settings");
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...originalLocation, search: "?x=1", hash: "#sec", assign: assignSpy },
+    });
+    render(<LocaleSwitcher />, { wrapper: i18nWrapper("en", TWO_LOCALES) });
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "it" } });
+
+    expect(assignSpy).toHaveBeenCalledWith("/it/settings?x=1#sec");
+  });
+
   it("sets the cookie before navigating (order matters for the SSR read on the new document)", () => {
     mockUsePathname.mockReturnValue("/settings");
     render(<LocaleSwitcher />, { wrapper: i18nWrapper("en", TWO_LOCALES) });

@@ -66,7 +66,6 @@ describe("createLocaleRouting", () => {
       cookieName: routing.cookieName,
       routing,
       messagesFor: () => ({}),
-      missingKeys: () => [],
     });
     expect(handler.defaultLocale).toBe("en");
     const result = handler.handle(request("/it/x"));
