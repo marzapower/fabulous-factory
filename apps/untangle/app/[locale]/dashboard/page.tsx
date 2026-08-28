@@ -3,7 +3,7 @@ import { requireSession } from "@factory/auth";
 import { getEntitlement } from "@factory/billing";
 import { getClientConfig, isEnabled } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
-import { getTranslations, setRequestLocale } from "@factory/i18n/server";
+import { getTranslations, localizedHref, setRequestLocale } from "@factory/i18n/server";
 import {
   countRunsToday,
   getLatestRunForUserByKind,
@@ -29,7 +29,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
   // Component, and next-intl's sync hook is only callable from a non-async component
   // (https://next-intl.dev/docs/environments/server-client-components#async-components).
   const t = await getTranslations("app.dashboard.shell");
-  const session = await requireSession({ redirectTo: "/login" });
+  const session = await requireSession({ redirectTo: await localizedHref("/login") });
   const config = getClientConfig();
 
   // Entitlement fetched ONCE here, server-side (m11-untangle-workspace.md K.7 mirrors

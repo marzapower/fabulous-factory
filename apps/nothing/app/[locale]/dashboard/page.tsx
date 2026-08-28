@@ -1,7 +1,7 @@
 import { requireSession } from "@factory/auth";
 import { getClientConfig } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
-import { getTranslations, setRequestLocale } from "@factory/i18n/server";
+import { getTranslations, localizedHref, setRequestLocale } from "@factory/i18n/server";
 
 import { DashboardTopBar } from "@factory/ui/dashboard";
 import { SiteFooter } from "@factory/ui/marketing";
@@ -15,9 +15,10 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage({ params }: { params: Promise<{ locale: string }> }) {
   setRequestLocale((await params).locale);
   const t = await getTranslations("app.dashboard");
-  // requireSession's default redirectTo stays "/login" — packages/auth is untouched by
-  // this migration; the proxy handles the localized bounce first (see proxy.ts).
-  const session = await requireSession({ redirectTo: "/login" });
+  // packages/auth is untouched by this migration — requireSession keeps its bare
+  // "/login" default; this page passes a localized redirectTo instead. The proxy
+  // handles the localized bounce first (see proxy.ts) — this is defense-in-depth.
+  const session = await requireSession({ redirectTo: await localizedHref("/login") });
   const config = getClientConfig();
 
   return (

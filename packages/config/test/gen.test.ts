@@ -1,11 +1,14 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  findCatalogKeyCollision,
+  insertCatalogKey,
   isValidName,
+  listCatalogFiles,
   parseCliArgs,
   renderTemplate,
   resolveAppDir,
@@ -34,6 +37,22 @@ function makeApps(root: string, ...names: string[]): void {
   for (const name of names) {
     mkdirSync(path.join(root, "apps", name, "app"), { recursive: true });
   }
+}
+
+/** Writes `<root>/<appDir>/messages/<locale>.json` with `data`, creating the dir. */
+function makeCatalog(
+  root: string,
+  appDir: string,
+  locale: string,
+  data: Record<string, unknown>,
+): void {
+  const messagesDir = path.join(root, appDir, "messages");
+  mkdirSync(messagesDir, { recursive: true });
+  writeFileSync(
+    path.join(messagesDir, `${locale}.json`),
+    `${JSON.stringify(data, null, 2)}\n`,
+    "utf8",
+  );
 }
 
 describe("isValidName", () => {
@@ -182,8 +201,15 @@ describe("renderTemplate", () => {
     );
     expect(output).toContain("params: Promise<{ locale: string }>");
     expect(output).toContain("setRequestLocale(locale)");
-    expect(output).toContain('const t = await getTranslations("app");');
-    expect(output).toContain('t("sampleSync")');
+    expect(output).toContain('const t = await getTranslations("app.sampleSync");');
+    expect(output).toContain('{t("title")}');
+    expect(output).toContain('{t("body")}');
+  });
+
+  it("page template carries no literal English copy and no TODO — fully localized by construction", () => {
+    const output = renderTemplate("page", "sample-sync");
+    expect(output).not.toContain("Sample Sync");
+    expect(output).not.toMatch(/TODO/);
   });
 
   it("job template is a direct inngest.createFunction(...) call with derived identifiers", () => {
@@ -323,12 +349,117 @@ describe("writeScaffold", () => {
     expect(joined).not.toContain('"sampleSync"');
   });
 
-  it("does not print registration instructions for handler/page scaffolds", () => {
+  it("does not print job registration instructions for handler/page scaffolds", () => {
     makeApps(rootDir, "demo");
     const handlerResult = writeScaffold(rootDir, "handler", "ping");
     expect(handlerResult.messages).toHaveLength(1);
 
     const pageResult = writeScaffold(rootDir, "page", "about");
-    expect(pageResult.messages).toHaveLength(1);
+    expect(pageResult.messages.join("\n")).not.toContain("functions array");
+  });
+
+  it("page scaffold inserts app.<camel> keys into every locale catalog present (i18n plan §2.6)", () => {
+    makeApps(rootDir, "demo");
+    makeCatalog(rootDir, "apps/demo", "en", { existing: "x" });
+    makeCatalog(rootDir, "apps/demo", "it", { existing: "y" });
+
+    const result = writeScaffold(rootDir, "page", "sample-sync");
+    expect(result.ok).toBe(true);
+    expect(result.messages.join("\n")).toContain(
+      'Added "app.sampleSync" to apps/demo/messages/en.json',
+    );
+    expect(result.messages.join("\n")).toContain(
+      'Added "app.sampleSync" to apps/demo/messages/it.json',
+    );
+
+    const en = JSON.parse(
+      readFileSync(path.join(rootDir, "apps/demo/messages/en.json"), "utf8"),
+    ) as Record<string, unknown>;
+    const itCatalog = JSON.parse(
+      readFileSync(path.join(rootDir, "apps/demo/messages/it.json"), "utf8"),
+    ) as Record<string, unknown>;
+    expect(en.existing).toBe("x");
+    expect(en.sampleSync).toEqual({
+      title: "Sample Sync",
+      body: "Placeholder copy for Sample Sync.",
+    });
+    expect(itCatalog.existing).toBe("y");
+    expect(itCatalog.sampleSync).toEqual({
+      title: "Sample Sync",
+      body: "Placeholder copy for Sample Sync.",
+    });
+  });
+
+  it("page scaffold refuses, writing nothing at all, when the key already exists in a catalog", () => {
+    makeApps(rootDir, "demo");
+    makeCatalog(rootDir, "apps/demo", "en", { sampleSync: { title: "already", body: "here" } });
+
+    const result = writeScaffold(rootDir, "page", "sample-sync");
+    expect(result.ok).toBe(false);
+    expect(result.messages.join("\n")).toContain("apps/demo/messages/en.json");
+    expect(existsSync(path.join(rootDir, "apps/demo/app/[locale]/sample-sync/page.tsx"))).toBe(
+      false,
+    );
+  });
+
+  it("page scaffold warns, but still writes the page, when there is no messages/ dir", () => {
+    makeApps(rootDir, "demo");
+    const result = writeScaffold(rootDir, "page", "sample-sync");
+    expect(result.ok).toBe(true);
+    expect(result.messages.join("\n")).toContain("No messages/ directory found");
+    expect(existsSync(path.join(rootDir, "apps/demo/app/[locale]/sample-sync/page.tsx"))).toBe(
+      true,
+    );
+  });
+});
+
+describe("listCatalogFiles", () => {
+  it("returns every *.json file directly under <appDir>/messages, sorted", () => {
+    makeCatalog(rootDir, "apps/demo", "en", { existing: "x" });
+    makeCatalog(rootDir, "apps/demo", "it", { existing: "y" });
+    expect(listCatalogFiles(rootDir, "apps/demo")).toEqual([
+      "apps/demo/messages/en.json",
+      "apps/demo/messages/it.json",
+    ]);
+  });
+
+  it("returns an empty array when there is no messages/ dir", () => {
+    makeApps(rootDir, "demo");
+    expect(listCatalogFiles(rootDir, "apps/demo")).toEqual([]);
+  });
+});
+
+describe("findCatalogKeyCollision", () => {
+  it("returns null when no catalog has the key", () => {
+    makeCatalog(rootDir, "apps/demo", "en", { existing: "x" });
+    const files = listCatalogFiles(rootDir, "apps/demo");
+    expect(findCatalogKeyCollision(rootDir, files, "sampleSync")).toBeNull();
+  });
+
+  it("returns the colliding file's repo-relative path", () => {
+    makeCatalog(rootDir, "apps/demo", "en", { sampleSync: { title: "x", body: "y" } });
+    const files = listCatalogFiles(rootDir, "apps/demo");
+    expect(findCatalogKeyCollision(rootDir, files, "sampleSync")).toBe(
+      "apps/demo/messages/en.json",
+    );
+  });
+});
+
+describe("insertCatalogKey", () => {
+  it("adds the key, preserves existing keys, writes 2-space indent + trailing newline", () => {
+    makeCatalog(rootDir, "apps/demo", "en", { existing: { a: 1 } });
+    insertCatalogKey(rootDir, "apps/demo/messages/en.json", "sampleSync", "Sample Sync");
+
+    const raw = readFileSync(path.join(rootDir, "apps/demo/messages/en.json"), "utf8");
+    expect(raw.endsWith("\n")).toBe(true);
+    expect(raw.endsWith("\n\n")).toBe(false);
+    expect(raw).toContain('  "sampleSync"');
+
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    expect(parsed.existing).toEqual({ a: 1 });
+    expect(parsed.sampleSync).toEqual({
+      title: "Sample Sync",
+      body: "Placeholder copy for Sample Sync.",
+    });
   });
 });

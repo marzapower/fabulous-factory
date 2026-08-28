@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { setRequestLocale } from "@factory/i18n/server";
+import { localizedHref, setRequestLocale } from "@factory/i18n/server";
 
 import { requireSession } from "@factory/auth";
 import {
@@ -27,10 +27,11 @@ export default async function ProjectPage({
 }) {
   const { id, locale } = await params;
   setRequestLocale(locale);
-  // requireSession's redirectTo stays the bare, unlocalized "/login" (packages/auth is
-  // untouched by the i18n plan) — the proxy already bounces an unauthenticated request
-  // to the locale-appropriate /login before it ever reaches this page.
-  const session = await requireSession({ redirectTo: "/login" });
+  // packages/auth is untouched by the i18n plan — requireSession keeps its bare
+  // "/login" default; this page passes a localized redirectTo instead. The proxy
+  // already bounces an unauthenticated request to the locale-appropriate /login before
+  // it ever reaches this page.
+  const session = await requireSession({ redirectTo: await localizedHref("/login") });
 
   const project = await getProjectForUser(id, session.user.id);
   if (!project) {

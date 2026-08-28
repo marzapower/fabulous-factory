@@ -4,7 +4,7 @@ import { CheckCircle2 } from "lucide-react";
 import { requireSession } from "@factory/auth";
 import { isEnabled } from "@factory/config";
 import { Link } from "@factory/i18n/navigation";
-import { setRequestLocale } from "@factory/i18n/server";
+import { localizedHref, setRequestLocale } from "@factory/i18n/server";
 import {
   buttonVariants,
   Card,
@@ -35,7 +35,7 @@ export default async function BillingSuccessPage({
   params: Promise<{ locale: string }>;
 }) {
   setRequestLocale((await params).locale);
-  await requireSession({ redirectTo: "/login" });
+  await requireSession({ redirectTo: await localizedHref("/login") });
 
   if (!isEnabled("billing")) {
     redirect("/dashboard");

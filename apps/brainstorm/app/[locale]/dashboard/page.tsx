@@ -1,4 +1,4 @@
-import { getTranslations, setRequestLocale } from "@factory/i18n/server";
+import { getTranslations, localizedHref, setRequestLocale } from "@factory/i18n/server";
 
 import { requireSession } from "@factory/auth";
 import { listProjectsForUser } from "@factory/brainstorm";
@@ -19,11 +19,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
   // Component, and next-intl's sync hook is only callable from a non-async component
   // (https://next-intl.dev/docs/environments/server-client-components#async-components).
   const t = await getTranslations("app.dashboard");
-  // requireSession's redirectTo stays the bare, unlocalized "/login" (packages/auth is
-  // untouched by the i18n plan) — the proxy already bounces an unauthenticated request
-  // to the locale-appropriate /login before it ever reaches this page; this is a
-  // defense-in-depth fallback, not the primary redirect path.
-  const session = await requireSession({ redirectTo: "/login" });
+  // packages/auth is untouched by the i18n plan — requireSession keeps its bare
+  // "/login" default; this page passes a localized redirectTo instead. The proxy
+  // already bounces an unauthenticated request to the locale-appropriate /login before
+  // it ever reaches this page; this is a defense-in-depth fallback, not the primary
+  // redirect path.
+  const session = await requireSession({ redirectTo: await localizedHref("/login") });
   const projects = await listProjectsForUser(session.user.id);
 
   return (

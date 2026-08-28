@@ -1,6 +1,6 @@
 import { requireSession } from "@factory/auth";
 import { Link } from "@factory/i18n/navigation";
-import { setRequestLocale } from "@factory/i18n/server";
+import { localizedHref, setRequestLocale } from "@factory/i18n/server";
 import { getRunForUser, isStaleRun, listRunsForUser, type RunDetail } from "@factory/untangle";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@factory/ui/primitives";
@@ -29,7 +29,7 @@ const STEP_STATUS_GLYPH: Record<string, string> = {
  */
 export default async function RunsPage({ params }: { params: Promise<{ locale: string }> }) {
   setRequestLocale((await params).locale);
-  const session = await requireSession({ redirectTo: "/login" });
+  const session = await requireSession({ redirectTo: await localizedHref("/login") });
   const runs = await listRunsForUser(session.user.id, RUN_HISTORY_LIMIT);
   const details = await Promise.all(runs.map((run) => getRunForUser(run.id, session.user.id)));
 

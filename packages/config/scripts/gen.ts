@@ -13,7 +13,7 @@
  * than one exists (`resolveAppDir`, npx-installer design spec §7) — required only when
  * the workspace has more than one app; a single-app workspace needs no flag.
  */
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -41,7 +41,8 @@ export function toPascalCase(name: string): string {
   return camel.charAt(0).toUpperCase() + camel.slice(1);
 }
 
-/** `sample-sync` → `Sample Sync` — used only for generated page headings. */
+/** `sample-sync` → `Sample Sync` — the `title` value inserted into a generated page's
+ * catalog entries (`writeScaffold`); the page itself has no literal title, only `t()`. */
 function toTitleCase(name: string): string {
   return name
     .split("-")
@@ -79,14 +80,15 @@ export const GET = defineHandler({
 
 /**
  * `<appDir>/app/[locale]/<name>/page.tsx` — minimal server component, layout-consistent
- * wrapper. Every page under `[locale]` starts with `setRequestLocale` (i18n plan §2.3);
- * `getTranslations` is pulled in ready to use, so the TODO is "add the key," not "wire
- * the plumbing."
+ * wrapper. Every page under `[locale]` starts with `setRequestLocale` (i18n plan §2.3).
+ * Fully localized by construction — no literal English, no TODO: `writeScaffold` inserts
+ * the matching `app.<camel>.{title,body}` keys into every locale catalog it finds
+ * alongside this file (see `insertCatalogKey`), so `t("title")`/`t("body")` resolve from
+ * the moment the page is generated.
  */
 function renderPageTemplate(name: string): string {
   const pascal = toPascalCase(name);
   const camel = toCamelCase(name);
-  const title = toTitleCase(name);
   return `import { getTranslations, setRequestLocale } from "@factory/i18n/server";
 
 export default async function ${pascal}Page({
@@ -96,16 +98,12 @@ export default async function ${pascal}Page({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("app");
+  const t = await getTranslations("app.${camel}");
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
-      <h1 className="text-3xl font-bold tracking-tight">${title}</h1>
-      <p className="mt-2 text-lg leading-relaxed text-muted-foreground">
-        {/* TODO: replace this placeholder copy — add an "app.${camel}" key to
-            messages/en.json (and messages/it.json) and swap in t("${camel}") below. */}
-        {t("${camel}")}
-      </p>
+      <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+      <p className="mt-2 text-lg leading-relaxed text-muted-foreground">{t("body")}</p>
     </main>
   );
 }
@@ -261,6 +259,78 @@ function findPageCollision(rootDir: string, name: string, appDir: string): strin
   return null;
 }
 
+/**
+ * `<appDir>/messages/<locale>.json` files directly under the app's catalog dir (`gen
+ * page` target, i18n plan §2.6 — the app namespace is the file's root). Sorted for
+ * deterministic output. Pure — exported for tests. Empty array when the dir doesn't
+ * exist (a fresh app that hasn't grown a messages/ dir yet is not an error here — the
+ * caller decides whether that's worth a warning).
+ */
+export function listCatalogFiles(rootDir: string, appDir: string): string[] {
+  const messagesDir = path.join(rootDir, appDir, "messages");
+  try {
+    return readdirSync(messagesDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .map((entry) => `${appDir}/messages/${entry.name}`)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * `gen page <name>` catalog-key collision check — mirrors `findPageCollision`'s
+ * refuse-rather-than-partially-write posture: a top-level `<camel>` key already present
+ * in ANY catalog file means the whole scaffold refuses (no page write, no catalog
+ * writes), rather than silently clobbering or skipping just that one file. Pure —
+ * exported for tests. A catalog file that fails to parse as a JSON object is not this
+ * function's concern (an app shipping malformed JSON is a pre-existing problem, not one
+ * `gen page` introduces or should mask).
+ */
+export function findCatalogKeyCollision(
+  rootDir: string,
+  catalogFiles: readonly string[],
+  camel: string,
+): string | null {
+  for (const relPath of catalogFiles) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(readFileSync(path.join(rootDir, relPath), "utf8"));
+    } catch {
+      continue;
+    }
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      !Array.isArray(parsed) &&
+      Object.prototype.hasOwnProperty.call(parsed, camel)
+    ) {
+      return relPath;
+    }
+  }
+  return null;
+}
+
+/**
+ * Inserts `{ "<camel>": { "title": <title>, "body": "Placeholder copy for <title>." } }`
+ * at the top level of the catalog at `relPath`, preserving every existing key. Written
+ * 2-space-indented with a trailing newline — matches `pnpm format`'s prettier defaults,
+ * so a freshly generated catalog never fails `format:check` on its own. Pure fs side
+ * effect — exported for tests. Caller (`writeScaffold`) is responsible for having
+ * already ruled out a collision via `findCatalogKeyCollision`.
+ */
+export function insertCatalogKey(
+  rootDir: string,
+  relPath: string,
+  camel: string,
+  title: string,
+): void {
+  const absPath = path.join(rootDir, relPath);
+  const parsed = JSON.parse(readFileSync(absPath, "utf8")) as Record<string, unknown>;
+  const updated = { ...parsed, [camel]: { title, body: `Placeholder copy for ${title}.` } };
+  writeFileSync(absPath, `${JSON.stringify(updated, null, 2)}\n`, "utf8");
+}
+
 export interface WriteScaffoldResult {
   ok: boolean;
   messages: string[];
@@ -268,11 +338,19 @@ export interface WriteScaffoldResult {
 
 /**
  * Pure fs side effect — exported for tests. Never overwrites an existing target
- * (handler/job: direct path; page: route-group-aware, `findPageCollision`). Never
- * `realpath`s `rootDir` (opt-23) — threaded verbatim into `path.join`.
+ * (handler/job: direct path; page: route-group-aware, `findPageCollision`, plus every
+ * locale catalog via `findCatalogKeyCollision`). Never `realpath`s `rootDir` (opt-23) —
+ * threaded verbatim into `path.join`.
  *
  * `appName` (the CLI's `--app <name>`) scopes handler/page targets via `resolveAppDir`;
  * ignored for `job` (packages/jobs is never app-scoped).
+ *
+ * For `kind === "page"`, also inserts the `app.<camel>.{title,body}` keys into every
+ * `<appDir>/messages/<locale>.json` it finds (i18n plan §2.6) — the generated page reads
+ * `t("title")`/`t("body")` from the moment it's written, no follow-up edit required. No
+ * messages/ dir at all is not an error (a product-copy app like `untangle`/`brainstorm`
+ * may not ship one) but is worth flagging loudly, since the page as generated will throw
+ * a missing-message error until one exists.
  */
 export function writeScaffold(
   rootDir: string,
@@ -310,18 +388,45 @@ export function writeScaffold(
     return { ok: false, messages: [`Refusing to overwrite — ${relTarget} already exists.`] };
   }
 
+  const camel = toCamelCase(name);
+  const catalogFiles = kind === "page" ? listCatalogFiles(rootDir, appDir) : [];
+  if (kind === "page") {
+    const catalogCollision = findCatalogKeyCollision(rootDir, catalogFiles, camel);
+    if (catalogCollision !== null) {
+      return {
+        ok: false,
+        messages: [`Refusing to overwrite — "${camel}" key already exists in ${catalogCollision}.`],
+      };
+    }
+  }
+
   mkdirSync(path.dirname(absTarget), { recursive: true });
   writeFileSync(absTarget, renderTemplate(kind, name), "utf8");
 
   const messages = [`Created ${relTarget}`];
 
   if (kind === "job") {
-    const camel = toCamelCase(name);
     messages.push(
       "Register it in packages/jobs/src/functions/index.ts:",
       `  import { ${camel} } from "./${name}";`,
       `  and add ${camel} to the functions array.`,
     );
+  }
+
+  if (kind === "page") {
+    if (catalogFiles.length === 0) {
+      messages.push(
+        `⚠ No messages/ directory found under ${appDir} — the page reads t("title")/t("body") ` +
+          `from "app.${camel}", so add that key to every ${appDir}/messages/<locale>.json ` +
+          "yourself once one exists.",
+      );
+    } else {
+      const title = toTitleCase(name);
+      for (const relPath of catalogFiles) {
+        insertCatalogKey(rootDir, relPath, camel, title);
+        messages.push(`Added "app.${camel}" to ${relPath}`);
+      }
+    }
   }
 
   return { ok: true, messages };
