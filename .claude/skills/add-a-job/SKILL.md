@@ -105,6 +105,7 @@ shared allowlist logic itself lives in `@factory/ui/middleware`
 
 ```diff
  export const proxy = createAuthProxy({
+   i18n: createLocaleRouting(i18n),
    extraExactAllowlist: [
      "/api/billing/webhook",
 +    "/api/inngest",

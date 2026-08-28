@@ -3,6 +3,8 @@
 
 import type { ReactNode } from "react";
 
+import { useTranslations } from "@factory/i18n";
+
 /**
  * Every working example on a `/features/*` docs page is one of three honest kinds
  * (K.15.0.3, K.15.2 Q4) — this wrapper labels which one it is so the label can never be
@@ -15,10 +17,10 @@ import type { ReactNode } from "react";
  */
 export type LiveExampleKind = "live" | "replay" | "static";
 
-const KIND_LABEL: Record<LiveExampleKind, string> = {
-  live: "Live — calls this deployment",
-  replay: "Recorded replay — no live call",
-  static: "Static — real source, no request",
+const KIND_LABEL_KEY: Record<LiveExampleKind, "kindLive" | "kindReplay" | "kindStatic"> = {
+  live: "kindLive",
+  replay: "kindReplay",
+  static: "kindStatic",
 };
 
 export function LiveExample({
@@ -30,6 +32,8 @@ export function LiveExample({
   title: string;
   children: ReactNode;
 }) {
+  const t = useTranslations("ui.marketing.liveExample");
+
   return (
     <div className="fab-live-example flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -40,7 +44,7 @@ export function LiveExample({
             (kind === "live" ? "bg-fab-live/15 text-fab-live" : "bg-muted text-muted-foreground")
           }
         >
-          {KIND_LABEL[kind]}
+          {t(KIND_LABEL_KEY[kind])}
         </span>
       </div>
       {children}

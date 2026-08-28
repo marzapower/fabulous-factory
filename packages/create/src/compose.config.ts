@@ -56,6 +56,7 @@ export const BASE_STATIC_ENTRIES: CopyEntry[] = [
   { src: "docs/templates", dest: "docs/templates" },
   { src: ".claude/skills/fabulous-feature", dest: ".claude/skills/fabulous-feature" },
   { src: ".claude/skills/add-a-job", dest: ".claude/skills/add-a-job" },
+  { src: ".claude/skills/add-a-locale", dest: ".claude/skills/add-a-locale" },
   { src: ".claude/agents/fab-warden.md", dest: ".claude/agents/fab-warden.md" },
   { src: ".claude/agents/fab-bastion.md", dest: ".claude/agents/fab-bastion.md" },
   { src: ".claude/agents/fab-medic.md", dest: ".claude/agents/fab-medic.md" },

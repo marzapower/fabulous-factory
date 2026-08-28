@@ -1,12 +1,13 @@
 // Built with Fabulous Factory — https://github.com/marzapower/fabulous-factory
 // This credit line is free to keep and gives the project a hand. Thank you!
 
-import Link from "next/link";
+import { useTranslations } from "@factory/i18n";
+import { Link } from "@factory/i18n/navigation";
 
 import { deriveAuthOptions } from "@factory/auth";
 import { getCapabilities, getEnv, getEnvDocsForGroup } from "@factory/config";
 
-import { CodeBlock, EnvTable, FeaturePageShell, FEATURES } from "../marketing";
+import { CodeBlock, EnvTable, FeaturePageShell, FEATURES, featureMeta } from "../marketing";
 
 const OPTIONAL_PROVIDER_LABELS = { google: "Google", github: "GitHub" } as const;
 
@@ -18,17 +19,18 @@ const OPTIONAL_PROVIDER_LABELS = { google: "Google", github: "GitHub" } as const
  * doesn't already expose: enabled OAuth providers + magic-link availability.
  */
 function AuthStatus() {
+  const t = useTranslations("ui.featurePages.auth");
   const { enabledProviders, email } = deriveAuthOptions(getEnv(), getCapabilities());
   const optional = [
     ...enabledProviders.map((provider) => OPTIONAL_PROVIDER_LABELS[provider]),
-    ...(email.magicLink ? ["Magic link"] : []),
+    ...(email.magicLink ? [t("statusMagicLink")] : []),
   ];
 
   return (
     <div className="fab-status flex flex-wrap items-center gap-2 font-mono text-xs">
       <span className="inline-flex items-center gap-2">
         <span aria-hidden="true" className="size-2 rounded-full bg-emerald-500" />
-        <span className="text-emerald-600 dark:text-emerald-400">email + password: always on</span>
+        <span className="text-emerald-600 dark:text-emerald-400">{t("statusAlwaysOn")}</span>
       </span>
       {optional.length > 0 ? (
         optional.map((name) => (
@@ -40,7 +42,7 @@ function AuthStatus() {
           </span>
         ))
       ) : (
-        <span className="text-muted-foreground">no optional sign-in methods configured</span>
+        <span className="text-muted-foreground">{t("statusNoOptional")}</span>
       )}
     </div>
   );
@@ -72,32 +74,27 @@ export function AuthFeaturePage({
   emoji?: string;
   sourceExample: AuthSourceExample;
 }) {
+  const t = useTranslations("ui.featurePages.auth");
+  const tc = useTranslations("ui.featurePages.common");
+  const tf = useTranslations("ui.features");
   const vars = FEATURES.auth.groups.flatMap((group) => getEnvDocsForGroup(group));
+  const feature = featureMeta(tf, "auth");
 
   return (
-    <FeaturePageShell
-      feature={FEATURES.auth}
-      brand={brand}
-      emoji={emoji}
-      statusSlot={<AuthStatus />}
-    >
+    <FeaturePageShell feature={feature} brand={brand} emoji={emoji} statusSlot={<AuthStatus />}>
       <section>
-        <h2 className="text-xl font-semibold">What it does</h2>
+        <h2 className="text-xl font-semibold">{tc("whatItDoes")}</h2>
         <p className="mt-2 text-muted-foreground">
-          From the caller&rsquo;s side: every session-gated route and server action gets a resolved,
-          real <code className="font-mono">session.user</code> handed to it, or it never runs at all
-          — there is no in-between state to handle.
+          {t.rich("whatItDoesBody", {
+            code: (chunks) => <code className="font-mono">{chunks}</code>,
+          })}
         </p>
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold">The rule it enforces</h2>
+        <h2 className="text-xl font-semibold">{tc("ruleItEnforces")}</h2>
         <p className="mt-2 text-muted-foreground">
-          Auth mode is mandatory, with no default. Every{" "}
-          <code className="font-mono">defineAction</code> call states{" "}
-          <code className="font-mono">auth: &quot;required&quot;</code> or{" "}
-          <code className="font-mono">&quot;public&quot;</code> explicitly — there is nowhere to
-          omit the decision, so a public action can never accidentally ship without one.
+          {t.rich("ruleBody", { code: (chunks) => <code className="font-mono">{chunks}</code> })}
         </p>
       </section>
 
@@ -107,21 +104,27 @@ export function AuthFeaturePage({
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold">A working example</h2>
+        <h2 className="text-xl font-semibold">{tc("workingExample")}</h2>
         <p className="mt-2 text-muted-foreground">
-          Auth is the one baseline that isn&rsquo;t optional — set{" "}
-          <code className="font-mono">BETTER_AUTH_SECRET</code> and email/password sign-in works
-          immediately; everything else here is an upgrade, not a requirement.
+          {t.rich("workingExampleBody", {
+            code: (chunks) => <code className="font-mono">{chunks}</code>,
+          })}
         </p>
         <div className="mt-4">
           <EnvTable vars={vars} />
         </div>
         <p className="mt-4 text-muted-foreground">
-          <Link href="/signup" className="font-medium text-foreground underline underline-offset-4">
-            Create an account
-          </Link>
-          , then open the dashboard — that&rsquo;s <code className="font-mono">requireSession</code>{" "}
-          doing its job.
+          {t.rich("ctaParagraph", {
+            link: (chunks) => (
+              <Link
+                href="/signup"
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                {chunks}
+              </Link>
+            ),
+            code: (chunks) => <code className="font-mono">{chunks}</code>,
+          })}
         </p>
       </section>
     </FeaturePageShell>

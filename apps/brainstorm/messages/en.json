@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "layout": {
+      "title": "Fabulous Brainstorm Chat — talk it out, keep what sparks",
+      "titleTemplate": "%s · Fabulous Brainstorm Chat",
+      "description": "A chat-based project brainstormer: talk ideas out with an AI partner, accept the ones that spark onto a board of ideas, features and notes. The board works fully by hand — chat lights up when you add an LLM key."
+    },
+    "login": {
+      "title": "Sign in",
+      "description": "Sign in to Fabulous Brainstorm Chat."
+    },
+    "signup": {
+      "title": "Create your account",
+      "description": "Create a Fabulous Brainstorm Chat account and start your first project."
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "description": "Request a password reset link for your Fabulous Brainstorm Chat account."
+    },
+    "resetPassword": {
+      "title": "Choose a new password",
+      "description": "Set a new password for your Fabulous Brainstorm Chat account."
+    },
+    "privacy": {
+      "title": "Privacy Policy"
+    },
+    "terms": {
+      "title": "Terms of Service"
+    },
+    "settings": {
+      "title": "Account settings",
+      "description": "Manage your Fabulous Brainstorm Chat account."
+    },
+    "featuresIndex": {
+      "title": "Fabulous Factory — the machinery behind Fabulous Brainstorm Chat",
+      "description": "The kernel that makes an unguarded route impossible, this deployment's live capability panel, the same run with the AI switched off, and how to get your own repo running."
+    }
+  },
+  "errorPage": {
+    "title": "Something broke",
+    "message": "That page hit a snag. Give it another try.",
+    "ref": "ref {digest}",
+    "tryAgain": "Try again",
+    "goHome": "Go home"
+  },
+  "notFoundPage": {
+    "title": "Nothing here",
+    "message": "That page doesn't exist, or it moved.",
+    "goHome": "Go home"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "welcome": "Welcome back to Fabulous Factory.",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up"
+    },
+    "signup": {
+      "title": "Create an account",
+      "welcome": "Get started with Fabulous Factory.",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in"
+    }
+  },
+  "legal": {
+    "backToHome": "Back to home",
+    "lastUpdated": "Last updated: placeholder.",
+    "placeholderNotice": "This is placeholder text shipped by the template — replace before production. See the <code>make-it-yours</code> skill.",
+    "privacyTitle": "Privacy Policy",
+    "termsTitle": "Terms of Service",
+    "privacy": {
+      "section1": {
+        "title": "1. Data collected",
+        "body": "Placeholder: what account, usage, and product data is collected, and why."
+      },
+      "section2": {
+        "title": "2. Cookies",
+        "body": "Placeholder: session cookies used for authentication, and any analytics cookies once enabled."
+      },
+      "section3": {
+        "title": "3. Third parties",
+        "body": "Placeholder: subprocessors (auth, email, analytics, error tracking, billing) and what each one sees."
+      },
+      "section4": {
+        "title": "4. Contact",
+        "body": "Placeholder: how to reach the company about a data or privacy request."
+      }
+    },
+    "terms": {
+      "section1": {
+        "title": "1. Service description",
+        "body": "Placeholder: describe what the product does, who it's for, and what using it means the customer agrees to."
+      },
+      "section2": {
+        "title": "2. Accounts",
+        "body": "Placeholder: account eligibility, credential responsibility, and grounds for suspension or termination."
+      },
+      "section3": {
+        "title": "3. Payment",
+        "body": "Placeholder: pricing, billing cycle, refund policy, and what happens to access when a subscription lapses."
+      },
+      "section4": {
+        "title": "4. Liability",
+        "body": "Placeholder: warranty disclaimer and limitation of liability language, reviewed by counsel before this repo ships to real customers."
+      },
+      "section5": {
+        "title": "5. Contact",
+        "body": "Placeholder: how to reach the company about these terms."
+      }
+    }
+  },
+  "dashboard": {
+    "title": "Your projects",
+    "signedInAs": "Signed in as {email}",
+    "welcome": "Welcome.",
+    "welcomeNamed": "Welcome, {name}.",
+    "noProjects": "No projects yet — name the thing you're circling."
+  }
+}

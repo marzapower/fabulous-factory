@@ -19,4 +19,14 @@ export default defineConfig({
       "server-only": path.resolve(__dirname, "../config/test/stubs/server-only.ts"),
     },
   },
+  ssr: {
+    // Vitest's default SSR module loader externalizes third-party node_modules packages
+    // to Node's own (strict) ESM resolver. next-intl's compiled output imports bare
+    // specifiers like `next/server` (no extension) that only resolve under a bundler's
+    // lenient resolution (Next's own webpack/Turbopack build, or Vite's own resolver) —
+    // never under raw Node ESM. `noExternal` forces Vite to resolve+transform next-intl
+    // itself instead of handing it to Node, fixing `createLocaleRouting`'s
+    // `next-intl/middleware` import under test (middleware.test.ts).
+    noExternal: ["next-intl"],
+  },
 });

@@ -45,6 +45,7 @@ COPY packages/create/package.json packages/create/package.json
 COPY packages/create-alias/package.json packages/create-alias/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/email/package.json packages/email/package.json
+COPY packages/i18n/package.json packages/i18n/package.json
 COPY packages/jobs/package.json packages/jobs/package.json
 COPY packages/llm/package.json packages/llm/package.json
 COPY packages/observability/package.json packages/observability/package.json

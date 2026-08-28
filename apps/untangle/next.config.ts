@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import path from "path";
+import createNextIntlPlugin from "next-intl/plugin";
 
 // Env-file note: the documented quickstart puts `.env` at the WORKSPACE ROOT (spec §8.1),
 // which Next's own env loading never reads (it only loads from the app directory). That
@@ -34,6 +35,10 @@ const nextConfig: NextConfig = {
     // The shared UI layer (primitives, auth forms, marketing components) extracted from
     // the three preset apps — TS source, same as every other workspace package here.
     "@factory/ui",
+    // i18n plan D1: the DAG-leaf package wrapping next-intl — TS source, same as every
+    // other workspace package here, and must survive `output: "standalone"` tracing
+    // since next.config.ts (below) imports `next-intl/plugin` at build time.
+    "@factory/i18n",
   ],
   outputFileTracingRoot: path.join(__dirname, "../../"),
 
@@ -84,4 +89,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// The one unavoidable `next-intl` seam outside `packages/i18n` (i18n plan D1): Turbopack
+// needs a relative, per-app filesystem path to the request-config module, given at
+// build time — `packages/i18n` itself can't own this call, since it doesn't know this
+// app's own `i18n/request.ts` path.
+export default createNextIntlPlugin("./i18n/request.ts")(nextConfig);

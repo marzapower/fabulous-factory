@@ -5,6 +5,13 @@
 // (verbatimModuleSyntax), so this module stays safe to import from client components —
 // no runtime dependency on `@factory/config` (a server-only package) ever ships.
 import type { ServiceGroup, ServiceName } from "@factory/config";
+// Type-only: used below purely as `typeof useTranslations<"ui.features">` (an
+// instantiation expression) to type `featureMeta`'s translator parameter as the exact
+// type `useTranslations("ui.features")` produces — a plain `(key: string) => string`
+// parameter type would be unsound here (next-intl's `Translator` narrows `key` to the
+// literal union of real message paths; TS's contravariant function-parameter check
+// correctly rejects widening that back to `string`).
+import type { useTranslations } from "@factory/i18n";
 // lucide-react is a client-safe icon library — importing its types/components here
 // doesn't change this module's importability from client components.
 import {
@@ -35,12 +42,11 @@ export type FeatureKey =
   | "billing"
   | "observability";
 
-export interface FeatureMeta {
+/** Title/blurb come from the `ui.features.<key>.{title,blurb}` catalog (see
+ * `featureMeta()` below) — this is the STATIC part: everything that doesn't depend on a
+ * locale. */
+export interface FeatureStatic {
   key: FeatureKey;
-  /** Human title, e.g. "Payments that unlock things". */
-  title: string;
-  /** One-sentence card copy. */
-  blurb: string;
   /**
    * `/features/${key}`. Omit after deleting the /features pages (make-it-yours) —
    * FeatureCard renders no link then.
@@ -54,12 +60,16 @@ export interface FeatureMeta {
   groups: ServiceGroup[];
 }
 
-export const FEATURES: Record<FeatureKey, FeatureMeta> = {
+export interface FeatureMeta extends FeatureStatic {
+  /** Human title, e.g. "Payments that unlock things". */
+  title: string;
+  /** One-sentence card copy. */
+  blurb: string;
+}
+
+export const FEATURES: Record<FeatureKey, FeatureStatic> = {
   auth: {
     key: "auth",
-    title: "Sign-in that's already done",
-    blurb:
-      "Email and password work on day one; OAuth and magic links turn on the moment you add keys.",
     href: "/features/auth",
     icon: KeyRound,
     services: [],
@@ -67,9 +77,6 @@ export const FEATURES: Record<FeatureKey, FeatureMeta> = {
   },
   kernel: {
     key: "kernel",
-    title: "A handler shape you can't get wrong",
-    blurb:
-      "Every route and action declares its auth mode, its input schema, its rate limit — a raw handler fails lint by construction.",
     href: "/features/kernel",
     icon: SquareCode,
     services: [],
@@ -77,9 +84,6 @@ export const FEATURES: Record<FeatureKey, FeatureMeta> = {
   },
   config: {
     key: "config",
-    title: "One registry, not a scattered process.env",
-    blurb:
-      "Every env var is declared once — required, secret, what it enables — and the doctor, the docs, and the code can never disagree.",
     href: "/features/config",
     icon: SlidersHorizontal,
     services: [],
@@ -87,9 +91,6 @@ export const FEATURES: Record<FeatureKey, FeatureMeta> = {
   },
   billing: {
     key: "billing",
-    title: "Payments that unlock things",
-    blurb:
-      "Stripe checkout and webhooks, wired end to end — free mode when it's off, so nothing blocks a demo.",
     href: "/features/billing",
     icon: CreditCard,
     services: ["billing"],
@@ -97,9 +98,6 @@ export const FEATURES: Record<FeatureKey, FeatureMeta> = {
   },
   llm: {
     key: "llm",
-    title: "An AI gateway, not a vendor lock-in",
-    blurb:
-      "Local, OpenRouter, or a direct key — swap providers without touching a single call site.",
     href: "/features/llm",
     icon: Bot,
     services: ["llm"],
@@ -107,9 +105,6 @@ export const FEATURES: Record<FeatureKey, FeatureMeta> = {
   },
   jobs: {
     key: "jobs",
-    title: "Cron your agent can trust",
-    blurb:
-      "Cron, fan-out and per-step retries when they're on — and every on-demand run works exactly the same when they're off.",
     href: "/features/jobs",
     icon: Clock,
     services: ["jobs"],
@@ -117,9 +112,6 @@ export const FEATURES: Record<FeatureKey, FeatureMeta> = {
   },
   security: {
     key: "security",
-    title: "SSRF guarded, not just documented",
-    blurb:
-      "A fetch of a user-supplied URL is scheme-checked, range-blocked, and re-validated after connect — see the refusal happen, not just read about it.",
     href: "/features/security",
     icon: ShieldCheck,
     services: [],
@@ -127,9 +119,6 @@ export const FEATURES: Record<FeatureKey, FeatureMeta> = {
   },
   email: {
     key: "email",
-    title: "Email that never blocks a signup",
-    blurb:
-      "Resend in production, the console in dev — nothing waits on a provider that isn't there.",
     href: "/features/email",
     icon: Mail,
     services: ["email"],
@@ -137,9 +126,6 @@ export const FEATURES: Record<FeatureKey, FeatureMeta> = {
   },
   observability: {
     key: "observability",
-    title: "See it break before your users do",
-    blurb:
-      "Product analytics and error tracking, both a silent no-op when you haven't set them up yet.",
     href: "/features/observability",
     icon: Activity,
     services: ["analytics", "errors"],
@@ -148,7 +134,7 @@ export const FEATURES: Record<FeatureKey, FeatureMeta> = {
 };
 
 /** Stable order for the grid — the frozen nine-key order (K.16 N4). */
-export const FEATURE_LIST: FeatureMeta[] = [
+export const FEATURE_LIST: FeatureStatic[] = [
   FEATURES.auth,
   FEATURES.kernel,
   FEATURES.config,
@@ -159,3 +145,19 @@ export const FEATURE_LIST: FeatureMeta[] = [
   FEATURES.billing,
   FEATURES.observability,
 ];
+
+/**
+ * Combines a feature's static shape with its translated title/blurb, read from
+ * `ui.features.<key>.{title,blurb}`. `t` is the translator scoped to the `ui.features`
+ * namespace (`useTranslations("ui.features")` or `getTranslations("ui.features")`).
+ */
+export function featureMeta(
+  t: ReturnType<typeof useTranslations<"ui.features">>,
+  key: FeatureKey,
+): FeatureMeta {
+  return {
+    ...FEATURES[key],
+    title: t(`${key}.title`),
+    blurb: t(`${key}.blurb`),
+  };
+}

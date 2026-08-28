@@ -43,7 +43,8 @@ which ships exactly one) may import anything; nothing imports `apps/*`.
 | `analytics`     | `config`                                                        |
 | `observability` | `config`                                                        |
 | `core`          | `config`, `db`, `auth`                                          |
-| `ui`            | `config`, `auth`                                                |
+| `ui`            | `config`, `auth`, `i18n`                                        |
+| `i18n`          | (none — DAG leaf)                                               |
 | `llm`           | `config`, `db`, `core`, `observability`                         |
 | `jobs`          | `config`                                                        |
 | `billing`       | `config`, `db`                                                  |
@@ -99,6 +100,27 @@ service integration, its disabled path must be exercised by a test, not left to 
   their CLI entrypoint behind an `invokedDirectly` check — tests import the functions
   directly, never subprocess-exec the script.
 
+## Localization
+
+- Every user-facing string in `packages/ui` and each app's own pages/components routes
+  through `t()` — `useTranslations`/`getTranslations`, imported from `@factory/i18n`
+  (isomorphic root) or `@factory/i18n/server` (async server components), never a raw
+  `next-intl` import: `packages/i18n` is the only place `next-intl` may be imported,
+  with a single unavoidable seam, each app's own `next.config.ts` (build-time
+  `next-intl/plugin` wiring).
+- Key convention: `<namespace>.<component>.<key>`, where the namespace is the owning
+  package's name — `ui.*` for `packages/ui`'s own catalog, `app.*` for each app's own
+  (moved shared pages, page metadata under `app.meta.*`). Catalogs are plain JSON,
+  `<pkg>/messages/<locale>.json`, merged by the app with per-key fallback to the default
+  locale.
+- `pnpm i18n:check` (wired into `pnpm check`) diffs every `<locale>.json` catalog
+  against the base catalog, which is **`en.json` by convention** — the file named after
+  the locale, not derived from any app's `defaultLocale` (`packages/i18n` is a DAG leaf
+  and reads no app config). Apps: a missing OR an extra key fails the check. Packages
+  (e.g. `packages/ui`): a missing key only warns, an extra key fails.
+- Not localized (ADR-0007, deliberate, not an oversight): emails (`@factory/email`),
+  `defineHandler`/`defineAction` error messages, and LLM output — English only.
+
 ## Definition of done
 
 `pnpm check` (lint → boundaries → format:check → typecheck → test) green is the
@@ -151,10 +173,13 @@ subject, enforced by commitlint (`commit-msg` husky hook) and a CI PR-title chec
   obviously signed-out page loads before render) — it is **not** the security boundary;
   the wrapper's mandatory auth mode is. The shared allowlist logic lives in
   `packages/ui/src/middleware.ts` (`@factory/ui/middleware`); each app's `proxy.ts` calls
-  `createAuthProxy()` with only its own extra allowlist entries.
+  `createAuthProxy({ i18n, extraExactAllowlist? })` — `i18n` (a `createLocaleRouting(...)`
+  handler from `@factory/i18n/middleware`) is required, every preset always passes one;
+  `extraExactAllowlist` is its own extra allowlist entries, same as before.
 - **Guarded zones**: `packages/auth`, `packages/core`, `packages/billing`, `proxy.ts`
-  (`apps/*/proxy.ts`), `packages/ui/src/middleware.ts`, and `packages/db` migrations. A PR
-  touching any of these needs a security checklist and an independent, fresh-context
-  security review before merging — no exceptions for "just a small change."
+  (`apps/*/proxy.ts`), `packages/ui/src/middleware.ts`, `packages/i18n/src/middleware.ts`,
+  `packages/i18n/src/routing.ts`, and `packages/db` migrations. A PR touching any of these
+  needs a security checklist and an independent, fresh-context security review before
+  merging — no exceptions for "just a small change."
 - Never log secrets or PII. LLM call logs store metadata (tokens, cost, latency), never
   raw payloads.

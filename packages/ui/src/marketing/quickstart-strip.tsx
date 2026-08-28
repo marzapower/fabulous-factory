@@ -1,27 +1,28 @@
 // Built with Fabulous Factory — https://github.com/marzapower/fabulous-factory
 // This credit line is free to keep and gives the project a hand. Thank you!
 
+import { useTranslations } from "@factory/i18n";
+
 import { CodeBlock } from "./code-block";
 
-const STEPS: ReadonlyArray<{ number: string; code: string; note: string }> = [
-  {
-    number: "01",
-    code: "npx fabulous-factory@latest install",
-    note: "Pick a preset — you get a new repo, born as YOUR product, not a clone to promote.",
-  },
-  {
-    number: "02",
-    code: "pnpm install && pnpm dev",
-    note: "You're running — Postgres and one secret are the only requirements.",
-  },
-  {
-    number: "03",
-    code: "what's left to make this mine?",
-    note: "Ask your agent — it walks you through every remaining default, one guided skill at a time.",
-  },
+// The `code` values are shell commands / literal prompts — not language-dependent — so
+// they stay as data here; only each step's `note` (prose) comes from the catalog, keyed
+// by `number`.
+const STEPS: ReadonlyArray<{ number: "01" | "02" | "03"; code: string }> = [
+  { number: "01", code: "npx fabulous-factory@latest install" },
+  { number: "02", code: "pnpm install && pnpm dev" },
+  { number: "03", code: "what's left to make this mine?" },
 ];
 
+const NOTE_KEY: Record<"01" | "02" | "03", "install" | "run" | "askAgent"> = {
+  "01": "install",
+  "02": "run",
+  "03": "askAgent",
+};
+
 export function QuickstartStrip() {
+  const t = useTranslations("ui.marketing.quickstartStrip.steps");
+
   return (
     <section className="fab-strip border-y border-border bg-muted/20">
       <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-16">
@@ -29,7 +30,7 @@ export function QuickstartStrip() {
           <div key={step.code} className="flex flex-col gap-3">
             <span className="font-mono text-sm font-semibold text-fab-marker">{step.number}</span>
             <CodeBlock code={step.code} />
-            <p className="text-sm text-muted-foreground">{step.note}</p>
+            <p className="text-sm text-muted-foreground">{t(NOTE_KEY[step.number])}</p>
           </div>
         ))}
       </div>

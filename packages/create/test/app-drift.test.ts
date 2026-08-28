@@ -57,10 +57,20 @@ const SHARED_APP_FILES = [
   // Error/not-found surfaces (T9, wave 3): all three build on `@factory/ui/feedback`
   // with no per-app copy, so there's nothing left to vary — kept as one shared file
   // per the same "small + tied to root, not worth an indirection" reasoning as the rest
-  // of this list, rather than duplicated with a comment saying "these must match".
-  "app/error.tsx",
-  "app/not-found.tsx",
+  // of this list, rather than duplicated with a comment saying "these must match". Moved
+  // under `app/[locale]/` by the i18n plan (§2.3) — every page lives under the locale
+  // segment now except `app/api/**`, `global-error.tsx`, `globals.css`, and `fonts/*`.
+  "app/[locale]/error.tsx",
+  "app/[locale]/not-found.tsx",
   "app/global-error.tsx",
+  // i18n plan §2.3/§2.5 (M9): the next-intl request-config entrypoint (the exact path
+  // handed to `createNextIntlPlugin`) and the byte-identical locale catch-all that turns
+  // any unmatched `/xx/...` into a localized 404 — both app-agnostic, so both are shared
+  // rather than duplicated with a "these must match" comment. `messages/index.ts`,
+  // `i18n/config.ts`, and `app/[locale]/layout.tsx` are per-app by construction (D6, and
+  // per-app metadata) and deliberately NOT listed here — they vary by design.
+  "i18n/request.ts",
+  "app/[locale]/[...rest]/page.tsx",
   // Shared IBM Plex webfont files (+ their OFL) — every preset app ships these, even
   // brainstorm, which also ships its own additional Space Grotesk files (NOT compared
   // here — those are brainstorm-only, deliberately not duplicated anywhere else).

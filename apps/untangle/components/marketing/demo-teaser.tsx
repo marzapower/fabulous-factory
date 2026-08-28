@@ -1,7 +1,7 @@
 // Built with Fabulous Factory — https://github.com/marzapower/fabulous-factory
 // This credit line is free to keep and gives the project a hand. Thank you!
 
-import Link from "next/link";
+import { Link } from "@factory/i18n/navigation";
 
 import { buttonVariants } from "@factory/ui/primitives";
 import { cn } from "@/lib/utils";

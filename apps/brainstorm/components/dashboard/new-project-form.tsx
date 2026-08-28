@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 
-import { createProjectAction } from "@/app/dashboard/actions";
+import { useRouter } from "@factory/i18n/navigation";
+
+import { createProjectAction } from "@/app/[locale]/dashboard/actions";
 import { Button, Input, Label } from "@factory/ui/primitives";
 
 const NAME_MAX_CHARS = 80;

@@ -10,6 +10,12 @@ allowBuilds:
   protobufjs: false
   esbuild: true
   sharp: true
+  # @parcel/watcher (transitive: next-intl, its extractor/plugin tooling) and @swc/core
+  # (transitive: next-intl, and already pulled in by tsup) both build real native
+  # binaries their functionality depends on — same rationale as esbuild/sharp above, not
+  # the metadata-only postinstalls denied for core-js/protobufjs.
+  "@parcel/watcher": true
+  "@swc/core": true
 # Supply-chain hardening (spec §8.5; flagged by the semgrep OWASP ruleset):
 # wait a day before adopting fresh releases, keep the dep tree registry-only,
 # and require explicit approval for build scripts of newly added packages.

@@ -11,9 +11,9 @@ look unexamined.
 
 ## Phase 1 — App identity
 
-- `apps/web/app/layout.tsx` — `metadata.title` (and `description`, if set) is still the
+- `apps/web/app/[locale]/layout.tsx` — `metadata.title` (and `description`, if set) is still the
   factory's name. Replace it with your product's.
-- `apps/web/app/page.tsx` — a thin composition, not where the copy lives. The landing
+- `apps/web/app/[locale]/page.tsx` — a thin composition, not where the copy lives. The landing
   page's actual copy and layout is in `apps/web/components/marketing/` (`site-header`,
   `hero`, `control-panel`, `feature-card`, `features-meta`, `site-footer`, and more) —
   edit those components directly rather than `page.tsx`, unless you're changing the

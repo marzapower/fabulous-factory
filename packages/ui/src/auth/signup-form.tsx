@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+
+import { useTranslations } from "@factory/i18n";
+import { useLocalizedHref } from "@factory/i18n/client";
+import { useRouter } from "@factory/i18n/navigation";
 
 import { authClient } from "@factory/auth/client";
 import { Button } from "../primitives/button";
@@ -20,7 +23,9 @@ export interface SignupFormProps {
 }
 
 export function SignupForm({ enabledProviders }: SignupFormProps) {
+  const t = useTranslations("ui.auth.signupForm");
   const router = useRouter();
+  const localizeHref = useLocalizedHref();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,7 +42,7 @@ export function SignupForm({ enabledProviders }: SignupFormProps) {
     const { data, error: signUpError } = await authClient.signUp.email({ email, password, name });
 
     if (signUpError) {
-      setError(signUpError.message ?? "Unable to create your account.");
+      setError(signUpError.message ?? t("signUpError"));
       setLoading(false);
       return;
     }
@@ -62,10 +67,8 @@ export function SignupForm({ enabledProviders }: SignupFormProps) {
   if (verifyPending) {
     return (
       <div className="grid gap-2 text-center">
-        <p className="text-sm font-medium">Check your email to verify your account</p>
-        <p className="text-sm text-muted-foreground">
-          We sent a verification link to {email}. Click it to finish setting up your account.
-        </p>
+        <p className="text-sm font-medium">{t("verifyPendingTitle")}</p>
+        <p className="text-sm text-muted-foreground">{t("verifyPendingBody", { email })}</p>
       </div>
     );
   }
@@ -75,10 +78,10 @@ export function SignupForm({ enabledProviders }: SignupFormProps) {
     setError(null);
     const { error: socialError } = await authClient.signIn.social({
       provider,
-      callbackURL: "/dashboard",
+      callbackURL: localizeHref("/dashboard"),
     });
     if (socialError) {
-      setError(socialError.message ?? `Unable to sign up with ${PROVIDER_LABELS[provider]}.`);
+      setError(socialError.message ?? t("socialError", { provider: PROVIDER_LABELS[provider] }));
       setSocialLoading(null);
     }
   }
@@ -96,12 +99,12 @@ export function SignupForm({ enabledProviders }: SignupFormProps) {
               onClick={() => handleSocial(provider)}
             >
               {socialLoading === provider
-                ? "Redirecting…"
-                : `Continue with ${PROVIDER_LABELS[provider]}`}
+                ? t("redirecting")
+                : t("continueWithProvider", { provider: PROVIDER_LABELS[provider] })}
             </Button>
           ))}
           <div className="relative py-2 text-center text-sm text-muted-foreground">
-            <span className="bg-card relative z-10 px-2">or continue with email</span>
+            <span className="bg-card relative z-10 px-2">{t("orContinueWithEmail")}</span>
             <div className="absolute inset-x-0 top-1/2 border-t" aria-hidden="true" />
           </div>
         </div>
@@ -109,7 +112,7 @@ export function SignupForm({ enabledProviders }: SignupFormProps) {
 
       <form className="grid gap-4" onSubmit={handleSubmit}>
         <div className="grid gap-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="name">{t("nameLabel")}</Label>
           <Input
             id="name"
             name="name"
@@ -121,7 +124,7 @@ export function SignupForm({ enabledProviders }: SignupFormProps) {
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("emailLabel")}</Label>
           <Input
             id="email"
             name="email"
@@ -133,7 +136,7 @@ export function SignupForm({ enabledProviders }: SignupFormProps) {
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("passwordLabel")}</Label>
           <Input
             id="password"
             name="password"
@@ -150,7 +153,7 @@ export function SignupForm({ enabledProviders }: SignupFormProps) {
           </p>
         )}
         <Button type="submit" disabled={loading}>
-          {loading ? "Creating account…" : "Create account"}
+          {loading ? t("creatingAccount") : t("createAccount")}
         </Button>
       </form>
     </div>

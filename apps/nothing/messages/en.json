@@ -1,0 +1,179 @@
+{
+  "meta": {
+    "layout": {
+      "title": {
+        "default": "Fabulous Nothing",
+        "template": "%s · Fabulous Nothing"
+      },
+      "description": "The blank-slate Fabulous Factory preset: a landing page, working sign-in and sign-up, and an empty authenticated dashboard. Nothing lives here yet — that's the point."
+    },
+    "login": {
+      "title": "Sign in",
+      "description": "Sign in to Fabulous Nothing."
+    },
+    "signup": {
+      "title": "Create your account",
+      "description": "Create an account — there's nothing here yet, and that's the point."
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "description": "Request a password reset link for your Fabulous Nothing account."
+    },
+    "resetPassword": {
+      "title": "Choose a new password",
+      "description": "Set a new password for your Fabulous Nothing account."
+    },
+    "privacy": {
+      "title": "Privacy Policy"
+    },
+    "terms": {
+      "title": "Terms of Service"
+    },
+    "settings": {
+      "title": "Account settings",
+      "description": "Manage your Fabulous Nothing account."
+    },
+    "features": {
+      "title": "Fabulous Factory — the machinery behind the product",
+      "description": "The kernel that makes an unguarded route impossible, this deployment's live capability panel, what changes when the AI key is missing, and how to get your own repo running."
+    }
+  },
+  "home": {
+    "eyebrow": "// fabulous nothing",
+    "heading": "This product doesn't exist yet.",
+    "signInWorks": "Sign in works.",
+    "capabilityLive": "The capability panel is live.",
+    "restIsGen": "Everything else is a <code>pnpm gen</code> away.",
+    "installCommand": "npx fabulous-factory install"
+  },
+  "errorPage": {
+    "title": "Something broke",
+    "message": "That page hit a snag. Give it another try.",
+    "ref": "ref {digest}",
+    "tryAgain": "Try again",
+    "goHome": "Go home"
+  },
+  "notFoundPage": {
+    "title": "Nothing here",
+    "message": "That page doesn't exist, or it moved.",
+    "goHome": "Go home"
+  },
+  "legal": {
+    "privacy": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: placeholder.",
+      "placeholderNotice": "This is placeholder text shipped by the template — replace before production. See the <code>make-it-yours</code> skill.",
+      "sections": {
+        "dataCollected": {
+          "title": "1. Data collected",
+          "body": "Placeholder: what account, usage, and product data is collected, and why."
+        },
+        "cookies": {
+          "title": "2. Cookies",
+          "body": "Placeholder: session cookies used for authentication, and any analytics cookies once enabled."
+        },
+        "thirdParties": {
+          "title": "3. Third parties",
+          "body": "Placeholder: subprocessors (auth, email, analytics, error tracking, billing) and what each one sees."
+        },
+        "contact": {
+          "title": "4. Contact",
+          "body": "Placeholder: how to reach the company about a data or privacy request."
+        }
+      },
+      "backToHome": "Back to home"
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "lastUpdated": "Last updated: placeholder.",
+      "placeholderNotice": "This is placeholder text shipped by the template — replace before production. See the <code>make-it-yours</code> skill.",
+      "sections": {
+        "serviceDescription": {
+          "title": "1. Service description",
+          "body": "Placeholder: describe what the product does, who it's for, and what using it means the customer agrees to."
+        },
+        "accounts": {
+          "title": "2. Accounts",
+          "body": "Placeholder: account eligibility, credential responsibility, and grounds for suspension or termination."
+        },
+        "payment": {
+          "title": "3. Payment",
+          "body": "Placeholder: pricing, billing cycle, refund policy, and what happens to access when a subscription lapses."
+        },
+        "liability": {
+          "title": "4. Liability",
+          "body": "Placeholder: warranty disclaimer and limitation of liability language, reviewed by counsel before this repo ships to real customers."
+        },
+        "contact": {
+          "title": "5. Contact",
+          "body": "Placeholder: how to reach the company about these terms."
+        }
+      },
+      "backToHome": "Back to home"
+    }
+  },
+  "dashboard": {
+    "signedInTitle": "Signed in",
+    "welcomeWithName": "Welcome, {name}.",
+    "welcomeNoName": "Welcome.",
+    "title": "Dashboard",
+    "emptyLine1": "This is your dashboard. Nothing lives here yet.",
+    "emptyLine2": "Run <code>pnpm gen</code> and ask your agent to invoke the <code>fabulous-feature</code> skill — that's how the first real feature gets built."
+  },
+  "auth": {
+    "login": {
+      "heading": "Sign in",
+      "subheading": "Welcome back to Fabulous Factory.",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up"
+    },
+    "signup": {
+      "heading": "Create an account",
+      "subheading": "Get started with Fabulous Factory.",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in"
+    }
+  },
+  "features": {
+    "index": {
+      "heroParagraph": "Fabulous Nothing is the blank-slate preset that ships with Fabulous Factory — scaffolded with one npx command, not cloned from a template. This page is about the factory."
+    },
+    "auth": {
+      "sourceHeading": "The shape you'll write",
+      "sourceCaption": "Example — what you'll write, once you add an auth-gated action"
+    },
+    "jobs": {
+      "whatItDoes": "What it does",
+      "whatItDoesBody": "From a caller's side: <code>@factory/jobs</code> is one Inngest client and one function registry, nothing more — no pipeline or run-engine abstraction ships with this preset. Scaffold a job with <code>pnpm gen job &lt;name&gt;</code>, register it, and it runs on Inngest Cloud or a local dev server identically, whichever is configured.",
+      "ruleItEnforces": "The rule it enforces",
+      "ruleBody": "Every registered function shares the same client, so <code>INNGEST_EVENT_KEY</code>/<code>INNGEST_SIGNING_KEY</code>/<code>INNGEST_DEV</code> govern all of them identically — there is no per-job env wiring to get wrong. The Inngest SDK itself stays confined to this package (and to any domain package that ships its own functions, e.g. the Untangle preset's <code>packages/untangle</code>) — never a direct import anywhere else, boundary-enforced by <code>pnpm boundaries</code>.",
+      "realSource": "Real source",
+      "realSourceBody": "The module-scope client every registered function is built against:",
+      "clientCaption": "packages/jobs/src/client.ts — the Inngest client",
+      "workingExample": "A working example",
+      "workingExampleBody": "This preset ships with no functions registered yet — the registry below is a literal empty array until your first <code>pnpm gen job</code>, so instead of a fake run, here is exactly what that scaffold-and-register flow changes.",
+      "registryLiveExampleTitle": "The registry, before and after your first job",
+      "registryCaption": "packages/jobs/src/functions/index.ts — the registry pnpm gen job populates",
+      "turnItOn": "Turn it on",
+      "turnItOnBody": "Point the app at Inngest Cloud with the two key vars, or run a local dev server with <code>INNGEST_DEV=1</code>. Without either, whatever functions you register simply don't fire — nothing else in this preset depends on Inngest being configured."
+    },
+    "llm": {
+      "exampleIntro": "A live call here would spend money on anonymous traffic, and this preset ships with no feature that calls it yet — so instead of a fake button, here is the exact contract a caller gets back on every element, taken straight from the snippet above.",
+      "liveExampleTitle": "What a caller receives"
+    },
+    "billing": {
+      "exampleIntro": "Set both Stripe keys and checkout and webhooks switch on together. Leave them unset and every account gets <code>runsPerDay: null</code> — unlimited, subject only to the fixed, per-day abuse ceiling every profile enforces.",
+      "exampleOutro": "This preset ships no billing card yet — <code>getEntitlement()</code> is the one call a paywalled feature needs to check a plan limit, whichever way you choose to render it. With Stripe configured, an upgrade raises that limit the moment the webhook lands."
+    },
+    "observability": {
+      "closingNote": "This preset ships no feature that calls <code>track()</code> yet — once one does, set both keys and it starts reporting; unset them and the same call sites keep running exactly the same, just quietly doing nothing."
+    }
+  },
+  "degradationStrip": {
+    "eyebrow": "// on, or off",
+    "heading": "Unset the LLM key and nothing breaks",
+    "body": "Same call, same call site, either way. With a key, <code>streamArray()</code> and <code>generate()</code> do their work. Without one, they throw before any provider SDK ever loads — and every call site in the template is written to catch that and fall back to a non-AI result rather than let it reach a user.",
+    "withKeyLabel": "With an LLM key",
+    "withoutKeyLabel": "Without one"
+  }
+}

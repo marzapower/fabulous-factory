@@ -17,7 +17,7 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r run typecheck && tsc --noEmit -p benchmarks",
     "test": "vitest run",
-    "check": "node scripts/check-node-version.mjs && pnpm lint && pnpm boundaries && pnpm format:check && pnpm typecheck && pnpm test",
+    "check": "node scripts/check-node-version.mjs && pnpm lint && pnpm boundaries && pnpm format:check && pnpm typecheck && pnpm i18n:check && pnpm test",
     "factory:doctor": "tsx packages/config/scripts/doctor.ts",
     "factory:status": "tsx packages/config/scripts/factory-status.ts",
     "preflight": "tsx packages/config/scripts/preflight.ts",
@@ -29,6 +29,7 @@
     "db:generate:untangle": "pnpm --filter @factory/untangle exec drizzle-kit generate",
     "db:generate:brainstorm": "pnpm --filter @factory/brainstorm exec drizzle-kit generate",
     "gen:env-example": "tsx packages/config/scripts/gen-env-example.ts",
+    "i18n:check": "tsx packages/i18n/scripts/i18n-check.ts",
     "prepare": "husky"
   },
   "devDependencies": {

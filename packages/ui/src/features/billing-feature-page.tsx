@@ -3,10 +3,19 @@
 
 import type { ReactNode } from "react";
 
+import { useTranslations } from "@factory/i18n";
+
 import { getClientConfig, getEnvDocsForGroup } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
 
-import { CodeBlock, EnvTable, FeaturePageShell, FEATURES, StatusLight } from "../marketing";
+import {
+  CodeBlock,
+  EnvTable,
+  FeaturePageShell,
+  FEATURES,
+  StatusLight,
+  featureMeta,
+} from "../marketing";
 
 export function BillingFeaturePage({
   brand,
@@ -27,39 +36,38 @@ export function BillingFeaturePage({
    * card or run usage this preset doesn't actually render (K.16 truth sweep). */
   exampleOutro: ReactNode;
 }) {
+  const t = useTranslations("ui.featurePages.billing");
+  const tc = useTranslations("ui.featurePages.common");
+  const tf = useTranslations("ui.features");
   const config = getClientConfig();
   const vars = FEATURES.billing.groups.flatMap((group) => getEnvDocsForGroup(group));
 
   return (
     <ClientConfigProvider config={config}>
       <FeaturePageShell
-        feature={FEATURES.billing}
+        feature={featureMeta(tf, "billing")}
         brand={brand}
         emoji={emoji}
         statusSlot={<StatusLight service="billing" />}
       >
         <section>
-          <h2 className="text-xl font-semibold">What it does</h2>
+          <h2 className="text-xl font-semibold">{tc("whatItDoes")}</h2>
           <p className="mt-2 text-muted-foreground">
-            From a paywalled action&rsquo;s side: one call,{" "}
-            <code className="font-mono">getEntitlement(userId)</code>, answers &quot;what is this
-            user allowed today&quot; — a plan id and a <code className="font-mono">runsPerDay</code>{" "}
-            limit, whether billing is configured or not.
+            {t.rich("whatItDoesBody", {
+              code: (chunks) => <code className="font-mono">{chunks}</code>,
+            })}
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold">The rule it enforces</h2>
+          <h2 className="text-xl font-semibold">{tc("ruleItEnforces")}</h2>
           <p className="mt-2 text-muted-foreground">
-            <code className="font-mono">getEntitlement()</code> never talks to the billing provider
-            directly — only the cached subscription row in Postgres — so a slow or down provider can
-            never slow down or break a request that just needs to know a plan limit. With billing
-            off, nothing is gated: every account gets the free plan&rsquo;s limit lifted entirely.
+            {t.rich("ruleBody", { code: (chunks) => <code className="font-mono">{chunks}</code> })}
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold">Real source</h2>
+          <h2 className="text-xl font-semibold">{tc("realSource")}</h2>
           <CodeBlock
             code={entitlementSnippet}
             caption="packages/billing/src/entitlement.ts — getEntitlement()"
@@ -67,7 +75,7 @@ export function BillingFeaturePage({
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold">A working example</h2>
+          <h2 className="text-xl font-semibold">{tc("workingExample")}</h2>
           <p className="mt-2 text-muted-foreground">{exampleIntro}</p>
           <div className="mt-4">
             <EnvTable vars={vars} />

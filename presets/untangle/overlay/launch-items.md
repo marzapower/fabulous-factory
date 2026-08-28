@@ -22,14 +22,14 @@ still the shipped example domain, not the product's own.
 
 ## [ ] Template showcase · blocks launch
 
-**Why:** The public `apps/web/app/features/` component-docs pages and the landing
+**Why:** The public `apps/web/app/[locale]/features/` component-docs pages and the landing
 page's recorded-run demo still document the template's own machinery — a real product
 must not ship its starter kit's guided tour.
 **Skill:** make-it-yours
 
 **Done means:**
 
-- The `apps/web/app/features/` directory's per-primitive docs pages and the
+- The `apps/web/app/[locale]/features/` directory's per-primitive docs pages and the
   marketing-only components that exist solely to power them are removed or replaced
   with product content
 - The landing page's recorded-run replay and "degradation, side by side" demo section

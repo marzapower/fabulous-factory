@@ -43,6 +43,7 @@ COPY packages/config/package.json packages/config/package.json
 COPY packages/core/package.json packages/core/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/email/package.json packages/email/package.json
+COPY packages/i18n/package.json packages/i18n/package.json
 COPY packages/jobs/package.json packages/jobs/package.json
 COPY packages/llm/package.json packages/llm/package.json
 COPY packages/observability/package.json packages/observability/package.json

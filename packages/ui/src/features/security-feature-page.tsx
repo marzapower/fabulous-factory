@@ -1,7 +1,9 @@
 // Built with Fabulous Factory — https://github.com/marzapower/fabulous-factory
 // This credit line is free to keep and gives the project a hand. Thank you!
 
-import { CodeBlock, FeaturePageShell, FEATURES } from "../marketing";
+import { useTranslations } from "@factory/i18n";
+
+import { CodeBlock, FeaturePageShell, featureMeta } from "../marketing";
 import { SecurityBlocklistDemo } from "./blocklist-demo";
 
 const isBlockedAddressSnippet = `export function isBlockedAddress(
@@ -39,42 +41,36 @@ const postConnectSnippet = `function createValidatingConnector(isBlocked: (addre
 }`;
 
 export function SecurityFeaturePage({ brand, emoji }: { brand: string; emoji?: string }) {
+  const t = useTranslations("ui.featurePages.security");
+  const tc = useTranslations("ui.featurePages.common");
+  const tf = useTranslations("ui.features");
+
   return (
-    <FeaturePageShell feature={FEATURES.security} brand={brand} emoji={emoji}>
+    <FeaturePageShell feature={featureMeta(tf, "security")} brand={brand} emoji={emoji}>
       <section>
-        <h2 className="text-xl font-semibold">What it does</h2>
+        <h2 className="text-xl font-semibold">{tc("whatItDoes")}</h2>
         <p className="mt-2 text-muted-foreground">
-          From a feature&rsquo;s side: any code that needs to fetch a URL the user supplied calls{" "}
-          <code className="font-mono">safeFetch()</code> instead of the global{" "}
-          <code className="font-mono">fetch</code>, and gets SSRF protection for free — no
-          per-feature range-checking code to get wrong.
+          {t.rich("whatItDoesBody", {
+            code: (chunks) => <code className="font-mono">{chunks}</code>,
+          })}
         </p>
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold">The rule it enforces</h2>
+        <h2 className="text-xl font-semibold">{tc("ruleItEnforces")}</h2>
         <p className="mt-2 text-muted-foreground">
-          A user-supplied URL can point at a hostname that resolves safely at DNS-lookup time and
-          somewhere internal (a cloud metadata endpoint, a private-network service) by the time the
-          connection actually lands — DNS-rebinding. The rule
-          <code className="font-mono">safeFetch</code> enforces is: never trust the pre-connect DNS
-          answer. Validate the socket you actually got.
+          {t.rich("ruleBody", { code: (chunks) => <code className="font-mono">{chunks}</code> })}
         </p>
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold">Real source</h2>
-        <p className="mt-2 text-muted-foreground">
-          The pure predicate the live example below calls — an IP-range check, nothing more:
-        </p>
+        <h2 className="text-xl font-semibold">{tc("realSource")}</h2>
+        <p className="mt-2 text-muted-foreground">{t("realSourceIntro")}</p>
         <CodeBlock
           code={isBlockedAddressSnippet}
           caption="packages/core/src/safe-fetch.ts — isBlockedAddress()"
         />
-        <p className="mt-4 text-muted-foreground">
-          The actual defense against DNS-rebinding is the post-connect check that calls this
-          predicate against the real, connected socket, not the DNS answer:
-        </p>
+        <p className="mt-4 text-muted-foreground">{t("realSourceIntro2")}</p>
         <div className="mt-2">
           <CodeBlock
             code={postConnectSnippet}
@@ -84,12 +80,11 @@ export function SecurityFeaturePage({ brand, emoji }: { brand: string; emoji?: s
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold">A working example</h2>
+        <h2 className="text-xl font-semibold">{tc("workingExample")}</h2>
         <p className="mt-2 text-muted-foreground">
-          <code className="font-mono">isBlockedAddress</code> takes an IP address literal, not a
-          hostname — it fails closed (blocked) for anything that isn&rsquo;t a valid IPv4/IPv6
-          literal, which is why the field below takes an IP, not a URL. This is DNS-free: no lookup,
-          no fetch is ever performed by this page.
+          {t.rich("workingExampleBody", {
+            code: (chunks) => <code className="font-mono">{chunks}</code>,
+          })}
         </p>
         <div className="mt-4">
           <SecurityBlocklistDemo />

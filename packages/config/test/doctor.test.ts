@@ -1,13 +1,18 @@
 /**
- * Covers doctor.ts's exported pure helpers only (`enableWithHint`, `trustedProxiesWarning`)
- * — `main()` itself is guarded behind an `invokedDirectly` check (same idiom as
- * gen-env-example.ts) specifically so importing this module in a test never also runs its
- * real-env side effects (`readMergedEnv()`, console output). Nothing in this file spies on
- * `console.log` or imports `main`.
+ * Covers doctor.ts's exported pure helpers only (`enableWithHint`, `trustedProxiesWarning`,
+ * `printI18nSection`) — `main()` itself is guarded behind an `invokedDirectly` check (same
+ * idiom as gen-env-example.ts) specifically so importing this module in a test never also
+ * runs its real-env side effects (`readMergedEnv()`, console output). Nothing in this file
+ * spies on `console.log` or imports `main`, except `printI18nSection`'s own describe block
+ * below, which spies only on that one function's output (i18n plan §2.6).
  */
-import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
-import { enableWithHint, trustedProxiesWarning } from "../scripts/doctor";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { enableWithHint, printI18nSection, trustedProxiesWarning } from "../scripts/doctor";
 import { serviceHints } from "../src/env-docs";
 import type { AppMode } from "../src/registry";
 
@@ -66,5 +71,69 @@ describe("trustedProxiesWarning", () => {
   it("does not fire outside production mode, even when unset", () => {
     expect(trustedProxiesWarning({}, DEVELOPMENT)).toBeNull();
     expect(trustedProxiesWarning({}, TEST)).toBeNull();
+  });
+});
+
+describe("printI18nSection", () => {
+  let repoRoot: string;
+  let logSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "doctor-i18n-test-"));
+    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  function writeMessages(relDir: string, ...locales: string[]): void {
+    const dir = path.join(repoRoot, relDir);
+    mkdirSync(dir, { recursive: true });
+    for (const locale of locales) {
+      writeFileSync(path.join(dir, `${locale}.json`), "{}\n", "utf8");
+    }
+  }
+
+  function loggedLines(): string[] {
+    return logSpy.mock.calls.map((call: unknown[]) => String(call[0]));
+  }
+
+  it("reports no catalogs found when neither packages/ui nor any app ships messages/", () => {
+    printI18nSection(repoRoot);
+    expect(loggedLines()).toContain("    no messages/ catalogs found on disk");
+  });
+
+  it("reports the union of locales and both catalogs when packages/ui and an app both ship messages/", () => {
+    writeMessages("packages/ui/messages", "en", "it");
+    writeMessages("apps/web/messages", "en");
+    mkdirSync(path.join(repoRoot, "apps/web"), { recursive: true });
+
+    printI18nSection(repoRoot);
+
+    expect(loggedLines()).toContain("    en, it (catalogs: ui, app)");
+  });
+
+  it("reports only the ui catalog when no app ships its own messages/", () => {
+    writeMessages("packages/ui/messages", "en", "it");
+
+    printI18nSection(repoRoot);
+
+    expect(loggedLines()).toContain("    en, it (catalogs: ui)");
+  });
+
+  it("unions locales across multiple apps and sorts en first", () => {
+    writeMessages("apps/untangle/messages", "en");
+    writeMessages("apps/nothing/messages", "en", "it");
+
+    printI18nSection(repoRoot);
+
+    expect(loggedLines()).toContain("    en, it (catalogs: app)");
+  });
+
+  it("degrades quietly (no throw) when apps/ doesn't exist at all", () => {
+    expect(() => printI18nSection(repoRoot)).not.toThrow();
+    expect(loggedLines()).toContain("    no messages/ catalogs found on disk");
   });
 });

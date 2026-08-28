@@ -37,7 +37,8 @@ Canonical conventions: docs/agents/conventions.md
 
 `define-product`, `add-a-feature`, `enable-billing`, `swap-llm-provider`, `brand-it`,
 `make-it-yours`, `pre-ship-check` — the adopter set, one per `LAUNCH.md` item.
-`fabulous-feature` and `add-a-job` are shared with the factory and always available.
+`fabulous-feature`, `add-a-job`, and `add-a-locale` are shared with the factory and
+always available.
 Ask "what's left to make this mine?" and run `pnpm factory:status` to render `LAUNCH.md`
 and find the next one.
 

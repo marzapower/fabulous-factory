@@ -1,6 +1,8 @@
 // Built with Fabulous Factory — https://github.com/marzapower/fabulous-factory
 // This credit line is free to keep and gives the project a hand. Thank you!
 
+import { useTranslations } from "@factory/i18n";
+
 import { CodeBlock } from "./code-block";
 
 // Illustrative — this shape is exactly what `factory/no-raw-handler` (the ESLint rule
@@ -28,36 +30,32 @@ export const GET = defineHandler({
 });`;
 
 export function KernelCode() {
+  const t = useTranslations("ui.marketing.kernelCode");
+
   return (
     <section className="fab-kernel mx-auto max-w-6xl px-6 py-20">
       <div className="mb-10 max-w-2xl">
-        <p className="font-mono text-sm text-fab-marker">// the kernel, in code</p>
-        <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground">
-          There is no other way to write a route
-        </h2>
+        <p className="font-mono text-sm text-fab-marker">{t("eyebrow")}</p>
+        <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground">{t("heading")}</h2>
         <p className="mt-3 text-muted-foreground">
-          <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-foreground">
-            defineHandler
-          </code>{" "}
-          and{" "}
-          <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-foreground">
-            defineAction
-          </code>{" "}
-          are the only legal way to declare a route or a server action. A raw export doesn&rsquo;t
-          get reviewed and rejected — it doesn&rsquo;t compile past lint in the first place.
+          {t.rich("body", {
+            code: (chunks) => (
+              <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-foreground">
+                {chunks}
+              </code>
+            ),
+          })}
         </p>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <CodeBlock code={ILLEGAL_HANDLER} caption="Raw handler — illustrative, not a real file" />
-          <p className="font-mono text-xs text-fab-marker">does not lint, does not merge</p>
+          <CodeBlock code={ILLEGAL_HANDLER} caption={t("illegalCaption")} />
+          <p className="font-mono text-xs text-fab-marker">{t("illegalNote")}</p>
         </div>
         <div className="flex flex-col gap-2">
-          <CodeBlock code={LEGAL_HANDLER} caption="app/api/health/route.ts — real, shipping" />
-          <p className="font-mono text-xs text-muted-foreground">
-            auth mode and rate limit, stated
-          </p>
+          <CodeBlock code={LEGAL_HANDLER} caption={t("legalCaption")} />
+          <p className="font-mono text-xs text-muted-foreground">{t("legalNote")}</p>
         </div>
       </div>
     </section>

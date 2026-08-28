@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@factory/auth/client", () => ({
@@ -14,6 +14,7 @@ vi.mock("next/navigation", () => ({
 
 import { authClient } from "@factory/auth/client";
 import { AccountSettings } from "../src/account/account-settings";
+import { renderI18n } from "./render";
 
 const mockedUpdateUser = vi.mocked(authClient.updateUser);
 const mockedDeleteUser = vi.mocked(authClient.deleteUser);
@@ -30,7 +31,7 @@ beforeEach(() => {
 describe("AccountSettings — profile card", () => {
   it("saves the typed name via authClient.updateUser, shows the saved state, and refreshes the router-cached session data", async () => {
     mockedUpdateUser.mockResolvedValue({ data: {}, error: null });
-    render(
+    renderI18n(
       <AccountSettings
         user={USER}
         emailEnabled={true}
@@ -52,7 +53,7 @@ describe("AccountSettings — profile card", () => {
   });
 
   it("disables the save button until the name actually changes, so a no-op save can't be submitted", () => {
-    render(
+    renderI18n(
       <AccountSettings
         user={USER}
         emailEnabled={true}
@@ -70,7 +71,7 @@ describe("AccountSettings — profile card", () => {
 describe("AccountSettings — danger zone: email confirmation × password collection", () => {
   it("credential account, email enabled: collects the password, and success shows the check-your-email state without navigating away", async () => {
     mockedDeleteUser.mockResolvedValue({ data: {}, error: null });
-    render(
+    renderI18n(
       <AccountSettings
         user={USER}
         emailEnabled={true}
@@ -96,7 +97,7 @@ describe("AccountSettings — danger zone: email confirmation × password collec
 
   it("social-only account, email enabled: no password field, still confirms by email", async () => {
     mockedDeleteUser.mockResolvedValue({ data: {}, error: null });
-    render(
+    renderI18n(
       <AccountSettings
         user={USER}
         emailEnabled={true}
@@ -118,7 +119,7 @@ describe("AccountSettings — danger zone: email confirmation × password collec
 
   it("credential account, email disabled: collects the password and deletes immediately, navigating home", async () => {
     mockedDeleteUser.mockResolvedValue({ data: {}, error: null });
-    render(
+    renderI18n(
       <AccountSettings
         user={USER}
         emailEnabled={false}
@@ -139,14 +140,14 @@ describe("AccountSettings — danger zone: email confirmation × password collec
       expect(mockedDeleteUser).toHaveBeenCalledWith({ password: "hunter2" });
     });
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/");
+      expect(mockPush).toHaveBeenCalledWith("/", { scroll: undefined });
     });
     expect(mockRefresh).toHaveBeenCalled();
   });
 
   it("social-only account, email disabled: no password field, deletes immediately with no arguments", async () => {
     mockedDeleteUser.mockResolvedValue({ data: {}, error: null });
-    render(
+    renderI18n(
       <AccountSettings
         user={USER}
         emailEnabled={false}
@@ -164,7 +165,7 @@ describe("AccountSettings — danger zone: email confirmation × password collec
       expect(mockedDeleteUser).toHaveBeenCalledWith({});
     });
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/");
+      expect(mockPush).toHaveBeenCalledWith("/", { scroll: undefined });
     });
   });
 
@@ -173,7 +174,7 @@ describe("AccountSettings — danger zone: email confirmation × password collec
       data: null,
       error: { code: "INVALID_PASSWORD", message: "raw" },
     });
-    render(
+    renderI18n(
       <AccountSettings
         user={USER}
         emailEnabled={false}
@@ -195,7 +196,7 @@ describe("AccountSettings — danger zone: email confirmation × password collec
   });
 
   it("cancel returns to the idle state and clears any typed password", () => {
-    render(
+    renderI18n(
       <AccountSettings
         user={USER}
         emailEnabled={false}

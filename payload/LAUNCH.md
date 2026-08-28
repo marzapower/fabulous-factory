@@ -41,7 +41,7 @@ copy, not the product's.
 
 - Landing page copy (hero, header, feature cards) speaks the product's name and value
   prop, not the factory's
-- `apps/web/app/layout.tsx` metadata title (and description, if set) name the real
+- `apps/web/app/[locale]/layout.tsx` metadata title (and description, if set) name the real
   product
 - Any remaining home-page copy references the product, not "Fabulous Factory"
 

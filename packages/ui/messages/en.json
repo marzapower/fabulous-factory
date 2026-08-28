@@ -1,0 +1,393 @@
+{
+  "auth": {
+    "loginForm": {
+      "orContinueWithEmail": "or continue with email",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "forgotPassword": "Forgot password?",
+      "signIn": "Sign in",
+      "signingIn": "Signing in…",
+      "signInError": "Unable to sign in. Check your email and password.",
+      "continueWithProvider": "Continue with {provider}",
+      "redirecting": "Redirecting…",
+      "socialError": "Unable to sign in with {provider}.",
+      "unverifiedNotice": "Your email isn't verified yet. Verify it to sign in.",
+      "resendButton": "Resend verification email",
+      "resendSending": "Sending…",
+      "resendSent": "Verification email sent — check your inbox at {email}.",
+      "resendError": "Unable to resend the verification email.",
+      "magicLinkPrompt": "Email me a sign-in link instead",
+      "magicLinkSent": "Sign-in link sent — check your inbox at {email}.",
+      "magicLinkEmailLabel": "Email",
+      "magicLinkSendButton": "Send link",
+      "magicLinkSending": "Sending…",
+      "magicLinkError": "Unable to send a sign-in link."
+    },
+    "signupForm": {
+      "orContinueWithEmail": "or continue with email",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "createAccount": "Create account",
+      "creatingAccount": "Creating account…",
+      "signUpError": "Unable to create your account.",
+      "continueWithProvider": "Continue with {provider}",
+      "redirecting": "Redirecting…",
+      "socialError": "Unable to sign up with {provider}.",
+      "verifyPendingTitle": "Check your email to verify your account",
+      "verifyPendingBody": "We sent a verification link to {email}. Click it to finish setting up your account."
+    },
+    "forgotPasswordForm": {
+      "disabledTitle": "Password reset isn't available",
+      "disabledBody": "Resetting a password requires email delivery, which isn't configured for this deployment. Contact whoever manages your account for another way in.",
+      "sentMessage": "If an account exists for {email}, we've sent a link to reset the password. Check your inbox.",
+      "emailLabel": "Email",
+      "sendButton": "Send reset link",
+      "sending": "Sending…",
+      "fallbackError": "Unable to send the reset link."
+    },
+    "forgotPasswordPage": {
+      "title": "Reset your password",
+      "description": "We'll email you a link to choose a new one.",
+      "rememberedIt": "Remembered it?",
+      "signIn": "Sign in"
+    },
+    "resetPasswordForm": {
+      "invalidMessage": "This link is invalid or has expired.",
+      "requestNewOne": "Request a new one",
+      "doneMessage": "Your password has been reset",
+      "signIn": "Sign in",
+      "newPasswordLabel": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "mismatchError": "Passwords don't match.",
+      "fallbackError": "Unable to reset your password.",
+      "submitButton": "Reset password",
+      "resetting": "Resetting…"
+    },
+    "resetPasswordPage": {
+      "title": "Choose a new password",
+      "description": "Pick something you haven't used before."
+    },
+    "signOutButton": {
+      "signOut": "Sign out",
+      "signingOut": "Signing out…"
+    }
+  },
+  "account": {
+    "profileCard": {
+      "title": "Profile",
+      "description": "Your name and email on this account.",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "verified": "Verified",
+      "notVerified": "Not verified",
+      "error": "Unable to update your profile.",
+      "saved": "Profile updated.",
+      "saveButton": "Save changes",
+      "saving": "Saving…"
+    },
+    "dataExportCard": {
+      "title": "Export your data",
+      "description": "Download everything this account has stored, as JSON.",
+      "downloadButton": "Download your data"
+    },
+    "dangerZoneCard": {
+      "title": "Delete account",
+      "description": "Permanently deletes your account and everything tied to it. This can't be undone.",
+      "emailSent": "Check your email for a link to confirm deleting your account.",
+      "deleteButton": "Delete account",
+      "passwordLabel": "Confirm your password",
+      "emailConfirmationNotice": "We'll email you a link to confirm — your account stays active until you click it.",
+      "immediateWithPasswordNotice": "This deletes your account immediately.",
+      "immediateNoPasswordNotice": "This deletes your account immediately. If you signed in a while ago, you may need to sign in again first.",
+      "emailErrorFallback": "Unable to start account deletion.",
+      "immediateErrorFallback": "Unable to delete your account.",
+      "emailConfirmButton": "Email me a confirmation link",
+      "emailConfirmSending": "Sending…",
+      "immediateConfirmButton": "Confirm delete",
+      "immediateConfirmSending": "Deleting…",
+      "cancelButton": "Cancel"
+    }
+  },
+  "capabilityPanel": {
+    "title": "Capabilities",
+    "services": {
+      "billing": "Billing",
+      "llm": "LLM",
+      "email": "Email",
+      "jobs": "Jobs",
+      "analytics": "Analytics",
+      "errors": "Errors"
+    },
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "localizationLabel": "Localization",
+    "localizationOnly": "{locale} only",
+    "localizationDefault": "(default {locale})"
+  },
+  "dashboard": {
+    "topBar": {
+      "accountActionsLabel": "Account actions for {userEmail}",
+      "settings": "Settings"
+    }
+  },
+  "marketing": {
+    "alreadyWorks": {
+      "eyebrow": "// what already works",
+      "heading": "The things every product needs, already there",
+      "subheading": "You're not starting from zero. These already work on day one.",
+      "items": {
+        "signingIn": {
+          "title": "Signing in",
+          "body": "People can create an account and log back in. Nothing extra to set up."
+        },
+        "takingPayments": {
+          "title": "Taking payments",
+          "body": "Charge for access to different plans. Upgrades, downgrades and cancellations already work."
+        },
+        "sendingEmail": {
+          "title": "Sending email",
+          "body": "Address confirmations, sign-in links, and anything else you need to send."
+        },
+        "workOnSchedule": {
+          "title": "Work on a schedule",
+          "body": "Set something to run every night, every hour, or after a delay — and trust that it will."
+        },
+        "aiFeatures": {
+          "title": "AI features",
+          "body": "Add features powered by AI — summarizing, generating, deciding — with usage tracked automatically."
+        }
+      }
+    },
+    "controlPanel": {
+      "header": "factory/status",
+      "liveMarker": "· live",
+      "stations": {
+        "billing": "Billing",
+        "llm": "LLM",
+        "jobs": "Jobs",
+        "email": "Email",
+        "analytics": "Analytics",
+        "errors": "Error tracking"
+      },
+      "footer": "Live from this deployment's runtime — unset an env var and a station goes to standby; locales are declared in code. Nothing breaks.",
+      "localizationLabel": "Localization",
+      "localizationOnly": "{locale} only",
+      "localizationDefault": "(default {locale})"
+    },
+    "codeBlock": {
+      "defaultAriaLabel": "Code sample"
+    },
+    "copyButton": {
+      "ariaLabel": "Copy to clipboard"
+    },
+    "envTable": {
+      "regionLabel": "Environment variables",
+      "caption": "Environment variables that enable this feature",
+      "colVariable": "Variable",
+      "colRequired": "Required",
+      "colDescription": "Description",
+      "colExample": "Example",
+      "required": "required",
+      "optional": "optional",
+      "noExample": "—"
+    },
+    "featureCard": {
+      "howItWorks": "How it works"
+    },
+    "featurePageShell": {
+      "breadcrumbHome": "Home",
+      "breadcrumbFeatures": "Features",
+      "breadcrumbNavLabel": "Breadcrumb"
+    },
+    "kernelCode": {
+      "eyebrow": "// the kernel, in code",
+      "heading": "There is no other way to write a route",
+      "body": "<code>defineHandler</code> and <code>defineAction</code> are the only legal way to declare a route or a server action. A raw export doesn't get reviewed and rejected — it doesn't compile past lint in the first place.",
+      "illegalCaption": "Raw handler — illustrative, not a real file",
+      "illegalNote": "does not lint, does not merge",
+      "legalCaption": "app/api/health/route.ts — real, shipping",
+      "legalNote": "auth mode and rate limit, stated"
+    },
+    "liveExample": {
+      "kindLive": "Live — calls this deployment",
+      "kindReplay": "Recorded replay — no live call",
+      "kindStatic": "Static — real source, no request"
+    },
+    "quickstartStrip": {
+      "steps": {
+        "install": "Pick a preset — you get a new repo, born as YOUR product, not a clone to promote.",
+        "run": "You're running — Postgres and one secret are the only requirements.",
+        "askAgent": "Ask your agent — it walks you through every remaining default, one guided skill at a time."
+      }
+    },
+    "siteFooter": {
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "builtWith": "Built with",
+      "factoryLinkText": "Fabulous Factory",
+      "legalNavLabel": "Legal"
+    },
+    "siteHeader": {
+      "underTheHood": "Under the hood",
+      "github": "GitHub",
+      "signIn": "Sign in",
+      "dashboard": "Dashboard",
+      "primaryNavLabel": "Primary"
+    },
+    "statusLight": {
+      "online": "online",
+      "standby": "standby"
+    },
+    "whyItHolds": {
+      "eyebrow": "// why it doesn't fall over",
+      "heading": "The safety net is built in, not remembered",
+      "paragraph1": "The important rules — checking who's allowed to do what, never leaking a secret, protecting a payment — are enforced automatically. No one has to remember to add them, because there's no way to leave them out.",
+      "paragraph2": "If a piece isn't set up yet — no email account connected, no AI key added — nothing breaks. That one feature just waits quietly until you switch it on."
+    }
+  },
+  "features": {
+    "auth": {
+      "title": "Sign-in that's already done",
+      "blurb": "Email and password work on day one; OAuth and magic links turn on the moment you add keys."
+    },
+    "kernel": {
+      "title": "A handler shape you can't get wrong",
+      "blurb": "Every route and action declares its auth mode, its input schema, its rate limit — a raw handler fails lint by construction."
+    },
+    "config": {
+      "title": "One registry, not a scattered process.env",
+      "blurb": "Every env var is declared once — required, secret, what it enables — and the doctor, the docs, and the code can never disagree."
+    },
+    "billing": {
+      "title": "Payments that unlock things",
+      "blurb": "Stripe checkout and webhooks, wired end to end — free mode when it's off, so nothing blocks a demo."
+    },
+    "llm": {
+      "title": "An AI gateway, not a vendor lock-in",
+      "blurb": "Local, OpenRouter, or a direct key — swap providers without touching a single call site."
+    },
+    "jobs": {
+      "title": "Cron your agent can trust",
+      "blurb": "Cron, fan-out and per-step retries when they're on — and every on-demand run works exactly the same when they're off."
+    },
+    "security": {
+      "title": "SSRF guarded, not just documented",
+      "blurb": "A fetch of a user-supplied URL is scheme-checked, range-blocked, and re-validated after connect — see the refusal happen, not just read about it."
+    },
+    "email": {
+      "title": "Email that never blocks a signup",
+      "blurb": "Resend in production, the console in dev — nothing waits on a provider that isn't there."
+    },
+    "observability": {
+      "title": "See it break before your users do",
+      "blurb": "Product analytics and error tracking, both a silent no-op when you haven't set them up yet."
+    }
+  },
+  "featurePages": {
+    "common": {
+      "whatItDoes": "What it does",
+      "ruleItEnforces": "The rule it enforces",
+      "realSource": "Real source",
+      "workingExample": "A working example",
+      "turnItOn": "Turn it on"
+    },
+    "auth": {
+      "statusAlwaysOn": "email + password: always on",
+      "statusNoOptional": "no optional sign-in methods configured",
+      "statusMagicLink": "Magic link",
+      "whatItDoesBody": "From the caller's side: every session-gated route and server action gets a resolved, real <code>session.user</code> handed to it, or it never runs at all — there is no in-between state to handle.",
+      "ruleBody": "Auth mode is mandatory, with no default. Every <code>defineAction</code> call states <code>auth: \"required\"</code> or <code>\"public\"</code> explicitly — there is nowhere to omit the decision, so a public action can never accidentally ship without one.",
+      "workingExampleBody": "Auth is the one baseline that isn't optional — set <code>BETTER_AUTH_SECRET</code> and email/password sign-in works immediately; everything else here is an upgrade, not a requirement.",
+      "ctaParagraph": "<link>Create an account</link>, then open the dashboard — that's <code>requireSession</code> doing its job."
+    },
+    "billing": {
+      "whatItDoesBody": "From a paywalled action's side: one call, <code>getEntitlement(userId)</code>, answers \"what is this user allowed today\" — a plan id and a <code>runsPerDay</code> limit, whether billing is configured or not.",
+      "ruleBody": "<code>getEntitlement()</code> never talks to the billing provider directly — only the cached subscription row in Postgres — so a slow or down provider can never slow down or break a request that just needs to know a plan limit. With billing off, nothing is gated: every account gets the free plan's limit lifted entirely."
+    },
+    "config": {
+      "whatItDoesBody": "From the caller's side: one function, <code>getClientConfig()</code>, boils down every service's runtime state into the small, safe slice of it a browser is ever allowed to see — a boolean per capability, nothing more.",
+      "ruleBody": "The client boundary carries on/off booleans only. Adapter identities — which provider is actually behind \"llm\" or \"email\" — never cross it, because that's recon data for an attacker probing what a deployment runs. A component that needs to show \"billing is on\" can; nothing can ask \"is it Stripe\" from the browser.",
+      "realSourceIntro": "The type this page's live capability map below is built from:",
+      "workingExampleIntro": "Not a mockup — this is this deployment's own capability map, read at request time.",
+      "liveExampleTitle": "This deployment's capability map"
+    },
+    "email": {
+      "whatItDoesBody": "From a caller's side: one <code>send()</code> call, naming a template and its typed props, works the same whether Resend is configured, missing, or you're in local dev — the caller never branches on which.",
+      "ruleBody": "<code>send()</code> reads the email capability once and picks exactly one path — disabled, console, or Resend — and the Resend SDK is only ever imported on that last branch. A signup can never hang waiting on a provider that isn't configured; without one, it just quietly reports itself undelivered instead.",
+      "sendSnippetCaption": "Simplified from packages/email/src/send.ts",
+      "templatesIntro": "Every template pairs its component with its subject line in one map, never scattered across call sites:",
+      "workingExampleIntro": "No preview is rendered here — <code>apps/web</code> deliberately carries no dependency on <code>@factory/email</code>, so nothing outside the adapter package it belongs to can import the vendor renderer.",
+      "turnItOnLabel": "Turn it on",
+      "turnItOnBody": "Set <code>RESEND_API_KEY</code> (and <code>EMAIL_FROM</code>) and delivery goes live. Leave it unset: in development every email prints to the console instead; in production, email is off entirely and sign-up just skips the verification step rather than blocking on it."
+    },
+    "kernel": {
+      "whatItDoesBody": "From the caller's side: every route and server action in this repo declares its auth mode, its input schema, and (when public) its rate-limit policy up front, in one place, before any of your handler code runs.",
+      "ruleBody": "<code>defineHandler</code> and <code>defineAction</code> are the ONLY legal way to declare a route handler or server action. A raw <code>export async function GET/POST/...</code>, or a raw exported function in a <code>\"use server\"</code> file, fails lint by construction — there is nowhere left to forget an auth check, skip input validation, or ship an unlimited public endpoint by accident.",
+      "realSourceIntro": "The handler backing the live example below, declared the only legal way, next to the raw handler shape it replaces:",
+      "illegalCaption": "What fails lint — never merges",
+      "workingExampleBody": "This calls the real echo endpoint above, on this deployment. It costs nothing, needs no account, and makes no outbound request — the handler only echoes a capped slice of what you send it.",
+      "asymmetryNote": "One asymmetry worth noticing: the origin check above (<code>defineHandler</code>'s step 4) only runs for state-changing methods, and it allows a request with no <code>Origin</code> header at all while rejecting one whose <code>sec-fetch-site</code> is <code>cross-site</code>. That means a copyable <code>curl</code> command succeeds against this route where a cross-origin browser call from another site is refused — the check targets the browser threat model (CSRF from a signed-in tab), not server-to-server callers, which is exactly why it works that way rather than being a hole in it."
+    },
+    "llm": {
+      "whatItDoesBody": "From a caller's side: <code>streamArray()</code> takes a zod schema for ONE array element and hands your code a fully-typed element every time the model completes one — no partial objects, no vendor SDK types leaking out of <code>@factory/llm</code>.",
+      "ruleBody": "Every call — streaming or not — goes through the same budget check, cost accounting, and <code>llm_calls</code> row, whichever provider profile is configured (local, OpenRouter, or a direct key). A call site never spends money it wasn't told it could, and a disabled or over-budget call throws before any provider SDK is even loaded.",
+      "turnItOnBody": "Set credentials for any one profile and it lights up. Leave all of it unset and <code>streamArray()</code>/<code>generate()</code> throw before any provider SDK loads; every call site in this template is written to fall back to a non-AI result rather than let that throw reach a user."
+    },
+    "observability": {
+      "statusAnalytics": "analytics",
+      "statusErrors": "errors",
+      "whatItDoesBody": "From a caller's side: <code>track()</code> fires an analytics event and <code>captureException()</code> reports an error — both are unconditional calls you never wrap in a capability check yourself.",
+      "ruleBody": "Two independent seams under one banner: product analytics via PostHog and error tracking via Sentry, plus OpenTelemetry tracing underneath the LLM and job pipelines. Either can be on, off, or both — neither depends on the other, and neither depends on any other service in the template. <code>track()</code> is fire-and-forget by contract: it never blocks the caller and never throws, whether analytics is on, off, or the call itself fails.",
+      "workingExampleBody": "Set <code>POSTHOG_KEY</code> for analytics and/or <code>SENTRY_DSN</code> for error reporting — each lights up independently. Leave either unset and its functions become silent no-ops: no vendor SDK is ever imported, and nothing that calls <code>track()</code> or <code>captureException()</code> changes behavior."
+    },
+    "security": {
+      "whatItDoesBody": "From a feature's side: any code that needs to fetch a URL the user supplied calls <code>safeFetch()</code> instead of the global <code>fetch</code>, and gets SSRF protection for free — no per-feature range-checking code to get wrong.",
+      "ruleBody": "A user-supplied URL can point at a hostname that resolves safely at DNS-lookup time and somewhere internal (a cloud metadata endpoint, a private-network service) by the time the connection actually lands — DNS-rebinding. The rule <code>safeFetch</code> enforces is: never trust the pre-connect DNS answer. Validate the socket you actually got.",
+      "realSourceIntro": "The pure predicate the live example below calls — an IP-range check, nothing more:",
+      "realSourceIntro2": "The actual defense against DNS-rebinding is the post-connect check that calls this predicate against the real, connected socket, not the DNS answer:",
+      "workingExampleBody": "<code>isBlockedAddress</code> takes an IP address literal, not a hostname — it fails closed (blocked) for anything that isn't a valid IPv4/IPv6 literal, which is why the field below takes an IP, not a URL. This is DNS-free: no lookup, no fetch is ever performed by this page."
+    },
+    "index": {
+      "eyebrow": "// fabulous factory",
+      "heading": "The machinery behind the product",
+      "argumentParagraph": "The argument, end to end: what you get on day one, the rule that makes a shortcut impossible, proof it's enforced on this exact deployment, proof the product keeps working when a piece is missing, how to run it yourself, and every piece you can build on next.",
+      "liveEyebrow": "// this deployment, live",
+      "liveHeading": "Capability lights, not a marketing claim",
+      "liveBody": "This panel reads this deployment's own runtime — unset an env var and a station goes to standby, live, right here.",
+      "builtEyebrow": "// what's already built",
+      "builtHeading": "Nine pieces, four of them load-bearing",
+      "builtBody": "Auth, the kernel, config, and security ship unconditionally — there's no env var that turns them off. The rest are checked live against this deployment's own runtime, the same signal the control panel above reads."
+    },
+    "echoDemo": {
+      "liveExampleTitle": "Try the echo endpoint",
+      "defaultMessage": "Hello from the docs page",
+      "messageLabel": "Message to send",
+      "placeholder": "Type a message, or clear it to see the 400",
+      "sendButton": "Send",
+      "sending": "Sending…",
+      "hint": "Send it 9 times within a minute to see the 429 — this route's own rate-limit policy is <rateLimit></rateLimit>. The limit is abuse mitigation that fails open on a database error, not a security guarantee.",
+      "networkError": "network error: {message}",
+      "httpStatus": "HTTP {status}"
+    },
+    "blocklistDemo": {
+      "liveExampleTitle": "Check an IP address",
+      "addressLabel": "IP address to check",
+      "checkButton": "Check",
+      "checking": "Checking…",
+      "networkError": "network error: {message}",
+      "httpStatus": "HTTP {status}",
+      "blocked": "BLOCKED",
+      "allowed": "allowed",
+      "hint": "DNS-free — no fetch is ever performed by this check. It evaluates the same pure predicate <code>isBlockedAddress</code> that gates <code>safeFetch</code>'s DNS-resolved address before a connection is attempted."
+    }
+  },
+  "theme": {
+    "themeToggle": {
+      "ariaLabel": "Toggle theme"
+    }
+  },
+  "localeSwitcher": {
+    "label": "Language"
+  }
+}

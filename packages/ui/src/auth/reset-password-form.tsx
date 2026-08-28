@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+
+import { useTranslations } from "@factory/i18n";
+import { Link } from "@factory/i18n/navigation";
 
 import { authClient } from "@factory/auth/client";
 import { Button } from "../primitives/button";
@@ -30,6 +32,7 @@ export function resolveResetPasswordView(token: string | null): "invalid" | "for
 }
 
 export function ResetPasswordForm() {
+  const t = useTranslations("ui.auth.resetPasswordForm");
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
@@ -42,9 +45,9 @@ export function ResetPasswordForm() {
   if (resolveResetPasswordView(token) === "invalid") {
     return (
       <p className="text-sm text-destructive" role="alert">
-        This link is invalid or has expired.{" "}
+        {t("invalidMessage")}{" "}
         <Link href="/forgot-password" className="underline underline-offset-4">
-          Request a new one
+          {t("requestNewOne")}
         </Link>
         .
       </p>
@@ -55,10 +58,10 @@ export function ResetPasswordForm() {
     return (
       <div className="grid gap-2 text-center">
         <p className="text-sm font-medium" role="status">
-          Your password has been reset
+          {t("doneMessage")}
         </p>
         <Link href="/login" className="text-sm underline underline-offset-4">
-          Sign in
+          {t("signIn")}
         </Link>
       </div>
     );
@@ -68,7 +71,7 @@ export function ResetPasswordForm() {
     event.preventDefault();
 
     if (newPassword !== confirmPassword) {
-      setError("Passwords don't match.");
+      setError(t("mismatchError"));
       return;
     }
 
@@ -83,7 +86,7 @@ export function ResetPasswordForm() {
 
     if (resetError) {
       setLoading(false);
-      setError(describeAuthError(resetError, "Unable to reset your password."));
+      setError(describeAuthError(resetError, t("fallbackError")));
       return;
     }
 
@@ -94,7 +97,7 @@ export function ResetPasswordForm() {
   return (
     <form className="grid gap-4" onSubmit={handleSubmit}>
       <div className="grid gap-2">
-        <Label htmlFor="new-password">New password</Label>
+        <Label htmlFor="new-password">{t("newPasswordLabel")}</Label>
         <Input
           id="new-password"
           name="newPassword"
@@ -106,7 +109,7 @@ export function ResetPasswordForm() {
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="confirm-password">Confirm new password</Label>
+        <Label htmlFor="confirm-password">{t("confirmPasswordLabel")}</Label>
         <Input
           id="confirm-password"
           name="confirmPassword"
@@ -123,7 +126,7 @@ export function ResetPasswordForm() {
         </p>
       )}
       <Button type="submit" disabled={loading}>
-        {loading ? "Resetting…" : "Reset password"}
+        {loading ? t("resetting") : t("submitButton")}
       </Button>
     </form>
   );

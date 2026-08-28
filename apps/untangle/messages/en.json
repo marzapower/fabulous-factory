@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "home": {
+      "title": "Fabulous Untangle — paste the mess, get the list",
+      "template": "%s · Fabulous Untangle",
+      "description": "Paste an unsorted brain dump and get back a task list: what's actually a task, when each one matters, and the big ones split into steps you can start. The sample product that ships with Fabulous Factory."
+    },
+    "login": {
+      "title": "Sign in",
+      "description": "Sign in to Untangle."
+    },
+    "signup": {
+      "title": "Create your account",
+      "description": "Create an Untangle account and paste your first mess."
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "description": "Request a password reset link for your Untangle account."
+    },
+    "resetPassword": {
+      "title": "Choose a new password",
+      "description": "Set a new password for your Untangle account."
+    },
+    "privacy": {
+      "title": "Privacy Policy"
+    },
+    "terms": {
+      "title": "Terms of Service"
+    },
+    "settings": {
+      "title": "Account settings",
+      "description": "Manage your Untangle account."
+    },
+    "featuresIndex": {
+      "title": "Fabulous Factory — the machinery behind Untangle",
+      "description": "The kernel that makes an unguarded route impossible, this deployment's live capability panel, the same run with the AI switched off, and how to get your own repo running."
+    }
+  },
+  "auth": {
+    "loginPage": {
+      "title": "Sign in",
+      "description": "Welcome back to Fabulous Factory.",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up"
+    },
+    "signupPage": {
+      "title": "Create an account",
+      "description": "Get started with Fabulous Factory.",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in"
+    }
+  },
+  "legal": {
+    "placeholderNotice": "This is placeholder text shipped by the template — replace before production. See the <code>make-it-yours</code> skill.",
+    "lastUpdated": "Last updated: placeholder.",
+    "backToHome": "Back to home",
+    "privacy": {
+      "heading": "Privacy Policy",
+      "section1Title": "1. Data collected",
+      "section1Body": "Placeholder: what account, usage, and product data is collected, and why.",
+      "section2Title": "2. Cookies",
+      "section2Body": "Placeholder: session cookies used for authentication, and any analytics cookies once enabled.",
+      "section3Title": "3. Third parties",
+      "section3Body": "Placeholder: subprocessors (auth, email, analytics, error tracking, billing) and what each one sees.",
+      "section4Title": "4. Contact",
+      "section4Body": "Placeholder: how to reach the company about a data or privacy request."
+    },
+    "terms": {
+      "heading": "Terms of Service",
+      "section1Title": "1. Service description",
+      "section1Body": "Placeholder: describe what the product does, who it's for, and what using it means the customer agrees to.",
+      "section2Title": "2. Accounts",
+      "section2Body": "Placeholder: account eligibility, credential responsibility, and grounds for suspension or termination.",
+      "section3Title": "3. Payment",
+      "section3Body": "Placeholder: pricing, billing cycle, refund policy, and what happens to access when a subscription lapses.",
+      "section4Title": "4. Liability",
+      "section4Body": "Placeholder: warranty disclaimer and limitation of liability language, reviewed by counsel before this repo ships to real customers.",
+      "section5Title": "5. Contact",
+      "section5Body": "Placeholder: how to reach the company about these terms."
+    }
+  },
+  "dashboard": {
+    "shell": {
+      "signedInAs": "Signed in as {email}",
+      "welcome": "Welcome.",
+      "welcomeWithName": "Welcome, {name}."
+    }
+  },
+  "errorPage": {
+    "title": "Something broke",
+    "message": "That page hit a snag. Give it another try.",
+    "ref": "ref {digest}",
+    "tryAgain": "Try again",
+    "goHome": "Go home"
+  },
+  "notFoundPage": {
+    "title": "Nothing here",
+    "message": "That page doesn't exist, or it moved.",
+    "goHome": "Go home"
+  }
+}

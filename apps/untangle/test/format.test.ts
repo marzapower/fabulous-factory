@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCents, formatDuration, formatDue } from "../components/workspace/format";
+import {
+  formatCents,
+  formatDateTime,
+  formatDuration,
+  formatDue,
+} from "../components/workspace/format";
 
 describe("formatCents", () => {
   it("renders two decimal places of a cent figure", () => {
@@ -28,6 +33,14 @@ describe("formatDuration", () => {
   it("renders an em dash for null/undefined", () => {
     expect(formatDuration(null)).toBe("—");
     expect(formatDuration(undefined)).toBe("—");
+  });
+});
+
+describe("formatDateTime", () => {
+  it("renders a pinned en-US date + short time, independent of the runtime's own locale", () => {
+    expect(formatDateTime(new Date(Date.UTC(2026, 7, 21, 14, 5)))).toMatch(
+      /^Aug 21, 2026, \d{1,2}:\d{2}\s?[AP]M$/,
+    );
   });
 });
 

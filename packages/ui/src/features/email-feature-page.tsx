@@ -1,6 +1,8 @@
 // Built with Fabulous Factory — https://github.com/marzapower/fabulous-factory
 // This credit line is free to keep and gives the project a hand. Thank you!
 
+import { useTranslations } from "@factory/i18n";
+
 import { getClientConfig, getEnvDocsForGroup } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
 
@@ -11,6 +13,7 @@ import {
   FEATURES,
   LiveExample,
   StatusLight,
+  featureMeta,
 } from "../marketing";
 
 // N2 (K.16): this page is Static, not Live — `apps/web` has no `@factory/email`
@@ -50,43 +53,40 @@ const subjectsSnippet = `const TEMPLATES: Record<TemplateName, TemplateEntry> = 
 };`;
 
 export function EmailFeaturePage({ brand, emoji }: { brand: string; emoji?: string }) {
+  const t = useTranslations("ui.featurePages.email");
+  const tc = useTranslations("ui.featurePages.common");
+  const tf = useTranslations("ui.features");
   const config = getClientConfig();
   const vars = FEATURES.email.groups.flatMap((group) => getEnvDocsForGroup(group));
 
   return (
     <ClientConfigProvider config={config}>
       <FeaturePageShell
-        feature={FEATURES.email}
+        feature={featureMeta(tf, "email")}
         brand={brand}
         emoji={emoji}
         statusSlot={<StatusLight service="email" />}
       >
         <section>
-          <h2 className="text-xl font-semibold">What it does</h2>
+          <h2 className="text-xl font-semibold">{tc("whatItDoes")}</h2>
           <p className="mt-2 text-muted-foreground">
-            From a caller&rsquo;s side: one <code className="font-mono">send()</code> call, naming a
-            template and its typed props, works the same whether Resend is configured, missing, or
-            you&rsquo;re in local dev — the caller never branches on which.
+            {t.rich("whatItDoesBody", {
+              code: (chunks) => <code className="font-mono">{chunks}</code>,
+            })}
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold">The rule it enforces</h2>
+          <h2 className="text-xl font-semibold">{tc("ruleItEnforces")}</h2>
           <p className="mt-2 text-muted-foreground">
-            <code className="font-mono">send()</code> reads the email capability once and picks
-            exactly one path — disabled, console, or Resend — and the Resend SDK is only ever
-            imported on that last branch. A signup can never hang waiting on a provider that
-            isn&rsquo;t configured; without one, it just quietly reports itself undelivered instead.
+            {t.rich("ruleBody", { code: (chunks) => <code className="font-mono">{chunks}</code> })}
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold">Real source</h2>
-          <CodeBlock code={sendSnippet} caption="Simplified from packages/email/src/send.ts" />
-          <p className="mt-4 text-muted-foreground">
-            Every template pairs its component with its subject line in one map, never scattered
-            across call sites:
-          </p>
+          <h2 className="text-xl font-semibold">{tc("realSource")}</h2>
+          <CodeBlock code={sendSnippet} caption={t("sendSnippetCaption")} />
+          <p className="mt-4 text-muted-foreground">{t("templatesIntro")}</p>
           <div className="mt-2">
             <CodeBlock
               code={subjectsSnippet}
@@ -96,20 +96,18 @@ export function EmailFeaturePage({ brand, emoji }: { brand: string; emoji?: stri
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold">A working example</h2>
+          <h2 className="text-xl font-semibold">{tc("workingExample")}</h2>
           <p className="mt-2 text-muted-foreground">
-            No preview is rendered here — <code className="font-mono">apps/web</code> deliberately
-            carries no dependency on <code className="font-mono">@factory/email</code>, so nothing
-            outside the adapter package it belongs to can import the vendor renderer.
+            {t.rich("workingExampleIntro", {
+              code: (chunks) => <code className="font-mono">{chunks}</code>,
+            })}
           </p>
           <div className="mt-4">
-            <LiveExample kind="static" title="Turn it on">
+            <LiveExample kind="static" title={t("turnItOnLabel")}>
               <p className="text-sm text-muted-foreground">
-                Set <code className="font-mono">RESEND_API_KEY</code> (and{" "}
-                <code className="font-mono">EMAIL_FROM</code>) and delivery goes live. Leave it
-                unset: in development every email prints to the console instead; in production,
-                email is off entirely and sign-up just skips the verification step rather than
-                blocking on it.
+                {t.rich("turnItOnBody", {
+                  code: (chunks) => <code className="font-mono">{chunks}</code>,
+                })}
               </p>
               <div className="mt-2">
                 <EnvTable vars={vars} />

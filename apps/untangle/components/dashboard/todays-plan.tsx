@@ -1,7 +1,6 @@
-import Link from "next/link";
-
 import type { LatestRunSummary, TaskListItem } from "@factory/untangle";
 
+import { Link } from "@factory/i18n/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@factory/ui/primitives";
 
 import { formatDue } from "../workspace/format";

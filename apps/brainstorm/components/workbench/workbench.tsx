@@ -9,7 +9,7 @@ import {
   deleteItemAction,
   setItemStatusAction,
   updateItemAction,
-} from "@/app/projects/[id]/actions";
+} from "@/app/[locale]/projects/[id]/actions";
 
 import { BoardPane } from "./board-pane";
 import { ChatPane } from "./chat-pane";

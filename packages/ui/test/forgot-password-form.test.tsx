@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@factory/auth/client", () => ({
@@ -8,6 +8,7 @@ vi.mock("@factory/auth/client", () => ({
 
 import { authClient } from "@factory/auth/client";
 import { ForgotPasswordForm, resolveForgotPasswordView } from "../src/auth/forgot-password-form";
+import { renderI18n } from "./render";
 
 const mockedRequestPasswordReset = vi.mocked(authClient.requestPasswordReset);
 
@@ -27,7 +28,7 @@ describe("resolveForgotPasswordView", () => {
 
 describe("ForgotPasswordForm", () => {
   it("renders the honest disabled state instead of a form when email isn't configured — a broken form would be worse than none", () => {
-    render(<ForgotPasswordForm emailEnabled={false} />);
+    renderI18n(<ForgotPasswordForm emailEnabled={false} />);
 
     expect(screen.getByText(/password reset isn.t available/i)).toBeTruthy();
     expect(screen.queryByRole("textbox")).toBeNull();
@@ -36,7 +37,7 @@ describe("ForgotPasswordForm", () => {
 
   it("submits the typed email with the fixed redirectTo, and shows the non-enumerating success copy", async () => {
     mockedRequestPasswordReset.mockResolvedValue({ data: { status: true }, error: null });
-    render(<ForgotPasswordForm emailEnabled={true} />);
+    renderI18n(<ForgotPasswordForm emailEnabled={true} />);
 
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: "person@example.com" },
@@ -60,7 +61,7 @@ describe("ForgotPasswordForm", () => {
       data: null,
       error: { code: "USER_NOT_FOUND", message: "raw" },
     });
-    render(<ForgotPasswordForm emailEnabled={true} />);
+    renderI18n(<ForgotPasswordForm emailEnabled={true} />);
 
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: "nobody@example.com" },

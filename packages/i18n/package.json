@@ -1,0 +1,37 @@
+{
+  "name": "@factory/i18n",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts",
+    "./client": "./src/client.tsx",
+    "./navigation": "./src/navigation.tsx",
+    "./routing": "./src/routing.ts",
+    "./middleware": "./src/middleware.ts",
+    "./check": "./src/check.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next-intl": "4.13.7",
+    "server-only": "^0.0.1"
+  },
+  "peerDependencies": {
+    "next": "^16.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "jsdom": "^30.0.1",
+    "next": "^16.3.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
+  }
+}

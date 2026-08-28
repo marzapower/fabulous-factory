@@ -1,0 +1,179 @@
+{
+  "meta": {
+    "layout": {
+      "title": {
+        "default": "Fabulous Nothing",
+        "template": "%s · Fabulous Nothing"
+      },
+      "description": "Il preset a pagina bianca di Fabulous Factory: una landing page, accesso e registrazione funzionanti, e una dashboard autenticata vuota. Non c'è ancora niente qui — è proprio questo il punto."
+    },
+    "login": {
+      "title": "Accedi",
+      "description": "Accedi a Fabulous Nothing."
+    },
+    "signup": {
+      "title": "Crea il tuo account",
+      "description": "Crea un account — non c'è ancora niente qui, ed è proprio questo il punto."
+    },
+    "forgotPassword": {
+      "title": "Reimposta la tua password",
+      "description": "Richiedi un link per reimpostare la password del tuo account Fabulous Nothing."
+    },
+    "resetPassword": {
+      "title": "Scegli una nuova password",
+      "description": "Imposta una nuova password per il tuo account Fabulous Nothing."
+    },
+    "privacy": {
+      "title": "Informativa sulla privacy"
+    },
+    "terms": {
+      "title": "Termini di servizio"
+    },
+    "settings": {
+      "title": "Impostazioni account",
+      "description": "Gestisci il tuo account Fabulous Nothing."
+    },
+    "features": {
+      "title": "Fabulous Factory — i meccanismi dietro al prodotto",
+      "description": "Il kernel che rende impossibile una route non protetta, il pannello delle funzionalità in diretta di questo deployment, cosa cambia quando manca la chiave AI, e come far girare il tuo repo."
+    }
+  },
+  "home": {
+    "eyebrow": "// fabulous nothing",
+    "heading": "Questo prodotto non esiste ancora.",
+    "signInWorks": "L'accesso funziona.",
+    "capabilityLive": "Il pannello delle funzionalità è in diretta.",
+    "restIsGen": "Tutto il resto è a un <code>pnpm gen</code> di distanza.",
+    "installCommand": "npx fabulous-factory install"
+  },
+  "errorPage": {
+    "title": "Qualcosa si è rotto",
+    "message": "Quella pagina ha avuto un intoppo. Riprova.",
+    "ref": "rif {digest}",
+    "tryAgain": "Riprova",
+    "goHome": "Vai alla home"
+  },
+  "notFoundPage": {
+    "title": "Niente qui",
+    "message": "Quella pagina non esiste, o è stata spostata.",
+    "goHome": "Vai alla home"
+  },
+  "legal": {
+    "privacy": {
+      "title": "Informativa sulla privacy",
+      "lastUpdated": "Ultimo aggiornamento: segnaposto.",
+      "placeholderNotice": "Questo è un testo segnaposto fornito dal template — sostituiscilo prima della produzione. Vedi l'abilità <code>make-it-yours</code>.",
+      "sections": {
+        "dataCollected": {
+          "title": "1. Dati raccolti",
+          "body": "Segnaposto: quali dati di account, utilizzo e prodotto vengono raccolti, e perché."
+        },
+        "cookies": {
+          "title": "2. Cookie",
+          "body": "Segnaposto: cookie di sessione usati per l'autenticazione, ed eventuali cookie di analytics una volta attivati."
+        },
+        "thirdParties": {
+          "title": "3. Terze parti",
+          "body": "Segnaposto: subprocessor (auth, email, analytics, tracciamento errori, fatturazione) e cosa vede ciascuno."
+        },
+        "contact": {
+          "title": "4. Contatti",
+          "body": "Segnaposto: come contattare l'azienda per una richiesta relativa a dati o privacy."
+        }
+      },
+      "backToHome": "Torna alla home"
+    },
+    "terms": {
+      "title": "Termini di servizio",
+      "lastUpdated": "Ultimo aggiornamento: segnaposto.",
+      "placeholderNotice": "Questo è un testo segnaposto fornito dal template — sostituiscilo prima della produzione. Vedi l'abilità <code>make-it-yours</code>.",
+      "sections": {
+        "serviceDescription": {
+          "title": "1. Descrizione del servizio",
+          "body": "Segnaposto: descrivi cosa fa il prodotto, a chi è rivolto, e cosa comporta per il cliente utilizzarlo."
+        },
+        "accounts": {
+          "title": "2. Account",
+          "body": "Segnaposto: idoneità dell'account, responsabilità sulle credenziali, e motivi di sospensione o chiusura."
+        },
+        "payment": {
+          "title": "3. Pagamento",
+          "body": "Segnaposto: prezzi, ciclo di fatturazione, politica di rimborso, e cosa succede all'accesso quando un abbonamento scade."
+        },
+        "liability": {
+          "title": "4. Responsabilità",
+          "body": "Segnaposto: clausola di esclusione di garanzia e limitazione di responsabilità, da far rivedere da un legale prima che questo repo venga spedito a clienti reali."
+        },
+        "contact": {
+          "title": "5. Contatti",
+          "body": "Segnaposto: come contattare l'azienda riguardo a questi termini."
+        }
+      },
+      "backToHome": "Torna alla home"
+    }
+  },
+  "dashboard": {
+    "signedInTitle": "Accesso effettuato",
+    "welcomeWithName": "Benvenuto, {name}.",
+    "welcomeNoName": "Benvenuto.",
+    "title": "Dashboard",
+    "emptyLine1": "Questa è la tua dashboard. Non c'è ancora niente qui.",
+    "emptyLine2": "Esegui <code>pnpm gen</code> e chiedi al tuo agente di invocare l'abilità <code>fabulous-feature</code> — è così che si costruisce la prima funzionalità reale."
+  },
+  "auth": {
+    "login": {
+      "heading": "Accedi",
+      "subheading": "Bentornato su Fabulous Factory.",
+      "noAccount": "Non hai un account?",
+      "signUp": "Registrati"
+    },
+    "signup": {
+      "heading": "Crea un account",
+      "subheading": "Inizia con Fabulous Factory.",
+      "haveAccount": "Hai già un account?",
+      "signIn": "Accedi"
+    }
+  },
+  "features": {
+    "index": {
+      "heroParagraph": "Fabulous Nothing è il preset a pagina bianca fornito con Fabulous Factory — scaffoldato con un solo comando npx, non clonato da un template. Questa pagina parla della factory."
+    },
+    "auth": {
+      "sourceHeading": "La forma che scriverai",
+      "sourceCaption": "Esempio — cosa scriverai, una volta aggiunta un'action protetta da auth"
+    },
+    "jobs": {
+      "whatItDoes": "Cosa fa",
+      "whatItDoesBody": "Dal lato del chiamante: <code>@factory/jobs</code> è un unico client Inngest e un unico registro di funzioni, niente di più — nessuna astrazione di pipeline o motore di esecuzione è fornita con questo preset. Scaffolda un job con <code>pnpm gen job &lt;name&gt;</code>, registralo, e girerà su Inngest Cloud o su un dev server locale in modo identico, a seconda di cosa è configurato.",
+      "ruleItEnforces": "La regola che applica",
+      "ruleBody": "Ogni funzione registrata condivide lo stesso client, così <code>INNGEST_EVENT_KEY</code>/<code>INNGEST_SIGNING_KEY</code>/<code>INNGEST_DEV</code> le governano tutte allo stesso modo — non c'è alcun collegamento env per job da sbagliare. L'SDK di Inngest stesso resta confinato a questo pacchetto (e a qualsiasi pacchetto di dominio che fornisce le proprie funzioni, ad es. <code>packages/untangle</code> del preset Untangle) — mai un import diretto altrove, applicato ai confini da <code>pnpm boundaries</code>.",
+      "realSource": "Sorgente reale",
+      "realSourceBody": "Il client a livello di modulo su cui è costruita ogni funzione registrata:",
+      "clientCaption": "packages/jobs/src/client.ts — il client Inngest",
+      "workingExample": "Un esempio funzionante",
+      "workingExampleBody": "Questo preset viene fornito senza funzioni ancora registrate — il registro qui sotto è un array letteralmente vuoto finché non esegui il tuo primo <code>pnpm gen job</code>, quindi invece di un'esecuzione finta, ecco esattamente cosa cambia quel flusso di scaffold e registrazione.",
+      "registryLiveExampleTitle": "Il registro, prima e dopo il tuo primo job",
+      "registryCaption": "packages/jobs/src/functions/index.ts — il registro popolato da pnpm gen job",
+      "turnItOn": "Attivalo",
+      "turnItOnBody": "Punta l'app verso Inngest Cloud con le due chiavi, oppure esegui un dev server locale con <code>INNGEST_DEV=1</code>. Senza nessuno dei due, le funzioni che registri semplicemente non si attivano — nient'altro in questo preset dipende dal fatto che Inngest sia configurato."
+    },
+    "llm": {
+      "exampleIntro": "Una chiamata dal vivo qui spenderebbe denaro su traffico anonimo, e questo preset non fornisce ancora una funzionalità che la chiama — quindi invece di un pulsante finto, ecco esattamente il contratto che un chiamante riceve su ogni elemento, preso direttamente dallo snippet qui sopra.",
+      "liveExampleTitle": "Cosa riceve un chiamante"
+    },
+    "billing": {
+      "exampleIntro": "Imposta entrambe le chiavi Stripe e checkout e webhook si attivano insieme. Lasciale non impostate e ogni account ottiene <code>runsPerDay: null</code> — illimitato, soggetto solo al tetto fisso anti-abuso giornaliero che ogni profilo applica.",
+      "exampleOutro": "Questo preset non fornisce ancora una card di fatturazione — <code>getEntitlement()</code> è l'unica chiamata di cui una funzionalità a pagamento ha bisogno per verificare il limite di un piano, in qualunque modo tu scelga di renderizzarla. Con Stripe configurato, un upgrade alza quel limite nel momento in cui arriva il webhook."
+    },
+    "observability": {
+      "closingNote": "Questo preset non fornisce ancora una funzionalità che chiama <code>track()</code> — quando lo farà, imposta entrambe le chiavi e inizierà a segnalare; lasciale non impostate e gli stessi punti di chiamata continuano a funzionare esattamente allo stesso modo, semplicemente senza fare nulla in silenzio."
+    }
+  },
+  "degradationStrip": {
+    "eyebrow": "// acceso, o spento",
+    "heading": "Rimuovi la chiave LLM e niente si rompe",
+    "body": "Stessa chiamata, stesso punto di chiamata, in entrambi i casi. Con una chiave, <code>streamArray()</code> e <code>generate()</code> fanno il loro lavoro. Senza una, lanciano un'eccezione prima ancora che venga caricato l'SDK di un provider — e ogni punto di chiamata nel template è scritto per intercettarla e ricadere su un risultato non-AI invece di lasciare che raggiunga un utente.",
+    "withKeyLabel": "Con una chiave LLM",
+    "withoutKeyLabel": "Senza"
+  }
+}

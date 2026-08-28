@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 
+import { useTranslations } from "@factory/i18n";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../primitives";
 import { SiteFooter } from "../marketing";
 import { ResetPasswordForm } from "./reset-password-form";
@@ -20,13 +22,15 @@ export interface ResetPasswordPageProps {
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- appName reserved for future per-app copy; kept in the signature so every call site already passes it.
 export function ResetPasswordPage({ appName }: ResetPasswordPageProps) {
+  const t = useTranslations("ui.auth.resetPasswordPage");
+
   return (
     <div className="fab-shell flex min-h-svh flex-col">
       <main className="flex flex-1 items-center justify-center p-6">
         <Card className="w-full max-w-sm">
           <CardHeader>
-            <CardTitle className="text-xl">Choose a new password</CardTitle>
-            <CardDescription>Pick something you haven&apos;t used before.</CardDescription>
+            <CardTitle className="text-xl">{t("title")}</CardTitle>
+            <CardDescription>{t("description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <Suspense fallback={null}>

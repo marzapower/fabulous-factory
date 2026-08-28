@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+
+import { useTranslations } from "@factory/i18n";
+import { useRouter } from "@factory/i18n/navigation";
 
 import { authClient } from "@factory/auth/client";
 import { Button } from "../primitives/button";
 
 export function SignOutButton() {
+  const t = useTranslations("ui.auth.signOutButton");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -19,7 +22,7 @@ export function SignOutButton() {
 
   return (
     <Button type="button" variant="outline" disabled={loading} onClick={handleSignOut}>
-      {loading ? "Signing out…" : "Sign out"}
+      {loading ? t("signingOut") : t("signOut")}
     </Button>
   );
 }

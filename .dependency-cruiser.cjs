@@ -4,12 +4,14 @@
  * Run via `pnpm boundaries` (`depcruise apps packages --config .dependency-cruiser.cjs`),
  * wired into `pnpm check` between lint and typecheck.
  *
- * DAG (plan D.2): config ← db ← auth ← core ← app. Nothing imports `apps/*`; a preset app
+ * DAG (plan D.2): config ← db ← auth ← core ← app. `packages/i18n` (i18n plan D1) is a
+ * separate DAG LEAF (imports nothing, not even config) consumed by `packages/ui` and
+ * every preset app — see dag-i18n-leaf below. Nothing imports `apps/*`; a preset app
  * may import anything. Vendor-SDK/driver leaks (`better-auth`, `pg`, drizzle-orm's
- * connection subpaths, `undici`) and the `@factory/config/node` poison-free entry are each
- * confined to their owning package, with two narrow, physically-verified subpath
- * exceptions (better-auth/next-js in the framework-mount route, better-auth/cookies in
- * middleware.ts) and one deliberate non-ban (drizzle-orm's pure query-operator entry
+ * connection subpaths, `undici`, `next-intl`) and the `@factory/config/node` poison-free
+ * entry are each confined to their owning package, with two narrow, physically-verified
+ * subpath exceptions (better-auth/next-js in the framework-mount route, better-auth/cookies
+ * in middleware.ts) and one deliberate non-ban (drizzle-orm's pure query-operator entry
  * point, needed in packages/core per plan D.4 — see no-drizzle-driver-outside-db below).
  *
  * NOTE on `process.env` reads: the "no legit source hit remains" invariant (D.5) is
@@ -257,8 +259,10 @@ module.exports = {
         "packages/ui (the shared component layer extracted from the three preset apps — " +
         "primitives, auth forms, marketing/docs components, the capability panel, plus " +
         "T5's middleware/SSE/theme seams) may depend on packages/config (ServiceName/" +
-        "EnvVarSpec types, useClientConfig) and packages/auth (authClient, better-auth/" +
-        "cookies in middleware.ts — see the narrow subpath exceptions above). It has no " +
+        "EnvVarSpec types, useClientConfig), packages/auth (authClient, better-auth/" +
+        "cookies in middleware.ts — see the narrow subpath exceptions above), and " +
+        "packages/i18n (the DAG-leaf localization package: catalogs, LocaleSwitcher, " +
+        "createLocaleRouting inside middleware.ts — i18n plan §2.5/§2.2). It has no " +
         "runtime dependency on packages/core today (kernel-code.tsx's `defineHandler` " +
         "import is a string literal inside an illustrative code sample, not a real " +
         "import) or packages/db — narrower than a preset app's own allowlist (every " +
@@ -268,7 +272,39 @@ module.exports = {
       },
       to: {
         path: "^packages/",
-        pathNot: "^packages/(config|auth|ui)/",
+        pathNot: "^packages/(config|auth|ui|i18n)/",
+      },
+    },
+    {
+      name: "dag-i18n-leaf",
+      severity: "error",
+      comment:
+        "packages/i18n (@factory/i18n, i18n plan D1) is a DAG LEAF — it wraps next-intl " +
+        "and must not depend on any other workspace package (not even packages/config): " +
+        "every app threads its own defineI18n() config in, and packages/i18n reads env " +
+        "nowhere. Consumed by packages/ui and every preset app.",
+      from: {
+        path: "^packages/i18n/",
+      },
+      to: {
+        path: "^packages/",
+        pathNot: "^packages/i18n/",
+      },
+    },
+    {
+      name: "no-next-intl-outside-i18n",
+      severity: "error",
+      comment:
+        "next-intl may only be imported in packages/i18n (the sole owner of the vendor " +
+        "seam, i18n plan D1) and each preset app's next.config.ts (the unavoidable " +
+        "next-intl/plugin build-time seam, wired at Turbopack config time — i18n plan " +
+        "D1/M2). No further carve-outs: app pages/components must go through " +
+        "@factory/i18n's isomorphic root, ./server, ./client, or ./navigation exports.",
+      from: {
+        pathNot: ["^packages/i18n/", "^apps/[^/]+/next\\.config\\.ts$"],
+      },
+      to: {
+        path: "(^|/)node_modules/next-intl(/|$)",
       },
     },
     {

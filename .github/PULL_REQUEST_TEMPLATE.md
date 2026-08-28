@@ -12,9 +12,10 @@
 
 Required **only** when this PR touches `packages/auth`, `packages/core`, `packages/billing`,
 your app's `proxy.ts` (`apps/*/proxy.ts`), the shared `packages/ui/src/middleware.ts` it
-calls into, or `packages/db/migrations` (design spec §8.5). CI's
-`guarded-zones` job blocks merge on those paths until every item below is checked and the
-final line reads exactly `- [x] security-checklist`.
+calls into, `packages/i18n/src/middleware.ts` or `packages/i18n/src/routing.ts` (the
+locale-routing logic the proxy composes), or `packages/db/migrations` (design spec §8.5).
+CI's `guarded-zones` job blocks merge on those paths until every item below is checked and
+the final line reads exactly `- [x] security-checklist`.
 
 - [ ] Auth decision reviewed — every changed/added handler or action's auth mode
       (`"required"` vs `"public"`) is correct, and "public" isn't just the easier default

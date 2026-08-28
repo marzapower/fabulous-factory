@@ -3,22 +3,33 @@
 
 import type { ReactNode } from "react";
 
+import { useTranslations } from "@factory/i18n";
+
 import { getClientConfig, getEnvDocsForGroup } from "@factory/config";
 import { ClientConfigProvider } from "@factory/config/client";
 
-import { CodeBlock, EnvTable, FeaturePageShell, FEATURES, StatusLight } from "../marketing";
+import {
+  CodeBlock,
+  EnvTable,
+  FeaturePageShell,
+  FEATURES,
+  StatusLight,
+  featureMeta,
+} from "../marketing";
 
 /** Two labeled lights, side by side — observability covers two independent
  * capabilities (analytics + errors), so one boolean can't speak for both. */
 function ObservabilityStatus() {
+  const t = useTranslations("ui.featurePages.observability");
+
   return (
     <div className="fab-status flex flex-wrap items-center gap-4">
       <div className="flex items-center gap-2">
-        <span className="font-mono text-xs text-muted-foreground">analytics</span>
+        <span className="font-mono text-xs text-muted-foreground">{t("statusAnalytics")}</span>
         <StatusLight service="analytics" />
       </div>
       <div className="flex items-center gap-2">
-        <span className="font-mono text-xs text-muted-foreground">errors</span>
+        <span className="font-mono text-xs text-muted-foreground">{t("statusErrors")}</span>
         <StatusLight service="errors" />
       </div>
     </div>
@@ -47,51 +58,47 @@ export function ObservabilityFeaturePage({
    * sentence copied from another preset (K.16 truth sweep). */
   closingNote: ReactNode;
 }) {
+  const t = useTranslations("ui.featurePages.observability");
+  const tc = useTranslations("ui.featurePages.common");
+  const tf = useTranslations("ui.features");
   const config = getClientConfig();
   const vars = FEATURES.observability.groups.flatMap((group) => getEnvDocsForGroup(group));
 
   return (
     <ClientConfigProvider config={config}>
       <FeaturePageShell
-        feature={FEATURES.observability}
+        feature={featureMeta(tf, "observability")}
         brand={brand}
         emoji={emoji}
         statusSlot={<ObservabilityStatus />}
       >
         <section>
-          <h2 className="text-xl font-semibold">What it does</h2>
+          <h2 className="text-xl font-semibold">{tc("whatItDoes")}</h2>
           <p className="mt-2 text-muted-foreground">
-            From a caller&rsquo;s side: <code className="font-mono">track()</code> fires an
-            analytics event and <code className="font-mono">captureException()</code> reports an
-            error — both are unconditional calls you never wrap in a capability check yourself.
+            {t.rich("whatItDoesBody", {
+              code: (chunks) => <code className="font-mono">{chunks}</code>,
+            })}
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold">The rule it enforces</h2>
+          <h2 className="text-xl font-semibold">{tc("ruleItEnforces")}</h2>
           <p className="mt-2 text-muted-foreground">
-            Two independent seams under one banner: product analytics via PostHog and error tracking
-            via Sentry, plus OpenTelemetry tracing underneath the LLM and job pipelines. Either can
-            be on, off, or both — neither depends on the other, and neither depends on any other
-            service in the template. <code className="font-mono">track()</code> is fire-and-forget
-            by contract: it never blocks the caller and never throws, whether analytics is on, off,
-            or the call itself fails.
+            {t.rich("ruleBody", { code: (chunks) => <code className="font-mono">{chunks}</code> })}
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold">Real source</h2>
+          <h2 className="text-xl font-semibold">{tc("realSource")}</h2>
           <CodeBlock code={trackSnippet} caption="packages/analytics/src/track.ts — track()" />
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold">A working example</h2>
+          <h2 className="text-xl font-semibold">{tc("workingExample")}</h2>
           <p className="mt-2 text-muted-foreground">
-            Set <code className="font-mono">POSTHOG_KEY</code> for analytics and/or{" "}
-            <code className="font-mono">SENTRY_DSN</code> for error reporting — each lights up
-            independently. Leave either unset and its functions become silent no-ops: no vendor SDK
-            is ever imported, and nothing that calls <code className="font-mono">track()</code> or{" "}
-            <code className="font-mono">captureException()</code> changes behavior.
+            {t.rich("workingExampleBody", {
+              code: (chunks) => <code className="font-mono">{chunks}</code>,
+            })}
           </p>
           <div className="mt-4">
             <EnvTable vars={vars} />

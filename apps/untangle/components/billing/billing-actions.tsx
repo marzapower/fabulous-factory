@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ArrowUpRight, ExternalLink } from "lucide-react";
 
 import type { PlanId } from "@factory/config";
-import { createCheckoutAction, openPortalAction } from "@/app/dashboard/actions";
+import { createCheckoutAction, openPortalAction } from "@/app/[locale]/dashboard/actions";
 import { Button } from "@factory/ui/primitives";
 
 /**

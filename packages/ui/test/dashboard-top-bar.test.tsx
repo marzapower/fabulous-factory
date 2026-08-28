@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@factory/auth/client", () => ({
@@ -13,10 +13,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { DashboardTopBar } from "../src/dashboard/top-bar";
+import { renderI18n } from "./render";
 
 describe("DashboardTopBar", () => {
   it("renders the Settings link, theme toggle, and sign-out button", () => {
-    render(<DashboardTopBar userEmail="ada@example.com" settingsHref="/settings" />);
+    renderI18n(<DashboardTopBar userEmail="ada@example.com" settingsHref="/settings" />);
 
     const settingsLink = screen.getByRole("link", { name: /settings/i });
     expect(settingsLink.getAttribute("href")).toBe("/settings");
@@ -26,7 +27,7 @@ describe("DashboardTopBar", () => {
   });
 
   it("points the Settings link at the given settingsHref", () => {
-    render(<DashboardTopBar userEmail="ada@example.com" settingsHref="/account/settings" />);
+    renderI18n(<DashboardTopBar userEmail="ada@example.com" settingsHref="/account/settings" />);
 
     expect(screen.getByRole("link", { name: /settings/i }).getAttribute("href")).toBe(
       "/account/settings",

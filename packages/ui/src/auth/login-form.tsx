@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+
+import { useTranslations } from "@factory/i18n";
+import { useLocalizedHref } from "@factory/i18n/client";
+import { Link, useRouter } from "@factory/i18n/navigation";
 
 import { authClient } from "@factory/auth/client";
 import { Button } from "../primitives/button";
@@ -24,7 +26,9 @@ export interface LoginFormProps {
 }
 
 export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps) {
+  const t = useTranslations("ui.auth.loginForm");
   const router = useRouter();
+  const localizeHref = useLocalizedHref();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -65,7 +69,7 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
         setLoading(false);
         return;
       }
-      setError(signInError.message ?? "Unable to sign in. Check your email and password.");
+      setError(signInError.message ?? t("signInError"));
       setLoading(false);
       return;
     }
@@ -79,10 +83,10 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
     setError(null);
     const { error: socialError } = await authClient.signIn.social({
       provider,
-      callbackURL: "/dashboard",
+      callbackURL: localizeHref("/dashboard"),
     });
     if (socialError) {
-      setError(socialError.message ?? `Unable to sign in with ${PROVIDER_LABELS[provider]}.`);
+      setError(socialError.message ?? t("socialError", { provider: PROVIDER_LABELS[provider] }));
       setSocialLoading(null);
     }
   }
@@ -94,12 +98,12 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
 
     const { error: sendError } = await authClient.sendVerificationEmail({
       email: unverifiedEmail,
-      callbackURL: "/dashboard",
+      callbackURL: localizeHref("/dashboard"),
     });
 
     if (sendError) {
       setResendState("idle");
-      setResendError(sendError.message ?? "Unable to resend the verification email.");
+      setResendError(sendError.message ?? t("resendError"));
       return;
     }
 
@@ -113,12 +117,12 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
 
     const { error: magicError } = await authClient.signIn.magicLink({
       email: magicLinkEmail,
-      callbackURL: "/dashboard",
+      callbackURL: localizeHref("/dashboard"),
     });
 
     if (magicError) {
       setMagicLinkState("idle");
-      setMagicLinkError(magicError.message ?? "Unable to send a sign-in link.");
+      setMagicLinkError(magicError.message ?? t("magicLinkError"));
       return;
     }
 
@@ -138,12 +142,12 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
               onClick={() => handleSocial(provider)}
             >
               {socialLoading === provider
-                ? "Redirecting…"
-                : `Continue with ${PROVIDER_LABELS[provider]}`}
+                ? t("redirecting")
+                : t("continueWithProvider", { provider: PROVIDER_LABELS[provider] })}
             </Button>
           ))}
           <div className="relative py-2 text-center text-sm text-muted-foreground">
-            <span className="bg-card relative z-10 px-2">or continue with email</span>
+            <span className="bg-card relative z-10 px-2">{t("orContinueWithEmail")}</span>
             <div className="absolute inset-x-0 top-1/2 border-t" aria-hidden="true" />
           </div>
         </div>
@@ -151,7 +155,7 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
 
       <form className="grid gap-4" onSubmit={handleSubmit}>
         <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("emailLabel")}</Label>
           <Input
             id="email"
             name="email"
@@ -164,7 +168,7 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
         </div>
         <div className="grid gap-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("passwordLabel")}</Label>
             {/* Password reset needs the email service; `magicLinkEnabled` is derived from
                 the exact same capability read (`deriveAuthOptions`' `email.magicLink` =
                 `capabilities.email !== "disabled"`), so gating on it here hides the link
@@ -175,7 +179,7 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
                 href="/forgot-password"
                 className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
               >
-                Forgot password?
+                {t("forgotPassword")}
               </Link>
             )}
           </div>
@@ -195,17 +199,15 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
           </p>
         )}
         <Button type="submit" disabled={loading}>
-          {loading ? "Signing in…" : "Sign in"}
+          {loading ? t("signingIn") : t("signIn")}
         </Button>
       </form>
 
       {unverifiedEmail && (
         <div className="grid gap-2 rounded-md border border-border bg-muted px-3 py-3 text-sm">
-          <p>Your email isn&apos;t verified yet. Verify it to sign in.</p>
+          <p>{t("unverifiedNotice")}</p>
           {resendState === "sent" ? (
-            <p className="text-muted-foreground">
-              Verification email sent — check your inbox at {unverifiedEmail}.
-            </p>
+            <p className="text-muted-foreground">{t("resendSent", { email: unverifiedEmail })}</p>
           ) : (
             <Button
               type="button"
@@ -215,7 +217,7 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
               disabled={resendState === "sending"}
               onClick={handleResendVerification}
             >
-              {resendState === "sending" ? "Sending…" : "Resend verification email"}
+              {resendState === "sending" ? t("resendSending") : t("resendButton")}
             </Button>
           )}
           {resendError && (
@@ -237,16 +239,16 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
                 setMagicLinkEmail(email);
               }}
             >
-              Email me a sign-in link instead
+              {t("magicLinkPrompt")}
             </button>
           ) : magicLinkState === "sent" ? (
             <p className="text-center text-muted-foreground">
-              Sign-in link sent — check your inbox at {magicLinkEmail}.
+              {t("magicLinkSent", { email: magicLinkEmail })}
             </p>
           ) : (
             <form className="grid gap-2" onSubmit={handleMagicLink}>
               <Label htmlFor="magic-link-email" className="sr-only">
-                Email
+                {t("magicLinkEmailLabel")}
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -258,7 +260,7 @@ export function LoginForm({ enabledProviders, magicLinkEnabled }: LoginFormProps
                   onChange={(event) => setMagicLinkEmail(event.target.value)}
                 />
                 <Button type="submit" variant="outline" disabled={magicLinkState === "sending"}>
-                  {magicLinkState === "sending" ? "Sending…" : "Send link"}
+                  {magicLinkState === "sending" ? t("magicLinkSending") : t("magicLinkSendButton")}
                 </Button>
               </div>
               {magicLinkError && (
